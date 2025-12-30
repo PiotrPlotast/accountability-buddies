@@ -1,3 +1,4 @@
+import "../../../global.css";
 import { Button, View } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
