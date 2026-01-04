@@ -1,6 +1,6 @@
 import "../../../global.css";
 import { Button, View } from "react-native";
-
+import Dashboard from "@/app/components/Dashboard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSupabase } from "@/hooks/useSupabase";
@@ -27,7 +27,7 @@ export default function Page() {
         paddingBottom: insets.bottom,
       }}
     >
-      <Button title="Sign Out" onPress={handleSignOut} />
+      <Dashboard />
     </View>
   );
 }
