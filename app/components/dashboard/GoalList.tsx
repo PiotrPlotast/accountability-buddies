@@ -4,10 +4,33 @@ import { Goal } from "@/types/dashboardTypes";
 type Props = {
   goals: Goal[];
   isViewingMe: boolean;
+  isLoading: boolean; // <--- 1. Add this prop
   onToggle: (goal: Goal) => void;
 };
 
-export default function GoalList({ goals, isViewingMe, onToggle }: Props) {
+export default function GoalList({
+  goals,
+  isViewingMe,
+  isLoading,
+  onToggle,
+}: Props) {
+  // 2. Handle Loading State (Prevents the "No habits" flash)
+  if (isLoading) {
+    return (
+      <View className="gap-3">
+        {/* Render 3 fake placeholder rows */}
+        {[1, 2, 3].map((i) => (
+          <View
+            key={i}
+            className="h-16 bg-gray-100 rounded-xl border border-transparent opacity-50"
+            // Note: If you have NativeWind set up for animations, you can add 'animate-pulse' here
+          />
+        ))}
+      </View>
+    );
+  }
+
+  // 3. Handle Empty State (Only shows if strictly NOT loading)
   if (goals.length === 0) {
     return (
       <View className="mt-10 items-center justify-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
@@ -20,15 +43,13 @@ export default function GoalList({ goals, isViewingMe, onToggle }: Props) {
     );
   }
 
+  // 4. Handle Real Data
   return (
     <View className="gap-3">
       {goals.map((goal) => {
         const isCompleted = goal.completed_today;
 
         // Dynamic Styling Logic
-        // Me + Done = Green
-        // Them + Done = Indigo
-        // Pending = White/Gray
         const containerStyle = isCompleted
           ? isViewingMe
             ? "bg-green-50 border-green-500"
