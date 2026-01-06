@@ -3,7 +3,7 @@ import { Alert } from "react-native";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useRouter } from "expo-router";
 import { Goal, Member, GroupResult } from "@/types/dashboardTypes";
-
+import * as Haptics from "expo-haptics";
 export function useDashboard() {
   const { session, supabase } = useSupabase();
   const userId = session?.user.id;
@@ -60,20 +60,7 @@ export function useDashboard() {
             .filter((g: any) => g.user_id === m.user_id)
             .map((g: any) => ({ ...g, completed_today: g.logs.length > 0 })),
         }));
-
-        const lastDate = myGroup.groups?.last_streak_date;
-        const serverStreak = myGroup.groups?.current_streak || 0;
-
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-        // The Rule: Streak is valid ONLY if updated Today or Yesterday.
-        // If last_streak_date is older than yesterday, it's broken.
-        const isStreakAlive = lastDate === today || lastDate === yesterdayStr;
-        const realStreak = isStreakAlive ? serverStreak : 0;
-        setStreak(realStreak);
-
+        const lastDate = myGroup.last_streak_date; // Use groupData, not myGroup
         const streakNotUpdatedToday = lastDate !== today;
         const myData = formattedMembers.find((m: any) => m.user_id === userId);
         const iHaveContributed = myData?.goals.some(
@@ -95,6 +82,7 @@ export function useDashboard() {
     const today = new Date().toISOString().split("T")[0];
     if (goal.completed_today) return;
 
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // Optimistic Update
     setMembers((current) =>
       current.map((m) => {
