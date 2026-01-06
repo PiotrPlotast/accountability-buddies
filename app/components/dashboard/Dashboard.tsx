@@ -33,6 +33,7 @@ export default function Dashboard() {
   if (!userId) return <View />;
 
   const currentMember = members.find((m) => m.user_id === selectedTabId);
+  const isInitializing = members.length > 0 && !currentMember;
   const isViewingMe = selectedTabId === userId;
 
   return (
@@ -67,6 +68,7 @@ export default function Dashboard() {
           goals={currentMember?.goals || []}
           isViewingMe={isViewingMe}
           onToggle={toggleGoal}
+          isLoading={loading || isInitializing}
         />
 
         {currentMember?.goals.length === 0 && (
