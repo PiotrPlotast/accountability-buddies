@@ -24,22 +24,20 @@ export function useDashboard() {
 
       const today = new Date().toISOString().split("T")[0];
 
-      const { data: myGroup } = await supabase
-        .from("group_members")
-        .select(
-          "group_id, groups(name, current_streak, invite_code, last_streak_date)",
-        )
-        .eq("user_id", userId)
+      const { data: myGroup, error } = await supabase
+        .rpc("get_my_group_stats")
         .single<GroupResult>();
 
-      if (!myGroup) {
+      if (error) console.log("RPC ERROR:", error);
+      if (!myGroup) console.log("RPC DATA IS NULL (User has no group)");
+      if (error || !myGroup) {
         router.replace("/(protected)/join-group");
         return;
       }
 
-      setGroupName(myGroup.groups?.name || "My Group");
-      setStreak(myGroup.groups?.current_streak || 0);
-      setInviteCode(myGroup.groups?.invite_code || "");
+      setGroupName(myGroup.name || "My Group");
+      setStreak(myGroup.current_streak || 0);
+      setInviteCode(myGroup.invite_code || "");
       setActiveGroupId(myGroup.group_id);
 
       const [membersRes, goalsRes] = await Promise.all([
@@ -64,6 +62,18 @@ export function useDashboard() {
         }));
 
         const lastDate = myGroup.groups?.last_streak_date;
+        const serverStreak = myGroup.groups?.current_streak || 0;
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+        // The Rule: Streak is valid ONLY if updated Today or Yesterday.
+        // If last_streak_date is older than yesterday, it's broken.
+        const isStreakAlive = lastDate === today || lastDate === yesterdayStr;
+        const realStreak = isStreakAlive ? serverStreak : 0;
+        setStreak(realStreak);
+
         const streakNotUpdatedToday = lastDate !== today;
         const myData = formattedMembers.find((m: any) => m.user_id === userId);
         const iHaveContributed = myData?.goals.some(
@@ -76,7 +86,7 @@ export function useDashboard() {
 
       if (!forceRefresh) setLoading(false);
     },
-    [userId],
+    [userId, router, supabase],
   );
 
   // Actions
