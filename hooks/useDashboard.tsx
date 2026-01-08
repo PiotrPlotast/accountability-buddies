@@ -73,32 +73,53 @@ export function useDashboard() {
 
       if (!forceRefresh) setLoading(false);
     },
-    [userId, router, supabase],
+    [userId],
   );
 
-  // Actions
   const toggleGoal = async (goal: Goal) => {
     if (!userId) return;
-    const today = new Date().toISOString().split("T")[0];
-    if (goal.completed_today) return;
-
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Optimistic Update
+
+    const today = new Date().toISOString().split("T")[0];
+
+    // Determine the new state (Flip the current state)
+    const isNowCompleted = !goal.completed_today;
+
+    // 1. Optimistic Update (Update UI instantly)
     setMembers((current) =>
       current.map((m) => {
         if (m.user_id !== userId) return m;
         return {
           ...m,
           goals: m.goals.map((g) =>
-            g.id === goal.id ? { ...g, completed_today: true } : g,
+            g.id === goal.id ? { ...g, completed_today: isNowCompleted } : g,
           ),
         };
       }),
     );
 
-    await supabase
-      .from("logs")
-      .insert({ goal_id: goal.id, user_id: userId, date: today });
+    // 2. Database Action
+    if (isNowCompleted) {
+      // CHECK: Add the log
+      await supabase.from("logs").insert({
+        goal_id: goal.id,
+        user_id: userId,
+        date: today,
+      });
+
+      // (Optional) Trigger Haptics here if you moved it to the hook
+      // await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      // UNCHECK: Remove the log
+      await supabase
+        .from("logs")
+        .delete()
+        .eq("goal_id", goal.id)
+        .eq("user_id", userId)
+        .eq("date", today);
+    }
+
+    // 3. Silent Refresh (Recalculate streak/waiting status)
     await fetchData(true);
   };
 
@@ -126,8 +147,10 @@ export function useDashboard() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (userId) {
+      fetchData();
+    }
+  }, [userId, fetchData]);
 
   return {
     userId,
