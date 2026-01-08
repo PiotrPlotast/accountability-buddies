@@ -61,7 +61,7 @@ export default function GoalList({
         return (
           <TouchableOpacity
             key={goal.id}
-            disabled={!isViewingMe || isCompleted}
+            disabled={!isViewingMe}
             onPress={() => onToggle(goal)}
             className={`p-5 rounded-xl border flex-row items-center justify-between ${containerStyle}`}
           >
