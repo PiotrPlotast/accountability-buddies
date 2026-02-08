@@ -16,11 +16,18 @@ export default function GoalList({
 }: Props) {
   if (isLoading) {
     return (
-      <View className="gap-3">
+      <View style={{ gap: 12 }}>
         {[1, 2, 3].map((i) => (
           <View
             key={i}
-            className="h-16 bg-gray-100 rounded-xl border border-transparent opacity-50"
+            style={{
+              height: 64, // h-16
+              backgroundColor: "#f3f4f6", // bg-gray-100
+              borderRadius: 12, // rounded-xl
+              borderWidth: 1,
+              borderColor: "transparent",
+              opacity: 0.5,
+            }}
           />
         ))}
       </View>
@@ -29,8 +36,26 @@ export default function GoalList({
 
   if (goals.length === 0) {
     return (
-      <View className="mt-10 items-center justify-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-        <Text className="text-gray-400 italic text-center">
+      <View
+        style={{
+          marginTop: 40, // mt-10
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24, // p-6
+          backgroundColor: "#f9fafb", // bg-gray-50
+          borderRadius: 12, // rounded-xl
+          borderWidth: 1,
+          borderStyle: "dashed",
+          borderColor: "#e5e7eb", // border-gray-200
+        }}
+      >
+        <Text
+          style={{
+            color: "#9ca3af", // text-gray-400
+            fontStyle: "italic",
+            textAlign: "center",
+          }}
+        >
           {isViewingMe
             ? "No habits yet. Add one above! 👆"
             : "They haven't added any habits yet. 😴"}
@@ -40,38 +65,63 @@ export default function GoalList({
   }
 
   return (
-    <View className="gap-3">
+    <View style={{ gap: 12 }}>
       {goals.map((goal) => {
         const isCompleted = goal.completed_today;
 
+        // Logika stylów kontenera (tło, border, cień)
         const containerStyle = isCompleted
           ? isViewingMe
-            ? "bg-green-50 border-green-500"
-            : "bg-indigo-50 border-indigo-200"
-          : "bg-white border-slate-200 shadow-sm";
+            ? { backgroundColor: "#f0fdf4", borderColor: "#22c55e" } // bg-green-50 border-green-500
+            : { backgroundColor: "#eef2ff", borderColor: "#c7d2fe" } // bg-indigo-50 border-indigo-200
+          : {
+              backgroundColor: "#ffffff", // bg-white
+              borderColor: "#e2e8f0", // border-slate-200
+              // shadow-sm implementation:
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+              elevation: 2,
+            };
 
-        const textStyle = isCompleted
+        // Logika koloru tekstu
+        const textColor = isCompleted
           ? isViewingMe
-            ? "text-green-800"
-            : "text-indigo-800"
+            ? "#166534" // text-green-800
+            : "#3730a3" // text-indigo-800
           : isViewingMe
-            ? "text-slate-800"
-            : "text-gray-400";
+            ? "#1e293b" // text-slate-800
+            : "#9ca3af"; // text-gray-400
 
         return (
           <TouchableOpacity
             key={goal.id}
             disabled={!isViewingMe}
             onPress={() => onToggle(goal)}
-            className={`p-5 rounded-xl border flex-row items-center justify-between ${containerStyle}`}
+            style={{
+              padding: 20, // p-5
+              borderRadius: 12, // rounded-xl
+              borderWidth: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              ...containerStyle, // Rozpakowanie warunkowych stylów
+            }}
           >
-            <Text className={`text-lg font-medium ${textStyle}`}>
+            <Text
+              style={{
+                fontSize: 18, // text-lg
+                fontWeight: "500", // font-medium
+                color: textColor,
+              }}
+            >
               {goal.title}
             </Text>
 
             {/* Status Icon */}
             {isCompleted && (
-              <Text className="text-xl">{isViewingMe ? "✅" : "🔥"}</Text>
+              <Text style={{ fontSize: 20 }}>{isViewingMe ? "✅" : "🔥"}</Text>
             )}
           </TouchableOpacity>
         );
