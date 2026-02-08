@@ -69,7 +69,6 @@ export default function GoalList({
       {goals.map((goal) => {
         const isCompleted = goal.completed_today;
 
-        // Logika stylów kontenera (tło, border, cień)
         const containerStyle = isCompleted
           ? isViewingMe
             ? { backgroundColor: "#f0fdf4", borderColor: "#22c55e" } // bg-green-50 border-green-500
@@ -85,7 +84,6 @@ export default function GoalList({
               elevation: 2,
             };
 
-        // Logika koloru tekstu
         const textColor = isCompleted
           ? isViewingMe
             ? "#166534" // text-green-800
