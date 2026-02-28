@@ -1,5 +1,11 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
+import { useDashboard } from "@/hooks/useDashboard";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import Reanimated, {
+  SharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 
 type Props = {
   goals: Goal[];
@@ -14,6 +20,50 @@ export default function GoalList({
   isLoading,
   onToggle,
 }: Props) {
+  const { deleteGoal } = useDashboard();
+
+  function RightAction(
+    prog: SharedValue<number>,
+    drag: SharedValue<number>,
+    goal: Goal,
+  ) {
+    const styleAnimation = useAnimatedStyle(() => {
+      return {
+        transform: [{ translateX: drag.value + 50 }],
+      };
+    });
+
+    return (
+      <Reanimated.View style={styleAnimation}>
+        <TouchableOpacity
+          style={styles.rightAction}
+          onPress={() => deleteGoal(goal.id)}
+        >
+          <Text>🗑️</Text>
+        </TouchableOpacity>
+      </Reanimated.View>
+    );
+  }
+
+  function LeftAction(
+    prog: SharedValue<number>,
+    drag: SharedValue<number>,
+    goal: Goal,
+  ) {
+    const styleAnimation = useAnimatedStyle(() => {
+      return {
+        transform: [{ translateX: drag.value - 50 }],
+      };
+    });
+
+    return (
+      <Reanimated.View style={styleAnimation}>
+        <TouchableOpacity style={styles.leftAction}>
+          <Text>✏️</Text>
+        </TouchableOpacity>
+      </Reanimated.View>
+    );
+  }
   if (isLoading) {
     return (
       <View style={{ gap: 12 }}>
@@ -93,37 +143,76 @@ export default function GoalList({
             : "#9ca3af"; // text-gray-400
 
         return (
-          <TouchableOpacity
+          <Swipeable
             key={goal.id}
-            disabled={!isViewingMe}
-            onPress={() => onToggle(goal)}
-            style={{
-              padding: 20, // p-5
-              borderRadius: 12, // rounded-xl
-              borderWidth: 1,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              ...containerStyle, // Rozpakowanie warunkowych stylów
-            }}
+            renderRightActions={
+              isViewingMe
+                ? (prog, drag) => RightAction(prog, drag, goal)
+                : undefined
+            }
+            renderLeftActions={
+              isViewingMe
+                ? (prog, drag) => LeftAction(prog, drag, goal)
+                : undefined
+            }
+            overshootRight={false}
+            overshootLeft={false}
+            friction={2}
           >
-            <Text
+            <TouchableOpacity
+              key={goal.id}
+              disabled={!isViewingMe}
+              onPress={() => onToggle(goal)}
               style={{
-                fontSize: 18, // text-lg
-                fontWeight: "500", // font-medium
-                color: textColor,
+                padding: 20, // p-5
+                borderRadius: 12, // rounded-xl
+                borderWidth: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                ...containerStyle,
               }}
             >
-              {goal.title}
-            </Text>
+              <Text
+                style={{
+                  fontSize: 18, // text-lg
+                  fontWeight: "500", // font-medium
+                  color: textColor,
+                }}
+              >
+                {goal.title}
+              </Text>
 
-            {/* Status Icon */}
-            {isCompleted && (
-              <Text style={{ fontSize: 20 }}>{isViewingMe ? "✅" : "🔥"}</Text>
-            )}
-          </TouchableOpacity>
+              {isCompleted && (
+                <Text style={{ fontSize: 20 }}>
+                  {isViewingMe ? "✅" : "🔥"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </Swipeable>
         );
       })}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  rightAction: {
+    padding: 20,
+    transform: [{ translateX: 16 }],
+    backgroundColor: "red",
+    borderRadius: 12,
+    fontSize: 18, // text-lg
+  },
+  leftAction: {
+    padding: 20,
+    transform: [{ translateX: -16 }],
+    backgroundColor: "pink",
+    borderRadius: 12,
+    fontSize: 18, // text-lg
+  },
+  separator: {
+    width: "100%",
+    borderTopWidth: 1,
+  },
+});
