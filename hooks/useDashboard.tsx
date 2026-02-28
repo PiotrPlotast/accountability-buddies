@@ -100,17 +100,12 @@ export function useDashboard() {
 
     // 2. Database Action
     if (isNowCompleted) {
-      // CHECK: Add the log
       await supabase.from("logs").insert({
         goal_id: goal.id,
         user_id: userId,
         date: today,
       });
-
-      // (Optional) Trigger Haptics here if you moved it to the hook
-      // await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
-      // UNCHECK: Remove the log
       await supabase
         .from("logs")
         .delete()
@@ -146,6 +141,43 @@ export function useDashboard() {
     }
   };
 
+  const deleteGoal = async (goalId: string) => {
+    if (!goalId || !userId || !activeGroupId) return;
+    const { data, error } = await supabase
+      .from("goals")
+      .delete()
+      .eq("id", goalId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) {
+      Alert.alert("Error", error.message);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn("Delete failed: No matching rows found or RLS blocked it.");
+      Alert.alert(
+        "Error",
+        "Could not delete this goal. You might not have permission.",
+      );
+      return;
+    }
+
+    setMembers((current) =>
+      current.map((m) => {
+        if (m.user_id !== userId) return m;
+        return {
+          ...m,
+          goals: m.goals.filter((g) => g.id !== goalId),
+        };
+      }),
+    );
+
+    await fetchData(true);
+  };
+
   useEffect(() => {
     if (userId) {
       fetchData();
@@ -163,5 +195,6 @@ export function useDashboard() {
     fetchData,
     toggleGoal,
     addGoal,
+    deleteGoal,
   };
 }
