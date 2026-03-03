@@ -19,6 +19,7 @@ export default function Dashboard() {
     fetchData,
     toggleGoal,
     addGoal,
+    deleteGoal,
   } = useDashboard();
 
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export default function Dashboard() {
   const isViewingMe = selectedTabId === userId;
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 w-full bg-slate-50">
       <DashboardHeader
         groupName={groupName}
         streak={streak}
@@ -53,7 +54,7 @@ export default function Dashboard() {
       />
 
       <ScrollView
-        className="flex-1 p-4"
+        className="flex-1 max-h-[550px] p-4"
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -69,6 +70,7 @@ export default function Dashboard() {
           isViewingMe={isViewingMe}
           onToggle={toggleGoal}
           isLoading={loading || isInitializing}
+          deleteGoal={deleteGoal}
         />
 
         {currentMember?.goals.length === 0 && (
