@@ -11,10 +11,16 @@
     "web": {
       "bundler": "metro"
     },
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.flemingvincent.accountabilitybuddies"
+      "bundleIdentifier": "com.flemingvincent.accountabilitybuddies",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -39,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "176e6217-dbf7-4c0d-9174-d7d084a973ea"
+      }
     }
   }
 }
