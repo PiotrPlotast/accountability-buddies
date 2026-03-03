@@ -1,6 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
-import { useDashboard } from "@/hooks/useDashboard";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
   SharedValue,
@@ -12,6 +11,7 @@ type Props = {
   isViewingMe: boolean;
   isLoading: boolean;
   onToggle: (goal: Goal) => void;
+  deleteGoal: (goalId: string) => void;
 };
 
 export default function GoalList({
@@ -19,9 +19,8 @@ export default function GoalList({
   isViewingMe,
   isLoading,
   onToggle,
+  deleteGoal,
 }: Props) {
-  const { deleteGoal } = useDashboard();
-
   function RightAction(
     prog: SharedValue<number>,
     drag: SharedValue<number>,

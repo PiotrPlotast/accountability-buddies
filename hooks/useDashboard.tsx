@@ -60,7 +60,7 @@ export function useDashboard() {
             .filter((g: any) => g.user_id === m.user_id)
             .map((g: any) => ({ ...g, completed_today: g.logs.length > 0 })),
         }));
-        const lastDate = myGroup.last_streak_date; // Use groupData, not myGroup
+        const lastDate = myGroup.last_streak_date;
         const streakNotUpdatedToday = lastDate !== today;
         const myData = formattedMembers.find((m: any) => m.user_id === userId);
         const iHaveContributed = myData?.goals.some(
