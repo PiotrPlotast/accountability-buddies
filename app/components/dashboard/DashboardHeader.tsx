@@ -23,7 +23,7 @@ export default function DashboardHeader({
     <View className="pt-14 pb-6 px-6 bg-slate-900">
       <View className="flex-row justify-between items-start">
         <View>
-          <Text className="text-gray-400 text-xs font-bold tracking-widest uppercase mb-1">
+          <Text className="text-gray-400 text-2xl font-bold tracking-widest uppercase mb-1">
             {groupName}
           </Text>
           <TouchableOpacity
@@ -39,15 +39,14 @@ export default function DashboardHeader({
         <View className="items-end">
           {isWaiting && (
             <Text className="text-yellow-400 text-[10px] font-bold uppercase mb-1">
-              Waiting...
+              Waiting for buddy...
             </Text>
           )}
           <Text
             className={`text-3xl font-bold ${isWaiting ? "text-yellow-200" : "text-white"}`}
           >
-            Day {streak}
+            {streak} {isWaiting ? "⏳" : "🔥"}
           </Text>
-          <Text className="text-3xl">{isWaiting ? "⏳" : "🔥"}</Text>
         </View>
       </View>
     </View>
