@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { View, ScrollView, RefreshControl, Text } from "react-native";
 import { useDashboard } from "@/hooks/useDashboard";
-
+import EditGoalModal from "./EditGoalModal";
 import DashboardHeader from "./DashboardHeader";
 import MemberTabs from "./MemberTabs";
 import AddGoalInput from "./AddGoalInput";
 import GoalList from "./GoalList";
-
+import { Goal } from "@/types/dashboardTypes";
 export default function Dashboard() {
   const {
     userId,
@@ -20,10 +20,11 @@ export default function Dashboard() {
     toggleGoal,
     addGoal,
     deleteGoal,
+    editGoal,
   } = useDashboard();
 
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
-
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   // Set default tab once members load
   useEffect(() => {
     if (members.length > 0 && !selectedTabId) {
@@ -36,7 +37,9 @@ export default function Dashboard() {
   const currentMember = members.find((m) => m.user_id === selectedTabId);
   const isInitializing = members.length > 0 && !currentMember;
   const isViewingMe = selectedTabId === userId;
-
+  const handleEditPress = (goal: Goal) => {
+    setEditingGoal(goal);
+  };
   return (
     <View className="flex-1 w-full bg-slate-50">
       <DashboardHeader
@@ -71,8 +74,24 @@ export default function Dashboard() {
           onToggle={toggleGoal}
           isLoading={loading || isInitializing}
           deleteGoal={deleteGoal}
+          editGoal={editGoal}
+          onEdit={handleEditPress}
         />
-
+        <EditGoalModal
+          goal={editingGoal}
+          isVisible={!!editingGoal}
+          onClose={() => setEditingGoal(null)}
+          onSave={async (newTitle) => {
+            if (editingGoal?.id) {
+              await editGoal(editingGoal.id, newTitle);
+              setEditingGoal(null); // Close modal only after starting update
+            } else {
+              console.warn(
+                "Attempted to save, but editingGoal.id was undefined",
+              );
+            }
+          }}
+        />
         {currentMember?.goals.length === 0 && (
           <Text className="text-center text-gray-300 mt-10 italic">
             No habits yet.
