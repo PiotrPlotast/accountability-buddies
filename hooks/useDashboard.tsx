@@ -178,6 +178,44 @@ export function useDashboard() {
     await fetchData(true);
   };
 
+  const editGoal = async (goalId: string, newTitle: string) => {
+    if (!goalId || goalId === "undefined") {
+      console.error("Update aborted: goalId is missing.");
+      return;
+    }
+    if (newTitle === undefined || newTitle.trim() === "") {
+      Alert.alert("Error", "Habit name cannot be empty");
+      return;
+    }
+    if (!newTitle.trim() || !userId) return;
+
+    // 1. Optimistic Update
+    setMembers((current) =>
+      current.map((m) => {
+        if (m.user_id !== userId) return m;
+        return {
+          ...m,
+          goals: m.goals.map((g) =>
+            g.id === goalId ? { ...g, title: newTitle.trim() } : g,
+          ),
+        };
+      }),
+    );
+    console.log("Goal ID being sent:", goalId);
+    // 2. Database Update
+    const { error } = await supabase
+      .from("goals")
+      .update({ title: newTitle.trim() })
+      .eq("id", goalId)
+      .eq("user_id", userId);
+
+    if (error) {
+      Alert.alert("Error", "Could not update habit");
+      console.log(error);
+      fetchData(true); // Rollback on error
+    }
+  };
+
   useEffect(() => {
     if (userId) {
       fetchData();
@@ -196,5 +234,6 @@ export function useDashboard() {
     toggleGoal,
     addGoal,
     deleteGoal,
+    editGoal,
   };
 }
