@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { View, ScrollView, RefreshControl, Text } from "react-native";
 import { useDashboard } from "@/hooks/useDashboard";
 import EditGoalModal from "./EditGoalModal";
+import DeleteGoalModal from "./DeleteGoalModal";
 import DashboardHeader from "./DashboardHeader";
 import MemberTabs from "./MemberTabs";
 import AddGoalInput from "./AddGoalInput";
@@ -25,6 +26,8 @@ export default function Dashboard() {
 
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null);
+
   // Set default tab once members load
   useEffect(() => {
     if (members.length > 0 && !selectedTabId) {
@@ -39,6 +42,9 @@ export default function Dashboard() {
   const isViewingMe = selectedTabId === userId;
   const handleEditPress = (goal: Goal) => {
     setEditingGoal(goal);
+  };
+  const handleDeletePress = (goal: Goal) => {
+    setDeletingGoal(goal);
   };
   return (
     <View className="flex-1 w-full bg-slate-50">
@@ -73,9 +79,8 @@ export default function Dashboard() {
           isViewingMe={isViewingMe}
           onToggle={toggleGoal}
           isLoading={loading || isInitializing}
-          deleteGoal={deleteGoal}
-          editGoal={editGoal}
           onEdit={handleEditPress}
+          onDelete={handleDeletePress}
         />
         <EditGoalModal
           goal={editingGoal}
@@ -91,6 +96,15 @@ export default function Dashboard() {
               );
             }
           }}
+        />
+        <DeleteGoalModal
+          goal={deletingGoal}
+          onDelete={async (goalId) => {
+            await deleteGoal(goalId);
+            setDeletingGoal(null);
+          }}
+          isVisible={!!deletingGoal}
+          onClose={() => setDeletingGoal(null)}
         />
         {currentMember?.goals.length === 0 && (
           <Text className="text-center text-gray-300 mt-10 italic">
