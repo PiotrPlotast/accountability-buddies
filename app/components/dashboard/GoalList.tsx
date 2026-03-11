@@ -11,9 +11,8 @@ type Props = {
   isViewingMe: boolean;
   isLoading: boolean;
   onToggle: (goal: Goal) => void;
-  deleteGoal: (goalId: string) => void;
-  editGoal: (goalId: string, newTitle: string) => void;
   onEdit: (goal: Goal) => void;
+  onDelete: (goal: Goal) => void;
 };
 
 export default function GoalList({
@@ -21,9 +20,8 @@ export default function GoalList({
   isViewingMe,
   isLoading,
   onToggle,
-  deleteGoal,
-  editGoal,
   onEdit,
+  onDelete,
 }: Props) {
   function RightAction(
     prog: SharedValue<number>,
@@ -40,7 +38,7 @@ export default function GoalList({
       <Reanimated.View style={styleAnimation}>
         <TouchableOpacity
           style={styles.rightAction}
-          onPress={() => deleteGoal(goal.id)}
+          onPress={() => onDelete(goal)}
         >
           <Text>🗑️</Text>
         </TouchableOpacity>
