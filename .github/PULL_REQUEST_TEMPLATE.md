@@ -1,6 +1,4 @@
-## Pull Request Template
-
-### Description
+## Description
 Provide a brief summary of the changes made in this pull request. Explain the problem this PR solves or the feature it adds.
 
 ### Type of Change
