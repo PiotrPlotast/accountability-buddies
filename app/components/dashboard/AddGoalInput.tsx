@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 type Props = {
-  onAdd: (title: string) => Promise<void>;
+  onAdd: (title: string) => void | Promise<void>;
 };
 
 export default function AddGoalInput({ onAdd }: Props) {

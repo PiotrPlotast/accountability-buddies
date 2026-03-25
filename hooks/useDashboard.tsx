@@ -1,226 +1,75 @@
-import { useState, useEffect, useCallback } from "react";
-import { Alert } from "react-native";
-import { useSupabase } from "@/hooks/useSupabase";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "expo-router";
-import { Goal, Member, GroupResult } from "@/types/dashboardTypes";
-import * as Haptics from "expo-haptics";
+import { useSupabase } from "@/hooks/useSupabase";
+import { useGroupStats } from "@/hooks/useGroupStats";
+import { useGroupMembers } from "@/hooks/useGroupMembers";
+import { useToggleGoal } from "@/hooks/useToggleGoal";
+import { useAddGoal } from "@/hooks/useAddGoal";
+import { useDeleteGoal } from "@/hooks/useDeleteGoal";
+import { useEditGoal } from "@/hooks/useEditGoal";
+import { Goal } from "@/types/dashboardTypes";
+
 export function useDashboard() {
-  const { session, supabase } = useSupabase();
+  const { session } = useSupabase();
   const userId = session?.user.id;
   const router = useRouter();
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [groupName, setGroupName] = useState<string>("Loading...");
-  const [streak, setStreak] = useState<number>(0);
-  const [inviteCode, setInviteCode] = useState<string>("");
-  const [members, setMembers] = useState<Member[]>([]);
-  const [isWaiting, setIsWaiting] = useState<boolean>(false);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const groupStats = useGroupStats();
+  const groupMembers = useGroupMembers({
+    groupId: groupStats.data?.group_id || null,
+  });
 
-  const fetchData = useCallback(
-    async (forceRefresh = false) => {
-      if (!userId) return;
-      if (!forceRefresh) setLoading(true);
+  const toggleMutation = useToggleGoal();
+  const addMutation = useAddGoal();
+  const deleteMutation = useDeleteGoal();
+  const editMutation = useEditGoal();
 
-      const today = new Date().toISOString().split("T")[0];
+  const loading = groupStats.isLoading || groupMembers.isLoading;
+  const groupName = groupStats.data?.name || "Loading...";
+  const streak = groupStats.data?.current_streak || 0;
+  const inviteCode = groupStats.data?.invite_code || "";
+  const activeGroupId = groupStats.data?.group_id || null;
+  const members = groupMembers.data || [];
 
-      const { data: myGroup, error } = await supabase
-        .rpc("get_my_group_stats")
-        .single<GroupResult>();
+  const isWaiting = useMemo(() => {
+    if (!groupStats.data || !groupMembers.data) return false;
+    const today = new Date().toLocaleDateString("en-CA");
+    const lastDate = groupStats.data.last_streak_date;
+    const streakNotUpdatedToday = lastDate !== today;
+    const myData = groupMembers.data.find((m) => m.user_id === userId);
+    const iHaveContributed = myData?.goals.some((g) => g.completed_today);
+    return !!(streakNotUpdatedToday && iHaveContributed);
+  }, [groupStats.data, groupMembers.data, userId]);
 
-      if (error) console.log("RPC ERROR:", error);
-      if (!myGroup) console.log("RPC DATA IS NULL (User has no group)");
-      if (error || !myGroup) {
-        router.replace("/(protected)/join-group");
-        return;
-      }
+  const fetchData = async () => {
+    await Promise.all([groupStats.refetch(), groupMembers.refetch()]);
+  };
 
-      setGroupName(myGroup.name || "My Group");
-      setStreak(myGroup.current_streak || 0);
-      setInviteCode(myGroup.invite_code || "");
-      setActiveGroupId(myGroup.group_id);
-
-      const [membersRes, goalsRes] = await Promise.all([
-        supabase
-          .from("group_members")
-          .select("user_id, profiles(full_name)")
-          .eq("group_id", myGroup.group_id),
-        supabase
-          .from("goals")
-          .select("*, logs(id)")
-          .eq("group_id", myGroup.group_id)
-          .eq("logs.date", today),
-      ]);
-
-      if (membersRes.data && goalsRes.data) {
-        const formattedMembers = membersRes.data.map((m: any) => ({
-          user_id: m.user_id,
-          full_name: m.profiles?.full_name || "Unknown",
-          goals: goalsRes.data
-            .filter((g: any) => g.user_id === m.user_id)
-            .map((g: any) => ({ ...g, completed_today: g.logs.length > 0 })),
-        }));
-        const lastDate = myGroup.last_streak_date;
-        const streakNotUpdatedToday = lastDate !== today;
-        const myData = formattedMembers.find((m: any) => m.user_id === userId);
-        const iHaveContributed = myData?.goals.some(
-          (g: any) => g.completed_today,
-        );
-
-        setIsWaiting(!!(streakNotUpdatedToday && iHaveContributed));
-        setMembers(formattedMembers);
-      }
-
-      if (!forceRefresh) setLoading(false);
-    },
-    [userId],
-  );
-
-  const toggleGoal = async (goal: Goal) => {
-    if (!userId) return;
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    const today = new Date().toISOString().split("T")[0];
-
-    // Determine the new state (Flip the current state)
-    const isNowCompleted = !goal.completed_today;
-
-    // 1. Optimistic Update (Update UI instantly)
-    setMembers((current) =>
-      current.map((m) => {
-        if (m.user_id !== userId) return m;
-        return {
-          ...m,
-          goals: m.goals.map((g) =>
-            g.id === goal.id ? { ...g, completed_today: isNowCompleted } : g,
-          ),
-        };
-      }),
-    );
-
-    // 2. Database Action
-    if (isNowCompleted) {
-      await supabase.from("logs").insert({
-        goal_id: goal.id,
-        user_id: userId,
-        date: today,
-      });
-    } else {
-      await supabase
-        .from("logs")
-        .delete()
-        .eq("goal_id", goal.id)
-        .eq("user_id", userId)
-        .eq("date", today);
-    }
-
-    // 3. Silent Refresh (Recalculate streak/waiting status)
-    await fetchData(true);
+  const toggleGoal = (goal: Goal) => {
+    toggleMutation.mutate(goal);
   };
 
   const addGoal = async (title: string) => {
-    if (!title.trim() || !userId || !activeGroupId) return;
-    const { data, error } = await supabase
-      .from("goals")
-      .insert({ title: title.trim(), user_id: userId, group_id: activeGroupId })
-      .select()
-      .single();
-
-    if (error) Alert.alert("Error", error.message);
-    else {
-      // Optimistic add
-      setMembers((current) =>
-        current.map((m) => {
-          if (m.user_id !== userId) return m;
-          return {
-            ...m,
-            goals: [...m.goals, { ...data, completed_today: false }],
-          };
-        }),
-      );
-    }
+    if (!activeGroupId) return;
+    addMutation.mutate({ title, groupId: activeGroupId });
   };
 
   const deleteGoal = async (goalId: string) => {
-    if (!goalId || !userId || !activeGroupId) return;
-    const { data, error } = await supabase
-      .from("goals")
-      .delete()
-      .eq("id", goalId)
-      .eq("user_id", userId)
-      .select()
-      .single();
-
-    if (error) {
-      Alert.alert("Error", error.message);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      console.warn("Delete failed: No matching rows found or RLS blocked it.");
-      Alert.alert(
-        "Error",
-        "Could not delete this goal. You might not have permission.",
-      );
-      return;
-    }
-
-    setMembers((current) =>
-      current.map((m) => {
-        if (m.user_id !== userId) return m;
-        return {
-          ...m,
-          goals: m.goals.filter((g) => g.id !== goalId),
-        };
-      }),
-    );
-
-    await fetchData(true);
+    if (!activeGroupId) return;
+    deleteMutation.mutate({ goalId, groupId: activeGroupId });
   };
 
-  const editGoal = async (goalId: string, newTitle: string) => {
-    if (!goalId || goalId === "undefined") {
-      console.error("Update aborted: goalId is missing.");
-      return;
-    }
-    if (newTitle === undefined || newTitle.trim() === "") {
-      Alert.alert("Error", "Habit name cannot be empty");
-      return;
-    }
-    if (!newTitle.trim() || !userId) return;
-
-    // 1. Optimistic Update
-    setMembers((current) =>
-      current.map((m) => {
-        if (m.user_id !== userId) return m;
-        return {
-          ...m,
-          goals: m.goals.map((g) =>
-            g.id === goalId ? { ...g, title: newTitle.trim() } : g,
-          ),
-        };
-      }),
-    );
-    console.log("Goal ID being sent:", goalId);
-    // 2. Database Update
-    const { error } = await supabase
-      .from("goals")
-      .update({ title: newTitle.trim() })
-      .eq("id", goalId)
-      .eq("user_id", userId);
-
-    if (error) {
-      Alert.alert("Error", "Could not update habit");
-      console.log(error);
-      fetchData(true); // Rollback on error
-    }
+  const editGoal = (goalId: string, newTitle: string) => {
+    if (!activeGroupId) return;
+    editMutation.mutate({ goalId, newTitle, groupId: activeGroupId });
   };
 
+  // Redirect if no group
   useEffect(() => {
-    if (userId) {
-      fetchData();
+    if (groupStats.isFetched && !groupStats.data) {
+      router.replace("/(protected)/join-group");
     }
-  }, [userId, fetchData]);
+  }, [groupStats.isFetched, groupStats.data, router]);
 
   return {
     userId,

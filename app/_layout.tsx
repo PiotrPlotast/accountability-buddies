@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
@@ -13,11 +14,15 @@ SplashScreen.setOptions({
 
 SplashScreen.preventAutoHideAsync();
 
+const queryClient = new QueryClient();
+
 export default function RootLayout() {
   return (
-    <SupabaseProvider>
-      <RootNavigator />
-    </SupabaseProvider>
+    <QueryClientProvider client={queryClient}>
+      <SupabaseProvider>
+        <RootNavigator />
+      </SupabaseProvider>
+    </QueryClientProvider>
   );
 }
 
