@@ -5,24 +5,23 @@ import Reanimated, {
   SharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardActions } from "@/hooks/useDashboardActions";
 
 type Props = {
-  goals: Goal[];
-  isViewingMe: boolean;
-  isLoading: boolean;
-  onToggle: (goal: Goal) => void;
+  selectedTabId: string | null;
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
 };
 
-export default function GoalList({
-  goals,
-  isViewingMe,
-  isLoading,
-  onToggle,
-  onEdit,
-  onDelete,
-}: Props) {
+export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
+  const { members, loading, userId, activeGroupId } = useDashboardData();
+  const { toggleGoal } = useDashboardActions(activeGroupId);
+
+  const currentMember = members.find((m) => m.user_id === selectedTabId);
+  const goals = currentMember?.goals || [];
+  const isViewingMe = selectedTabId === userId;
+  const isLoading = loading || (members.length > 0 && !currentMember);
   function RightAction(
     prog: SharedValue<number>,
     drag: SharedValue<number>,
@@ -166,7 +165,7 @@ export default function GoalList({
             <TouchableOpacity
               key={goal.id}
               disabled={!isViewingMe}
-              onPress={() => onToggle(goal)}
+              onPress={() => toggleGoal(goal)}
               style={{
                 padding: 20, // p-5
                 borderRadius: 12, // rounded-xl

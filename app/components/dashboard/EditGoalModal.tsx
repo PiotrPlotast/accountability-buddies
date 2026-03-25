@@ -10,20 +10,18 @@ import {
   Platform,
 } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
+import { useDashboardActions } from "@/hooks/useDashboardActions";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 type Props = {
   goal: Goal | null;
   isVisible: boolean;
   onClose: () => void;
-  onSave: (title: string) => void;
 };
 
-export default function EditGoalModal({
-  goal,
-  isVisible,
-  onClose,
-  onSave,
-}: Props) {
+export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
+  const { activeGroupId } = useDashboardData();
+  const { editGoal } = useDashboardActions(activeGroupId);
   const [title, setTitle] = useState("");
 
   // Update internal text when the goal changes
@@ -55,7 +53,12 @@ export default function EditGoalModal({
 
             <TouchableOpacity
               style={styles.saveBtn}
-              onPress={() => onSave(title)}
+              onPress={async () => {
+                if (goal?.id) {
+                  await editGoal(goal.id, title);
+                  onClose();
+                }
+              }}
             >
               <Text style={styles.saveText}>Save Changes</Text>
             </TouchableOpacity>

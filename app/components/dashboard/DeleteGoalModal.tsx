@@ -8,20 +8,18 @@ import {
   Platform,
 } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
+import { useDashboardActions } from "@/hooks/useDashboardActions";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 type Props = {
   goal: Goal | null;
   isVisible: boolean;
   onClose: () => void;
-  onDelete: (goalId: string) => void;
 };
 
-export default function DeleteGoalModal({
-  goal,
-  isVisible,
-  onClose,
-  onDelete,
-}: Props) {
+export default function DeleteGoalModal({ goal, isVisible, onClose }: Props) {
+  const { activeGroupId } = useDashboardData();
+  const { deleteGoal } = useDashboardActions(activeGroupId);
   return (
     <Modal visible={isVisible} animationType="fade" transparent={true}>
       <KeyboardAvoidingView
@@ -37,7 +35,12 @@ export default function DeleteGoalModal({
 
             <TouchableOpacity
               style={styles.saveBtn}
-              onPress={() => goal && onDelete(goal.id)}
+              onPress={async () => {
+                if (goal?.id) {
+                  await deleteGoal(goal.id);
+                  onClose();
+                }
+              }}
             >
               <Text style={styles.saveText}>Delete Habit</Text>
             </TouchableOpacity>
