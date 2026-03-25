@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   Keyboard,
 } from "react-native";
+import { useDashboardActions } from "@/hooks/useDashboardActions";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
-type Props = {
-  onAdd: (title: string) => Promise<void>;
-};
-
-export default function AddGoalInput({ onAdd }: Props) {
+export default function AddGoalInput() {
+  const { activeGroupId } = useDashboardData();
+  const { addGoal } = useDashboardActions(activeGroupId);
   const [title, setTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -20,7 +20,7 @@ export default function AddGoalInput({ onAdd }: Props) {
 
     setIsSubmitting(true);
 
-    await onAdd(title);
+    await addGoal(title);
 
     setTitle("");
     setIsSubmitting(false);

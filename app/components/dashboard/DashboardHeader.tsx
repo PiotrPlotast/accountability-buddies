@@ -1,19 +1,12 @@
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardStatus } from "@/hooks/useDashboardStatus";
 
-type Props = {
-  groupName: string;
-  streak: number;
-  inviteCode: string;
-  isWaiting: boolean;
-};
+export default function DashboardHeader() {
+  const { groupName, streak, inviteCode, userId } = useDashboardData();
+  const { isWaiting } = useDashboardStatus(userId);
 
-export default function DashboardHeader({
-  groupName,
-  streak,
-  inviteCode,
-  isWaiting,
-}: Props) {
   const handleCopy = async () => {
     await Clipboard.setStringAsync(inviteCode);
     Alert.alert("Copied!", `Code ${inviteCode} copied.`);
