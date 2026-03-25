@@ -6,7 +6,26 @@ export type Goal = {
   group_id: string;
 };
 
-export type Member = { user_id: string; full_name: string; goals: Goal[] };
+// Raw Supabase row from `goals` query with nested `logs` relation
+export type GoalRow = {
+  id: string;
+  title: string;
+  user_id: string;
+  group_id: string;
+  logs: { id: string }[];
+};
+
+// Raw Supabase row from `group_members` query
+export type GroupMemberRow = {
+  user_id: string;
+  profiles: { full_name: string } | null;
+};
+
+export type Member = {
+  user_id: string;
+  full_name: string;
+  goals: Goal[];
+};
 
 export type GroupResult = {
   group_id: string;

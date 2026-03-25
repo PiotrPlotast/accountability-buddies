@@ -65,10 +65,7 @@ export default function Dashboard() {
       <ScrollView
         className="flex-1 max-h-[550px] p-4"
         refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={() => fetchData(true)}
-          />
+          <RefreshControl refreshing={loading} onRefresh={() => fetchData()} />
         }
         keyboardShouldPersistTaps="handled"
       >
