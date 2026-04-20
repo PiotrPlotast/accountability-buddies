@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useGroupStats } from "@/hooks/useGroupStats";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
+import { getTodayLocalDate } from "@/lib/date";
 
 export function useDashboardStatus(userId: string | undefined) {
   const groupStats = useGroupStats();
@@ -10,7 +11,7 @@ export function useDashboardStatus(userId: string | undefined) {
 
   const isWaiting = useMemo(() => {
     if (!groupStats.data || !groupMembers.data) return false;
-    const today = new Date().toLocaleDateString("en-CA");
+    const today = getTodayLocalDate();
     const lastDate = groupStats.data.last_streak_date;
     const streakNotUpdatedToday = lastDate !== today;
     const myData = groupMembers.data.find((m) => m.user_id === userId);

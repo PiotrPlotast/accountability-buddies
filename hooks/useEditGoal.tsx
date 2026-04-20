@@ -1,7 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSupabase } from "@/hooks/useSupabase";
-import { Alert } from "react-native";
-import { Member } from "@/types/dashboardTypes";
+import { useOptimisticGoalMutation } from "@/lib/useOptimisticGoalMutation";
 
 interface EditGoalParams {
   goalId: string;
@@ -10,14 +7,9 @@ interface EditGoalParams {
 }
 
 export function useEditGoal() {
-  const { supabase, session } = useSupabase();
-  const userId = session?.user.id;
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ goalId, newTitle, groupId }: EditGoalParams) => {
-      if (!goalId || !newTitle.trim() || !userId)
-        throw new Error("Invalid params");
+  return useOptimisticGoalMutation<EditGoalParams, void>({
+    mutationFn: async ({ goalId, newTitle }, { supabase, userId }) => {
+      if (!goalId || !newTitle.trim()) throw new Error("Invalid params");
 
       const { error } = await supabase
         .from("goals")
@@ -27,29 +19,12 @@ export function useEditGoal() {
 
       if (error) throw error;
     },
-    onMutate: async ({ goalId, newTitle, groupId }: EditGoalParams) => {
-      // Optimistic update
-      queryClient.setQueryData<Member[]>(["groupMembers", groupId], (old) => {
-        if (!old) return old;
-        return old.map((m) => {
-          if (m.user_id !== userId) return m;
-          return {
-            ...m,
-            goals: m.goals.map((g) =>
-              g.id === goalId ? { ...g, title: newTitle.trim() } : g,
-            ),
-          };
-        });
-      });
-    },
-    onError: (error: unknown, { groupId }) => {
-      const message = error instanceof Error ? error.message : String(error);
-      Alert.alert("Error", message);
-      // Rollback
-      queryClient.invalidateQueries({ queryKey: ["groupMembers", groupId] });
-    },
-    onSettled: (_data, _error, _variables) => {
-      queryClient.invalidateQueries({ queryKey: ["groupMembers"] });
-    },
+    getGroupId: ({ groupId }) => groupId,
+    getPatch:
+      ({ goalId, newTitle }) =>
+      (goals) =>
+        goals.map((g) =>
+          g.id === goalId ? { ...g, title: newTitle.trim() } : g,
+        ),
   });
 }

@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSupabase } from "@/hooks/useSupabase";
 import { GroupResult } from "@/types/dashboardTypes";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useGroupStats() {
   const { supabase, session } = useSupabase();
   const userId = session?.user.id;
 
   return useQuery({
-    queryKey: ["groupStats", userId],
+    queryKey: queryKeys.groupStats(userId),
     queryFn: async (): Promise<GroupResult | null> => {
       if (!userId) return null;
 

@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSupabase } from "@/hooks/useSupabase";
 import { Member, GroupMemberRow, GoalRow } from "@/types/dashboardTypes";
+import { getTodayLocalDate } from "@/lib/date";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface UseGroupMembersProps {
   groupId: string | null;
@@ -10,19 +12,19 @@ export function useGroupMembers({ groupId }: UseGroupMembersProps) {
   const { supabase } = useSupabase();
 
   return useQuery({
-    queryKey: ["groupMembers", groupId],
+    queryKey: queryKeys.groupMembers(groupId),
     queryFn: async (): Promise<Member[]> => {
       if (!groupId) return [];
 
-      const today = new Date().toLocaleDateString("en-CA");
+      const today = getTodayLocalDate();
 
       const [membersRes, goalsRes] = await Promise.all([
         supabase
-          .from<GroupMemberRow>("group_members")
+          .from("group_members")
           .select("user_id, profiles(full_name)")
           .eq("group_id", groupId),
         supabase
-          .from<GoalRow>("goals")
+          .from("goals")
           .select("id,user_id,title,group_id,logs(id)")
           .eq("group_id", groupId)
           .eq("logs.date", today),
