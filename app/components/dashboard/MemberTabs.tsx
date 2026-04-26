@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { Text, Pressable, ScrollView } from "react-native";
 import { Member } from "@/types/dashboardTypes";
 
 type Props = {
@@ -15,20 +15,40 @@ export default function MemberTabs({
   userId,
 }: Props) {
   return (
-    <View className="flex-row border-b border-gray-100">
-      {members.map((member) => (
-        <TouchableOpacity
-          key={member.user_id}
-          onPress={() => onSelect(member.user_id)}
-          className={`flex-1 p-4 items-center border-b-2 ${member.user_id === selectedTabId ? "border-indigo-600" : "border-transparent"}`}
-        >
-          <Text
-            className={`font-bold ${member.user_id === selectedTabId ? "text-indigo-600" : "text-gray-400"}`}
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
+      className="py-2"
+    >
+      {members.map((member) => {
+        const isActive = member.user_id === selectedTabId;
+        const isMe = member.user_id === userId;
+        const label = isMe ? "You" : member.full_name.split(" ")[0];
+        const done = member.goals.filter((g) => g.completed_today).length;
+        const total = member.goals.length;
+
+        return (
+          <Pressable
+            key={member.user_id}
+            onPress={() => onSelect(member.user_id)}
+            className={`px-4 h-11 rounded-pill flex-row items-center gap-2 ${
+              isActive ? "bg-neon" : "bg-surface border border-border"
+            }`}
           >
-            {member.user_id === userId ? "YOU" : member.full_name.split(" ")[0]}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+            <Text
+              className={`font-mono-medium text-sm ${isActive ? "text-bg" : "text-text"}`}
+            >
+              {label}
+            </Text>
+            <Text
+              className={`font-mono text-xs ${isActive ? "text-bg" : "text-text-muted"}`}
+            >
+              {done}/{total}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
   );
 }

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSupabase } from "@/hooks/useSupabase";
-import { Member, GroupMemberRow, GoalRow } from "@/types/dashboardTypes";
+import { Member } from "@/types/dashboardTypes";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -25,20 +25,23 @@ export function useGroupMembers({ groupId }: UseGroupMembersProps) {
           .eq("group_id", groupId),
         supabase
           .from("goals")
-          .select("id,user_id,title,group_id,logs(id)")
+          .select("id,user_id,title,group_id,icon,repeat_days,logs(id)")
           .eq("group_id", groupId)
           .eq("logs.date", today),
       ]);
 
       if (!membersRes.data || !goalsRes.data) return [];
 
-      const formattedMembers: Member[] = membersRes.data.map((m) => ({
-        user_id: m.user_id,
-        full_name: m.profiles?.full_name || "Unknown",
-        goals: goalsRes.data
-          .filter((g) => g.user_id === m.user_id)
-          .map((g) => ({ ...g, completed_today: g.logs.length > 0 })),
-      }));
+      const formattedMembers: Member[] = membersRes.data.map((m) => {
+        const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+        return {
+          user_id: m.user_id,
+          full_name: profile?.full_name || "Unknown",
+          goals: goalsRes.data
+            .filter((g) => g.user_id === m.user_id)
+            .map((g) => ({ ...g, completed_today: g.logs.length > 0 })),
+        };
+      });
 
       return formattedMembers;
     },

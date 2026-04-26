@@ -16,59 +16,63 @@ export default function Dashboard() {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null);
 
-  // Set default tab once members load
   useEffect(() => {
     if (members.length > 0 && !selectedTabId) {
       setSelectedTabId(userId || members[0].user_id);
     }
   }, [members, userId, selectedTabId]);
 
-  if (!userId) return <View />;
+  if (!userId) return <View className="flex-1 bg-bg" />;
 
-  const currentMember = members.find((m) => m.user_id === selectedTabId);
   const isViewingMe = selectedTabId === userId;
+  const currentMember = members.find((m) => m.user_id === selectedTabId);
 
   return (
-    <View className="flex-1 w-full bg-slate-50">
-      <DashboardHeader />
-
-      <MemberTabs
-        members={members}
-        selectedTabId={selectedTabId || ""}
-        onSelect={setSelectedTabId}
-        userId={userId}
-      />
-
+    <View className="flex-1 w-full bg-bg">
       <ScrollView
-        className="flex-1 p-4"
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={() => fetchData()} />
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={() => fetchData()}
+            tintColor="#C6F94A"
+          />
         }
         keyboardShouldPersistTaps="handled"
       >
-        {isViewingMe && <AddGoalInput />}
-
-        <GoalList
-          selectedTabId={selectedTabId}
-          onEdit={setEditingGoal}
-          onDelete={setDeletingGoal}
+        <DashboardHeader />
+        <MemberTabs
+          members={members}
+          selectedTabId={selectedTabId || ""}
+          onSelect={setSelectedTabId}
+          userId={userId}
         />
-        <EditGoalModal
-          goal={editingGoal}
-          isVisible={!!editingGoal}
-          onClose={() => setEditingGoal(null)}
-        />
-        <DeleteGoalModal
-          goal={deletingGoal}
-          isVisible={!!deletingGoal}
-          onClose={() => setDeletingGoal(null)}
-        />
-        {currentMember?.goals.length === 0 && (
-          <Text className="text-center text-gray-300 mt-10 italic">
-            No habits yet.
-          </Text>
-        )}
+        <View className="px-5 mt-3">
+          {isViewingMe && <AddGoalInput />}
+          <GoalList
+            selectedTabId={selectedTabId}
+            onEdit={setEditingGoal}
+            onDelete={setDeletingGoal}
+          />
+          {currentMember?.goals.length === 0 && !isViewingMe && (
+            <Text className="text-center text-text-dim font-mono mt-10">
+              No habits yet.
+            </Text>
+          )}
+        </View>
       </ScrollView>
+
+      <EditGoalModal
+        goal={editingGoal}
+        isVisible={!!editingGoal}
+        onClose={() => setEditingGoal(null)}
+      />
+      <DeleteGoalModal
+        goal={deletingGoal}
+        isVisible={!!deletingGoal}
+        onClose={() => setDeletingGoal(null)}
+      />
     </View>
   );
 }

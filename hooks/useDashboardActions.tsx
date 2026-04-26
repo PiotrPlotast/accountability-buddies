@@ -14,9 +14,17 @@ export function useDashboardActions(activeGroupId: string | null) {
     toggleMutation.mutate(goal);
   };
 
-  const addGoal = async (title: string) => {
+  const addGoal = async (
+    title: string,
+    opts?: { icon?: string | null; repeatDays?: number[] },
+  ) => {
     if (!activeGroupId) return;
-    await addMutation.mutateAsync({ title, groupId: activeGroupId });
+    await addMutation.mutateAsync({
+      title,
+      groupId: activeGroupId,
+      icon: opts?.icon ?? null,
+      repeatDays: opts?.repeatDays,
+    });
   };
 
   const deleteGoal = async (goalId: string) => {

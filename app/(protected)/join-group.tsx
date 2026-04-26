@@ -1,13 +1,15 @@
+import "../../global.css";
 import { useState } from "react";
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Alert,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSupabase } from "@/hooks/useSupabase";
 
 export default function JoinGroupScreen() {
@@ -17,24 +19,22 @@ export default function JoinGroupScreen() {
   const [code, setCode] = useState("");
   const [groupName, setGroupName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"JOIN" | "CREATE">("JOIN"); // Toggle between forms
+  const [mode, setMode] = useState<"JOIN" | "CREATE">("JOIN");
 
   const handleJoin = async () => {
     if (!code) return Alert.alert("Error", "Please enter a code");
     setLoading(true);
 
-    // Call the SQL function we wrote earlier
     const { data, error } = await supabase.rpc("join_group_via_code", {
       code_input: code.trim(),
     });
 
     setLoading(false);
 
-    if (error || !data.success) {
+    if (error || !data?.success) {
       Alert.alert("Failed", data?.message || error?.message || "Invalid code");
     } else {
-      Alert.alert("Success!", "You have joined the squad.");
-      router.replace("/(tabs)"); // Go back to Dashboard
+      router.replace("/");
     }
   };
 
@@ -45,13 +45,9 @@ export default function JoinGroupScreen() {
     const userId = session?.user.id;
     if (!userId) return;
 
-    // 1. Create the Group
     const { data: groupData, error: groupError } = await supabase
       .from("groups")
-      .insert({
-        name: groupName,
-        creator_id: userId,
-      })
+      .insert({ name: groupName, creator_id: userId })
       .select()
       .single();
 
@@ -60,7 +56,6 @@ export default function JoinGroupScreen() {
       return Alert.alert("Error", groupError.message);
     }
 
-    // 2. Add MYSELF as the first member
     const { error: memberError } = await supabase.from("group_members").insert({
       group_id: groupData.id,
       user_id: userId,
@@ -71,77 +66,85 @@ export default function JoinGroupScreen() {
     if (memberError) {
       Alert.alert("Error", "Group created but joining failed.");
     } else {
-      Alert.alert("Success", `Group "${groupName}" created!`);
-      router.replace("/(tabs)");
+      router.replace("/");
     }
   };
 
+  const isJoin = mode === "JOIN";
+
   return (
-    <View className="flex-1 bg-white p-6 justify-center">
-      <Text className="text-3xl font-extrabold text-slate-800 text-center mb-2">
-        {mode === "JOIN" ? "Join a Squad" : "Start a Squad"}
-      </Text>
-      <Text className="text-gray-400 text-center mb-10">
-        {mode === "JOIN"
-          ? "Enter the invite code shared by your friend."
-          : "Create a new group and invite your friends."}
-      </Text>
-
-      {/* FORM INPUTS */}
-      {mode === "JOIN" ? (
-        <View className="gap-4">
-          <TextInput
-            placeholder="e.g. A8X-992"
-            value={code}
-            onChangeText={setCode}
-            autoCapitalize="characters"
-            className="bg-gray-50 border border-gray-200 p-5 rounded-xl text-center text-2xl font-bold tracking-widest"
-          />
-          <TouchableOpacity
-            onPress={handleJoin}
-            disabled={loading}
-            className="bg-indigo-600 p-4 rounded-xl items-center shadow-lg shadow-indigo-200"
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white font-bold text-lg">Join Group</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View className="gap-4">
-          <TextInput
-            placeholder="Group Name (e.g. Swole Mates)"
-            value={groupName}
-            onChangeText={setGroupName}
-            className="bg-gray-50 border border-gray-200 p-5 rounded-xl text-lg"
-          />
-          <TouchableOpacity
-            onPress={handleCreate}
-            disabled={loading}
-            className="bg-slate-900 p-4 rounded-xl items-center shadow-lg"
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white font-bold text-lg">Create Group</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* TOGGLE SWITCH */}
-      <TouchableOpacity
-        onPress={() => setMode(mode === "JOIN" ? "CREATE" : "JOIN")}
-        className="mt-6 p-4"
-      >
-        <Text className="text-indigo-600 text-center font-semibold">
-          {mode === "JOIN"
-            ? "No code? Create a new group"
-            : "Have a code? Join instead"}
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0B0B0C" }}>
+      <View className="flex-1 px-6 justify-center">
+        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
+          Step 01 / 01
         </Text>
-      </TouchableOpacity>
-    </View>
+        <Text
+          className="text-text font-mono-bold"
+          style={{ fontSize: 32, lineHeight: 36 }}
+        >
+          {isJoin ? "Join a crew." : "Start a crew."}
+        </Text>
+        <Text className="text-text-muted font-mono text-sm mt-3">
+          {isJoin
+            ? "Paste the invite code your buddy shared."
+            : "Name your group. You can invite people after."}
+        </Text>
+
+        <View className="mt-8 gap-3">
+          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
+            {isJoin ? "Invite code" : "Group name"}
+          </Text>
+          {isJoin ? (
+            <View className="border-2 border-neon rounded-tile px-4 h-16 justify-center bg-bg">
+              <TextInput
+                value={code}
+                onChangeText={setCode}
+                autoCapitalize="characters"
+                placeholder="A8X-992"
+                placeholderTextColor="#6B7280"
+                className="text-text text-2xl text-center tracking-widest"
+                style={{ fontFamily: "GeistMono_700Bold" }}
+              />
+            </View>
+          ) : (
+            <View className="border-2 border-neon rounded-tile px-4 h-14 justify-center bg-bg">
+              <TextInput
+                value={groupName}
+                onChangeText={setGroupName}
+                placeholder="Swole Mates"
+                placeholderTextColor="#6B7280"
+                className="text-text text-base"
+                style={{ fontFamily: "GeistMono_400Regular" }}
+              />
+            </View>
+          )}
+
+          <Pressable
+            onPress={isJoin ? handleJoin : handleCreate}
+            disabled={loading}
+            className="h-14 rounded-tile items-center justify-center bg-neon mt-2"
+          >
+            {loading ? (
+              <ActivityIndicator color="#0B0B0C" />
+            ) : (
+              <Text className="text-bg font-mono-bold">
+                {isJoin ? "Join group" : "Create group"}
+              </Text>
+            )}
+          </Pressable>
+        </View>
+
+        <Pressable
+          onPress={() => setMode(isJoin ? "CREATE" : "JOIN")}
+          className="mt-8 items-center"
+        >
+          <Text className="text-neon font-mono-medium text-sm">
+            {isJoin
+              ? "No code? Create a new group"
+              : "Have a code? Join instead"}
+          </Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }

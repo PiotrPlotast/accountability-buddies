@@ -4,6 +4,8 @@ export type Goal = {
   user_id: string;
   completed_today: boolean;
   group_id: string;
+  icon: string | null;
+  repeat_days: number[];
 };
 
 // Raw Supabase row from `goals` query with nested `logs` relation
@@ -12,6 +14,8 @@ export type GoalRow = {
   title: string;
   user_id: string;
   group_id: string;
+  icon: string | null;
+  repeat_days: number[];
   logs: { id: string }[];
 };
 
@@ -25,6 +29,11 @@ export type Member = {
   user_id: string;
   full_name: string;
   goals: Goal[];
+};
+
+export type ProfileRow = {
+  nickname: string | null;
+  avatar_url: string | null;
 };
 
 export type GroupResult = {

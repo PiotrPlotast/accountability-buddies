@@ -3,4 +3,5 @@ export const queryKeys = {
   groupStatsAll: () => ["groupStats"] as const,
   groupMembers: (groupId: string | null) => ["groupMembers", groupId] as const,
   groupMembersAll: () => ["groupMembers"] as const,
+  profile: (userId: string | undefined) => ["profile", userId] as const,
 };

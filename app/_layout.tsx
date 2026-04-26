@@ -3,6 +3,12 @@ import { useEffect } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  useFonts,
+  GeistMono_400Regular,
+  GeistMono_500Medium,
+  GeistMono_700Bold,
+} from "@expo-google-fonts/geist-mono";
 
 import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
@@ -17,6 +23,14 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    GeistMono_400Regular,
+    GeistMono_500Medium,
+    GeistMono_700Bold,
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
     <QueryClientProvider client={queryClient}>
       <SupabaseProvider>
@@ -42,6 +56,7 @@ function RootNavigator() {
         gestureEnabled: false,
         animation: "none",
         animationDuration: 0,
+        contentStyle: { backgroundColor: "#0B0B0C" },
       }}
     >
       <Stack.Protected guard={!!session}>

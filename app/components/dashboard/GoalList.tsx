@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
@@ -22,25 +22,20 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
   const goals = currentMember?.goals || [];
   const isViewingMe = selectedTabId === userId;
   const isLoading = loading || (members.length > 0 && !currentMember);
+
   function RightAction(
     prog: SharedValue<number>,
     drag: SharedValue<number>,
     goal: Goal,
   ) {
-    const styleAnimation = useAnimatedStyle(() => {
-      return {
-        transform: [{ translateX: drag.value + 50 }],
-      };
-    });
-
+    const styleAnimation = useAnimatedStyle(() => ({
+      transform: [{ translateX: drag.value + 56 }],
+    }));
     return (
       <Reanimated.View style={styleAnimation}>
-        <TouchableOpacity
-          style={styles.rightAction}
-          onPress={() => onDelete(goal)}
-        >
-          <Text>🗑️</Text>
-        </TouchableOpacity>
+        <Pressable style={styles.rightAction} onPress={() => onDelete(goal)}>
+          <Text style={{ fontSize: 18 }}>🗑️</Text>
+        </Pressable>
       </Reanimated.View>
     );
   }
@@ -50,23 +45,18 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
     drag: SharedValue<number>,
     goal: Goal,
   ) {
-    const styleAnimation = useAnimatedStyle(() => {
-      return {
-        transform: [{ translateX: drag.value - 50 }],
-      };
-    });
-
+    const styleAnimation = useAnimatedStyle(() => ({
+      transform: [{ translateX: drag.value - 56 }],
+    }));
     return (
       <Reanimated.View style={styleAnimation}>
-        <TouchableOpacity
-          style={styles.leftAction}
-          onPress={() => onEdit(goal)}
-        >
-          <Text>✏️</Text>
-        </TouchableOpacity>
+        <Pressable style={styles.leftAction} onPress={() => onEdit(goal)}>
+          <Text style={{ fontSize: 18 }}>✏️</Text>
+        </Pressable>
       </Reanimated.View>
     );
   }
+
   if (isLoading) {
     return (
       <View style={{ gap: 12 }}>
@@ -74,12 +64,10 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
           <View
             key={i}
             style={{
-              height: 64, // h-16
-              backgroundColor: "#f3f4f6", // bg-gray-100
-              borderRadius: 12, // rounded-xl
-              borderWidth: 1,
-              borderColor: "transparent",
-              opacity: 0.5,
+              height: 72,
+              backgroundColor: "#151517",
+              borderRadius: 14,
+              opacity: 0.6,
             }}
           />
         ))}
@@ -89,62 +77,20 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
 
   if (goals.length === 0) {
     return (
-      <View
-        style={{
-          marginTop: 40, // mt-10
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24, // p-6
-          backgroundColor: "#f9fafb", // bg-gray-50
-          borderRadius: 12, // rounded-xl
-          borderWidth: 1,
-          borderStyle: "dashed",
-          borderColor: "#e5e7eb", // border-gray-200
-        }}
-      >
-        <Text
-          style={{
-            color: "#9ca3af", // text-gray-400
-            fontStyle: "italic",
-            textAlign: "center",
-          }}
-        >
+      <View className="mt-6 p-6 bg-surface border border-border rounded-tile items-center">
+        <Text className="text-text-muted font-mono text-sm text-center">
           {isViewingMe
-            ? "No habits yet. Add one above! 👆"
-            : "They haven't added any habits yet. 😴"}
+            ? "No habits yet. Tap + to add one."
+            : "Nothing here yet."}
         </Text>
       </View>
     );
   }
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={{ gap: 10 }}>
       {goals.map((goal) => {
-        const isCompleted = goal.completed_today;
-
-        const containerStyle = isCompleted
-          ? isViewingMe
-            ? { backgroundColor: "#f0fdf4", borderColor: "#22c55e" } // bg-green-50 border-green-500
-            : { backgroundColor: "#eef2ff", borderColor: "#c7d2fe" } // bg-indigo-50 border-indigo-200
-          : {
-              backgroundColor: "#ffffff", // bg-white
-              borderColor: "#e2e8f0", // border-slate-200
-              // shadow-sm implementation:
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 2,
-              elevation: 2,
-            };
-
-        const textColor = isCompleted
-          ? isViewingMe
-            ? "#166534" // text-green-800
-            : "#3730a3" // text-indigo-800
-          : isViewingMe
-            ? "#1e293b" // text-slate-800
-            : "#9ca3af"; // text-gray-400
-
+        const done = goal.completed_today;
         return (
           <Swipeable
             key={goal.id}
@@ -162,36 +108,48 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
             overshootLeft={false}
             friction={2}
           >
-            <TouchableOpacity
-              key={goal.id}
+            <Pressable
               disabled={!isViewingMe}
               onPress={() => toggleGoal(goal)}
-              style={{
-                padding: 20, // p-5
-                borderRadius: 12, // rounded-xl
-                borderWidth: 1,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                ...containerStyle,
-              }}
+              className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center"
             >
-              <Text
-                style={{
-                  fontSize: 18, // text-lg
-                  fontWeight: "500", // font-medium
-                  color: textColor,
-                }}
+              <View
+                className={`w-10 h-10 rounded-tile items-center justify-center mr-3 ${
+                  done ? "bg-neon" : "bg-bg border border-border"
+                }`}
               >
-                {goal.title}
-              </Text>
+                {done ? (
+                  <Text className="text-bg font-mono-bold text-base">✓</Text>
+                ) : goal.icon ? (
+                  <Text style={{ fontSize: 18 }}>{goal.icon}</Text>
+                ) : null}
+              </View>
 
-              {isCompleted && (
-                <Text style={{ fontSize: 20 }}>
-                  {isViewingMe ? "✅" : "🔥"}
+              <View className="flex-1">
+                <Text
+                  className={`font-mono-medium text-base ${
+                    done ? "text-text-dim" : "text-text"
+                  }`}
+                  style={
+                    done ? { textDecorationLine: "line-through" } : undefined
+                  }
+                >
+                  {goal.title}
                 </Text>
-              )}
-            </TouchableOpacity>
+                <View className="flex-row items-center gap-1 mt-2">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <View
+                      key={i}
+                      className={`w-1.5 h-1.5 rounded-pill ${
+                        done && i === 6 ? "bg-neon" : "bg-border"
+                      }`}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {done ? <Text style={{ fontSize: 16 }}>🔥</Text> : null}
+            </Pressable>
           </Swipeable>
         );
       })}
@@ -203,19 +161,13 @@ const styles = StyleSheet.create({
   rightAction: {
     padding: 20,
     transform: [{ translateX: 16 }],
-    backgroundColor: "red",
-    borderRadius: 12,
-    fontSize: 18, // text-lg
+    backgroundColor: "#EF4444",
+    borderRadius: 14,
   },
   leftAction: {
     padding: 20,
     transform: [{ translateX: -16 }],
-    backgroundColor: "pink",
-    borderRadius: 12,
-    fontSize: 18, // text-lg
-  },
-  separator: {
-    width: "100%",
-    borderTopWidth: 1,
+    backgroundColor: "#FACC15",
+    borderRadius: 14,
   },
 });
