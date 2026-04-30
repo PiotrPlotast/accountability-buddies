@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, ScrollView, RefreshControl, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import EditGoalModal from "./EditGoalModal";
 import DeleteGoalModal from "./DeleteGoalModal";
@@ -15,7 +16,7 @@ export default function Dashboard() {
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null);
-
+  const insets = useSafeAreaInsets();
   useEffect(() => {
     if (members.length > 0 && !selectedTabId) {
       setSelectedTabId(userId || members[0].user_id);
@@ -31,7 +32,7 @@ export default function Dashboard() {
     <View className="flex-1 w-full bg-bg">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         refreshControl={
           <RefreshControl
             refreshing={loading}
