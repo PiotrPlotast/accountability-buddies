@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
@@ -7,6 +7,10 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
+import { useTheme } from "@/hooks/useTheme";
+
+const ACTION_WIDTH = 72;
+const ACTION_GAP = 8;
 
 type Props = {
   selectedTabId: string | null;
@@ -17,6 +21,7 @@ type Props = {
 export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
   const { members, loading, userId, activeGroupId } = useDashboardData();
   const { toggleGoal } = useDashboardActions(activeGroupId);
+  const { accent } = useTheme();
 
   const currentMember = members.find((m) => m.user_id === selectedTabId);
   const goals = currentMember?.goals || [];
@@ -24,34 +29,48 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
   const isLoading = loading || (members.length > 0 && !currentMember);
 
   function RightAction(
-    prog: SharedValue<number>,
+    _prog: SharedValue<number>,
     drag: SharedValue<number>,
     goal: Goal,
   ) {
     const styleAnimation = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value + 56 }],
+      transform: [{ translateX: drag.value + ACTION_WIDTH + ACTION_GAP }],
     }));
     return (
       <Reanimated.View style={styleAnimation}>
-        <Pressable style={styles.rightAction} onPress={() => onDelete(goal)}>
+        <Pressable
+          onPress={() => onDelete(goal)}
+          style={{ width: ACTION_WIDTH, marginLeft: ACTION_GAP }}
+          className="h-[72px] rounded-tile bg-danger items-center justify-center"
+        >
           <Text style={{ fontSize: 18 }}>🗑️</Text>
+          <Text className="text-text font-mono-medium uppercase text-[10px] tracking-widest mt-1">
+            Delete
+          </Text>
         </Pressable>
       </Reanimated.View>
     );
   }
 
   function LeftAction(
-    prog: SharedValue<number>,
+    _prog: SharedValue<number>,
     drag: SharedValue<number>,
     goal: Goal,
   ) {
     const styleAnimation = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value - 56 }],
+      transform: [{ translateX: drag.value - ACTION_WIDTH - ACTION_GAP }],
     }));
     return (
       <Reanimated.View style={styleAnimation}>
-        <Pressable style={styles.leftAction} onPress={() => onEdit(goal)}>
+        <Pressable
+          onPress={() => onEdit(goal)}
+          style={{ width: ACTION_WIDTH, marginRight: ACTION_GAP }}
+          className="h-[72px] rounded-tile bg-warning items-center justify-center"
+        >
           <Text style={{ fontSize: 18 }}>✏️</Text>
+          <Text className="text-bg font-mono-medium uppercase text-[10px] tracking-widest mt-1">
+            Edit
+          </Text>
         </Pressable>
       </Reanimated.View>
     );
@@ -115,8 +134,9 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
             >
               <View
                 className={`w-10 h-10 rounded-tile items-center justify-center mr-3 ${
-                  done ? "bg-neon" : "bg-bg border border-border"
+                  done ? "" : "bg-bg border border-border"
                 }`}
+                style={done ? { backgroundColor: accent.hex } : undefined}
               >
                 {done ? (
                   <Text className="text-bg font-mono-bold text-base">✓</Text>
@@ -137,14 +157,18 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
                   {goal.title}
                 </Text>
                 <View className="flex-row items-center gap-1 mt-2">
-                  {Array.from({ length: 7 }).map((_, i) => (
-                    <View
-                      key={i}
-                      className={`w-1.5 h-1.5 rounded-pill ${
-                        done && i === 6 ? "bg-neon" : "bg-border"
-                      }`}
-                    />
-                  ))}
+                  {Array.from({ length: 7 }).map((_, i) => {
+                    const lit = done && i === 6;
+                    return (
+                      <View
+                        key={i}
+                        className={`w-1.5 h-1.5 rounded-pill ${lit ? "" : "bg-border"}`}
+                        style={
+                          lit ? { backgroundColor: accent.hex } : undefined
+                        }
+                      />
+                    );
+                  })}
                 </View>
               </View>
 
@@ -156,18 +180,3 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  rightAction: {
-    padding: 20,
-    transform: [{ translateX: 16 }],
-    backgroundColor: "#EF4444",
-    borderRadius: 14,
-  },
-  leftAction: {
-    padding: 20,
-    transform: [{ translateX: -16 }],
-    backgroundColor: "#FACC15",
-    borderRadius: 14,
-  },
-});

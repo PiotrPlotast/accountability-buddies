@@ -16,6 +16,7 @@ export function useDashboardData() {
 
   const loading = groupStats.isLoading || groupMembers.isLoading;
   const groupName = groupStats.data?.name || "Loading...";
+  const groupIcon = groupStats.data?.icon || "👥";
   const streak = groupStats.data?.current_streak || 0;
   const inviteCode = groupStats.data?.invite_code || "";
   const activeGroupId = groupStats.data?.group_id || null;
@@ -36,6 +37,7 @@ export function useDashboardData() {
     userId,
     loading,
     groupName,
+    groupIcon,
     streak,
     inviteCode,
     members,

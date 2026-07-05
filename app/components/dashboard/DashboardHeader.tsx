@@ -1,10 +1,15 @@
 import { View, Text, Pressable, Alert } from "react-native";
+import { useRouter, type Href } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useTheme } from "@/hooks/useTheme";
 import ProgressRing from "./ProgressRing";
 
 export default function DashboardHeader() {
-  const { groupName, streak, inviteCode, members, userId } = useDashboardData();
+  const { groupName, groupIcon, streak, inviteCode, members, userId } =
+    useDashboardData();
+  const { accent } = useTheme();
+  const router = useRouter();
   const me = members.find((m) => m.user_id === userId);
   const myGoals = me?.goals ?? [];
   const done = myGoals.filter((g) => g.completed_today).length;
@@ -23,16 +28,32 @@ export default function DashboardHeader() {
     <View className="px-5 pt-2 pb-4">
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-3">
-          <View className="w-8 h-8 rounded-tile bg-neon items-center justify-center">
-            <Text style={{ fontSize: 16 }}>🪵</Text>
+          <View
+            className="w-8 h-8 rounded-tile items-center justify-center"
+            style={{ backgroundColor: accent.hex }}
+          >
+            <Text style={{ fontSize: 16 }}>{groupIcon}</Text>
           </View>
           <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
             Group · {peopleCount} {peopleCount === 1 ? "person" : "people"}
           </Text>
         </View>
-        <View className="bg-surface border border-border px-3 h-8 rounded-pill flex-row items-center gap-1">
-          <Text style={{ fontSize: 12 }}>🔥</Text>
-          <Text className="text-text font-mono-medium text-sm">{streak}d</Text>
+        <View className="flex-row items-center gap-2">
+          <Pressable
+            onPress={() => router.push("/group-settings" as Href)}
+            hitSlop={8}
+            className="w-8 h-8 rounded-pill bg-surface border border-border items-center justify-center"
+          >
+            <Text className="text-text-muted" style={{ fontSize: 14 }}>
+              ⚙
+            </Text>
+          </Pressable>
+          <View className="bg-surface border border-border px-3 h-8 rounded-pill flex-row items-center gap-1">
+            <Text style={{ fontSize: 12 }}>🔥</Text>
+            <Text className="text-text font-mono-medium text-sm">
+              {streak}d
+            </Text>
+          </View>
         </View>
       </View>
 

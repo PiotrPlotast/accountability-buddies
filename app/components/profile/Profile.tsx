@@ -2,6 +2,7 @@ import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { Image } from "expo-image";
 
 import { useProfileData } from "@/hooks/useProfileData";
+import { useTheme } from "@/hooks/useTheme";
 import Heatmap from "./Heatmap";
 
 const AVATAR_BLURHASH =
@@ -25,6 +26,7 @@ export default function Profile() {
     groupMemberCount,
     signOut,
   } = useProfileData();
+  const { accent } = useTheme();
 
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
@@ -70,7 +72,10 @@ export default function Profile() {
       </View>
 
       <View className="px-5 mt-4 flex-row items-center gap-4">
-        <View className="w-20 h-20 rounded-tile bg-neon items-center justify-center overflow-hidden">
+        <View
+          className="w-20 h-20 rounded-tile items-center justify-center overflow-hidden"
+          style={{ backgroundColor: accent.hex }}
+        >
           {avatarUrl ? (
             <Image
               style={{ width: "100%", height: "100%" }}
@@ -98,9 +103,9 @@ export default function Profile() {
       </View>
 
       <View className="px-5 mt-6 flex-row gap-3">
-        <Stat value={String(groupStreak)} label="Streak" />
-        <Stat value={String(checkinsToday)} label="Checkins" />
-        <Stat value={String(groupsCount)} label="Groups" />
+        <Stat value={String(groupStreak)} label="Streak" color={accent.hex} />
+        <Stat value={String(checkinsToday)} label="Checkins" color={accent.hex} />
+        <Stat value={String(groupsCount)} label="Groups" color={accent.hex} />
       </View>
 
       <View className="px-5 mt-8">
@@ -145,10 +150,18 @@ export default function Profile() {
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+function Stat({
+  value,
+  label,
+  color,
+}: {
+  value: string;
+  label: string;
+  color: string;
+}) {
   return (
     <View className="flex-1 bg-surface border border-border rounded-tile px-4 py-4">
-      <Text className="text-neon font-mono-bold" style={{ fontSize: 28 }}>
+      <Text className="font-mono-bold" style={{ fontSize: 28, color }}>
         {value}
       </Text>
       <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-1">

@@ -12,6 +12,7 @@ import {
 
 import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 SplashScreen.setOptions({
   duration: 500,
@@ -34,7 +35,9 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <SupabaseProvider>
-        <RootNavigator />
+        <ThemeProvider>
+          <RootNavigator />
+        </ThemeProvider>
       </SupabaseProvider>
     </QueryClientProvider>
   );

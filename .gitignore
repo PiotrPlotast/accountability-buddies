@@ -42,3 +42,5 @@ ios/
 
 # android
 android/
+
+coverage/

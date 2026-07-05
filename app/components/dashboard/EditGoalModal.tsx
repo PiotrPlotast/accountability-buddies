@@ -11,6 +11,7 @@ import {
 import { Goal } from "@/types/dashboardTypes";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useTheme } from "@/hooks/useTheme";
 
 type Props = {
   goal: Goal | null;
@@ -21,6 +22,7 @@ type Props = {
 export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
   const { activeGroupId } = useDashboardData();
   const { editGoal } = useDashboardActions(activeGroupId);
+  const { accent } = useTheme();
   const [title, setTitle] = useState("");
 
   useEffect(() => {
@@ -61,7 +63,8 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
               <Text className="text-text-muted font-mono-medium">Cancel</Text>
             </Pressable>
             <Pressable
-              className="flex-1 h-12 rounded-tile items-center justify-center bg-neon"
+              className="flex-1 h-12 rounded-tile items-center justify-center"
+              style={{ backgroundColor: accent.hex }}
               onPress={async () => {
                 if (goal?.id) {
                   await editGoal(goal.id, title);

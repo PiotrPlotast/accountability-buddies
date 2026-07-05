@@ -1,4 +1,5 @@
 import { View } from "react-native";
+import { useTheme } from "@/hooks/useTheme";
 
 const WEEKS = 13;
 const DAYS = 7;
@@ -12,13 +13,14 @@ function intensityFor(index: number, seed: number): number {
   return 3;
 }
 
-const SHADES = ["#1E1E21", "#3A5F10", "#6E9E22", "#C6F94A"];
-
 type Props = {
   seed?: number;
 };
 
 export default function Heatmap({ seed = 7 }: Props) {
+  const { accent } = useTheme();
+  const SHADES = accent.shades;
+
   return (
     <View style={{ gap: 4 }}>
       {Array.from({ length: DAYS }).map((_, row) => (

@@ -14,6 +14,10 @@ export default function ProtectedLayout() {
           name="new-habit"
           options={{ headerShown: false, presentation: "modal" }}
         />
+        <Stack.Screen
+          name="group-settings"
+          options={{ headerShown: false, presentation: "modal" }}
+        />
       </Stack>
     </GestureHandlerRootView>
   );

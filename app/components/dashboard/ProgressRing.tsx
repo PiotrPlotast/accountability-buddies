@@ -1,5 +1,6 @@
 import { View, Text } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { useTheme } from "@/hooks/useTheme";
 
 type Props = {
   size?: number;
@@ -12,6 +13,7 @@ export default function ProgressRing({
   stroke = 6,
   progress,
 }: Props) {
+  const { accent } = useTheme();
   const clamped = Math.max(0, Math.min(1, progress));
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -32,7 +34,7 @@ export default function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#C6F94A"
+          stroke={accent.hex}
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={circumference}

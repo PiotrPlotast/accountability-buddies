@@ -1,5 +1,6 @@
 import { Text, Pressable, ScrollView } from "react-native";
 import { Member } from "@/types/dashboardTypes";
+import { useTheme } from "@/hooks/useTheme";
 
 type Props = {
   members: Member[];
@@ -14,6 +15,7 @@ export default function MemberTabs({
   onSelect,
   userId,
 }: Props) {
+  const { accent } = useTheme();
   return (
     <ScrollView
       horizontal
@@ -33,8 +35,9 @@ export default function MemberTabs({
             key={member.user_id}
             onPress={() => onSelect(member.user_id)}
             className={`px-4 h-11 rounded-pill flex-row items-center gap-2 ${
-              isActive ? "bg-neon" : "bg-surface border border-border"
+              isActive ? "" : "bg-surface border border-border"
             }`}
+            style={isActive ? { backgroundColor: accent.hex } : undefined}
           >
             <Text
               className={`font-mono-medium text-sm ${isActive ? "text-bg" : "text-text"}`}

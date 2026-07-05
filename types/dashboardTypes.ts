@@ -39,6 +39,7 @@ export type ProfileRow = {
 export type GroupResult = {
   group_id: string;
   name: string;
+  icon: string;
   current_streak: number;
   invite_code: string;
   last_streak_date: string | null;

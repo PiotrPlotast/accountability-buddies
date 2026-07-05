@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { View, ScrollView, RefreshControl, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useTheme } from "@/hooks/useTheme";
 import EditGoalModal from "./EditGoalModal";
 import DeleteGoalModal from "./DeleteGoalModal";
 import DashboardHeader from "./DashboardHeader";
@@ -12,6 +13,7 @@ import { Goal } from "@/types/dashboardTypes";
 
 export default function Dashboard() {
   const { userId, loading, members, fetchData } = useDashboardData();
+  const { accent } = useTheme();
 
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -37,7 +39,7 @@ export default function Dashboard() {
           <RefreshControl
             refreshing={loading}
             onRefresh={() => fetchData()}
-            tintColor="#C6F94A"
+            tintColor={accent.hex}
           />
         }
         keyboardShouldPersistTaps="handled"
