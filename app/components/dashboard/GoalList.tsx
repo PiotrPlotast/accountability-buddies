@@ -41,7 +41,7 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
         <Pressable
           onPress={() => onDelete(goal)}
           style={{ width: ACTION_WIDTH, marginLeft: ACTION_GAP }}
-          className="h-[72px] rounded-tile bg-danger items-center justify-center"
+          className="px-4 py-4 rounded-tile bg-danger items-center justify-center"
         >
           <Text style={{ fontSize: 18 }}>🗑️</Text>
           <Text className="text-text font-mono-medium uppercase text-[10px] tracking-widest mt-1">
@@ -65,7 +65,7 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
         <Pressable
           onPress={() => onEdit(goal)}
           style={{ width: ACTION_WIDTH, marginRight: ACTION_GAP }}
-          className="h-[72px] rounded-tile bg-warning items-center justify-center"
+          className="px-4 py-4 rounded-tile bg-warning items-center justify-center"
         >
           <Text style={{ fontSize: 18 }}>✏️</Text>
           <Text className="text-bg font-mono-medium uppercase text-[10px] tracking-widest mt-1">
