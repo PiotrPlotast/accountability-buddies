@@ -20,8 +20,8 @@ export default function Page() {
             <Text className="text-neon">tiny crew.</Text>
           </Text>
           <Text className="text-text-muted font-mono text-base mt-4">
-            Two to six people. Shared streaks. Zero guilt trips. Just a friend
-            checking in.
+            Stay accountable with your closest friends. Share streaks, ditch the
+            guilt, and check in on your own terms.
           </Text>
         </View>
 
