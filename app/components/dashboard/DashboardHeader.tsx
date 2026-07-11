@@ -1,13 +1,11 @@
-import { View, Text, Pressable, Alert } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { useRouter, type Href } from "expo-router";
-import * as Clipboard from "expo-clipboard";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useTheme } from "@/hooks/useTheme";
 import ProgressRing from "./ProgressRing";
 
 export default function DashboardHeader() {
-  const { groupName, groupIcon, streak, inviteCode, members, userId } =
-    useDashboardData();
+  const { groupName, groupIcon, streak, members, userId } = useDashboardData();
   const { accent } = useTheme();
   const router = useRouter();
   const me = members.find((m) => m.user_id === userId);
@@ -15,12 +13,6 @@ export default function DashboardHeader() {
   const done = myGoals.filter((g) => g.completed_today).length;
   const total = myGoals.length;
   const progress = total > 0 ? done / total : 0;
-
-  const handleCopy = async () => {
-    if (!inviteCode) return;
-    await Clipboard.setStringAsync(inviteCode);
-    Alert.alert("Copied", `Invite code ${inviteCode} copied.`);
-  };
 
   const peopleCount = members.length;
 
@@ -63,24 +55,6 @@ export default function DashboardHeader() {
       >
         {groupName}
       </Text>
-
-      {inviteCode ? (
-        <Pressable
-          onPress={handleCopy}
-          hitSlop={8}
-          className="flex-row items-center gap-2 mt-3 self-start"
-        >
-          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
-            Invite
-          </Text>
-          <Text className="text-text font-mono-medium text-sm">
-            {inviteCode}
-          </Text>
-          <Text className="text-text-dim" style={{ fontSize: 12 }}>
-            ⧉
-          </Text>
-        </Pressable>
-      ) : null}
 
       <View className="mt-5 bg-surface border border-border rounded-tile px-5 py-4 flex-row items-center justify-between">
         <View>
