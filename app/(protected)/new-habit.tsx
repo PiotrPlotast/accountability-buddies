@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
+import { useTheme } from "@/hooks/useTheme";
 
 const ICON_CHOICES = ["🧘", "📚", "💧", "🏃", "🎸", "✍️", "🥗", "💤"];
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -21,6 +22,7 @@ export default function NewHabitScreen() {
   const router = useRouter();
   const { activeGroupId } = useDashboardData();
   const { addGoal } = useDashboardActions(activeGroupId);
+  const { accent } = useTheme();
 
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState<string | null>("🧘");
@@ -48,7 +50,7 @@ export default function NewHabitScreen() {
 
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center justify-between px-5 h-14">
+      <View className="flex-row items-center px-5 h-14">
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
@@ -57,18 +59,6 @@ export default function NewHabitScreen() {
           <Text className="text-text font-mono-medium text-2xl">‹</Text>
         </Pressable>
         <Text className="text-text font-mono-medium text-base">New habit</Text>
-        <Pressable
-          onPress={handleSave}
-          disabled={!canSave}
-          hitSlop={12}
-          className="w-14 items-end justify-center"
-        >
-          <Text
-            className={`font-mono-medium text-base ${canSave ? "text-neon" : "text-text-dim"}`}
-          >
-            {submitting ? "..." : "Save"}
-          </Text>
-        </Pressable>
       </View>
 
       <ScrollView
@@ -78,7 +68,10 @@ export default function NewHabitScreen() {
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
           Habit name
         </Text>
-        <View className="border-2 border-neon rounded-tile px-4 h-14 justify-center bg-bg">
+        <View
+          style={{ borderColor: accent.hex }}
+          className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
+        >
           <TextInput
             value={title}
             onChangeText={setTitle}
@@ -100,6 +93,7 @@ export default function NewHabitScreen() {
               <Pressable
                 key={emoji}
                 onPress={() => setIcon(emoji)}
+                style={selected ? { backgroundColor: accent.hex } : undefined}
                 className={`w-14 h-14 rounded-tile items-center justify-center ${
                   selected ? "bg-neon" : "bg-surface border border-border"
                 }`}
@@ -120,9 +114,15 @@ export default function NewHabitScreen() {
               <Pressable
                 key={idx}
                 onPress={() => toggleDay(idx)}
-                className={`flex-1 h-12 rounded-tile items-center justify-center ${
-                  selected ? "bg-neon" : "bg-surface border border-border"
-                }`}
+                style={
+                  selected
+                    ? { backgroundColor: accent.hex }
+                    : {
+                        backgroundColor: "bg-surface",
+                        borderColor: "border border-border",
+                      }
+                }
+                className={`flex-1 h-12 rounded-tile items-center justify-center`}
               >
                 <Text
                   className={`font-mono-medium ${selected ? "text-bg" : "text-text-muted"}`}
@@ -142,7 +142,8 @@ export default function NewHabitScreen() {
         <Pressable
           onPress={handleSave}
           disabled={!canSave}
-          className={`h-14 rounded-tile items-center justify-center ${canSave ? "bg-neon" : "bg-surface"}`}
+          style={{ backgroundColor: canSave ? accent.hex : "bg-surface" }}
+          className={`h-14 rounded-tile items-center justify-center`}
         >
           {submitting ? (
             <ActivityIndicator color="#0B0B0C" />
