@@ -19,7 +19,7 @@ Built with Expo (React Native) and Supabase.
 ### Prerequisites
 
 - Node 20+ and npm
-- Xcode (iOS) and/or Android Studio (Android) — Expo Go is **not** supported because the project depends on `expo-dev-client`
+- Xcode (iOS) and/or Android Studio (Android), Expo go
 - A Supabase project with the schema described under [Backend](#backend)
 
 ### Install
