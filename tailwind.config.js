@@ -5,9 +5,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        bg: "#0B0B0C",
-        surface: "#151517",
-        "surface-2": "#1E1E21",
+        bg: "#18181B",
+        surface: "#27272A",
+        "surface-2": "#3F3F46",
         border: "#2A2A2E",
         neon: "#C6F94A",
         "neon-dim": "#8FB732",
