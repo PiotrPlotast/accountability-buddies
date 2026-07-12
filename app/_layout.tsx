@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-
+import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -13,7 +13,7 @@ import {
 import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
-
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 SplashScreen.setOptions({
   duration: 500,
   fade: true,
@@ -39,6 +39,7 @@ export default function RootLayout() {
           <RootNavigator />
         </ThemeProvider>
       </SupabaseProvider>
+      {Platform.OS === "web" && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }
