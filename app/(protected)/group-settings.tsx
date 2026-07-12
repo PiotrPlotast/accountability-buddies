@@ -1,5 +1,5 @@
 import "../../global.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -55,10 +55,19 @@ export default function GroupSettingsScreen() {
   const [name, setName] = useState(groupName === "Loading..." ? "" : groupName);
   const [icon, setIcon] = useState(groupIcon);
 
+  useEffect(() => {
+    setIcon(groupIcon);
+  }, [groupIcon]);
+
+  useEffect(() => {
+    if (groupName !== "Loading...") {
+      setName(groupName);
+    }
+  }, [groupName]);
+
   const trimmedName = name.trim();
   const dirty =
-    (trimmedName.length > 0 && trimmedName !== groupName) ||
-    icon !== groupIcon;
+    (trimmedName.length > 0 && trimmedName !== groupName) || icon !== groupIcon;
   const canSave = !!activeGroupId && dirty && !updateGroup.isPending;
 
   const handleSave = async () => {
@@ -155,9 +164,7 @@ export default function GroupSettingsScreen() {
                 className={`w-14 h-14 rounded-tile items-center justify-center ${
                   selected ? "" : "bg-surface border border-border"
                 }`}
-                style={
-                  selected ? { backgroundColor: accent.hex } : undefined
-                }
+                style={selected ? { backgroundColor: accent.hex } : undefined}
               >
                 <Text style={{ fontSize: 24 }}>{emoji}</Text>
               </Pressable>
