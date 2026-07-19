@@ -1,6 +1,6 @@
 import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { Image } from "expo-image";
-
+import { useSupabase } from "@/hooks/useSupabase";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
 import Heatmap from "./Heatmap";
@@ -27,7 +27,8 @@ export default function Profile() {
     signOut,
   } = useProfileData();
   const { accent } = useTheme();
-
+  const { session } = useSupabase();
+  const userId = session?.user.id;
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
   const displayName = nickname || "You";
@@ -104,16 +105,20 @@ export default function Profile() {
 
       <View className="px-5 mt-6 flex-row gap-3">
         <Stat value={String(groupStreak)} label="Streak" color={accent.hex} />
-        <Stat value={String(checkinsToday)} label="Checkins" color={accent.hex} />
+        <Stat
+          value={String(checkinsToday)}
+          label="Checkins"
+          color={accent.hex}
+        />
         <Stat value={String(groupsCount)} label="Groups" color={accent.hex} />
       </View>
 
       <View className="px-5 mt-8">
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-          Heatmap / 90 days
+          Heatmap / Last 12 weeks
         </Text>
         <View className="bg-surface border border-border rounded-tile p-4">
-          <Heatmap />
+          <Heatmap userId={userId} />
         </View>
       </View>
 
