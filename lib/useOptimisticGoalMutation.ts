@@ -23,9 +23,13 @@ interface Options<TVars, TData> {
   getPatch: (vars: TVars) => PatchMyGoals;
   beforeOptimistic?: (vars: TVars) => void | Promise<void>;
   invalidateStatsOnSettle?: boolean;
+  getHeatmapDelta?: (vars: TVars) => number;
 }
 
-type RollbackContext = { previousMembers: Member[] | undefined };
+type RollbackContext = {
+  previousMembers: Member[] | undefined;
+  previousHeatmap: Record<string, number> | undefined;
+};
 
 export function useOptimisticGoalMutation<TVars, TData = unknown>(
   opts: Options<TVars, TData>,
@@ -45,7 +49,7 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
       const key = queryKeys.groupMembers(opts.getGroupId(vars));
       await queryClient.cancelQueries({ queryKey: key });
       const previousMembers = queryClient.getQueryData<Member[]>(key);
-
+      let previousHeatmap: Record<string, number> | undefined;
       if (!userId) return { previousMembers };
 
       const patch = opts.getPatch(vars);
@@ -56,22 +60,48 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
         );
       });
 
-      return { previousMembers };
+      if (opts.getHeatmapDelta) {
+        const heatmapKey = ["heatmap", userId];
+        await queryClient.cancelQueries({ queryKey: heatmapKey });
+        previousHeatmap =
+          queryClient.getQueryData<Record<string, number>>(heatmapKey);
+        const delta = opts.getHeatmapDelta(vars);
+        const today = new Date().toLocaleDateString("en-CA");
+
+        queryClient.setQueryData<Record<string, number>>(heatmapKey, (old) => {
+          const current = old || {};
+          const currentCount = current[today] || 0;
+          return {
+            ...current,
+            [today]: Math.max(0, currentCount + delta), // max(0) chroni przed ujemnym wynikiem
+          };
+        });
+      }
+
+      return { previousMembers, previousHeatmap };
     },
+
     onError: (error, vars, context) => {
       const key = queryKeys.groupMembers(opts.getGroupId(vars));
       if (context?.previousMembers) {
         queryClient.setQueryData(key, context.previousMembers);
       }
+      if (context?.previousHeatmap && userId) {
+        queryClient.setQueryData(["heatmap", userId], context.previousHeatmap);
+      }
       const message = error instanceof Error ? error.message : String(error);
       Alert.alert("Error", message);
     },
+
     onSettled: (_data, _error, vars) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.groupMembers(opts.getGroupId(vars)),
       });
       if (opts.invalidateStatsOnSettle) {
         queryClient.invalidateQueries({ queryKey: queryKeys.groupStatsAll() });
+      }
+      if (opts.getHeatmapDelta && userId) {
+        queryClient.invalidateQueries({ queryKey: ["heatmap", userId] });
       }
     },
   });

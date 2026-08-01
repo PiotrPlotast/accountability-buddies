@@ -146,7 +146,7 @@ export default function NewHabitScreen() {
           className={`h-14 rounded-tile items-center justify-center`}
         >
           {submitting ? (
-            <ActivityIndicator color="#0B0B0C" />
+            <ActivityIndicator color="#18181B" />
           ) : (
             <Text
               className={`font-mono-bold text-base ${canSave ? "text-bg" : "text-text-dim"}`}

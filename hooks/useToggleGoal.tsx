@@ -35,5 +35,6 @@ export function useToggleGoal() {
     beforeOptimistic: () =>
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
     invalidateStatsOnSettle: true,
+    getHeatmapDelta: (goal) => (!goal.completed_today ? 1 : -1),
   });
 }
