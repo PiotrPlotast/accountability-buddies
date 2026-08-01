@@ -1,7 +1,7 @@
 import "../../global.css";
 import { useState } from "react";
 import { Text, TextInput, Pressable, View, ScrollView } from "react-native";
-
+import { themeColors } from "@/lib/colors";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -26,7 +26,7 @@ export default function Page() {
   const canSubmit = !!email && !!password;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0B0B0C" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
         <Text
           className="text-text font-mono-bold"

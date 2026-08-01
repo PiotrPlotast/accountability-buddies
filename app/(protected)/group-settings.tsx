@@ -235,11 +235,11 @@ export default function GroupSettingsScreen() {
           style={{ backgroundColor: canSave ? accent.hex : "#151517" }}
         >
           {updateGroup.isPending ? (
-            <ActivityIndicator color="#0B0B0C" />
+            <ActivityIndicator color="#18181B" />
           ) : (
             <Text
               className="font-mono-bold text-base"
-              style={{ color: canSave ? "#0B0B0C" : "#6B7280" }}
+              style={{ color: canSave ? "#18181B" : "#6B7280" }}
             >
               Save changes
             </Text>

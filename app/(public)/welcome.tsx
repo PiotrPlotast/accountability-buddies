@@ -1,12 +1,12 @@
 import "../../global.css";
 import { Text, Pressable, View } from "react-native";
-
+import { themeColors } from "@/lib/colors";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Page() {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0B0B0C" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <View className="flex-1 px-6 justify-between pb-6">
         <View className="mt-10">
           <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-4">

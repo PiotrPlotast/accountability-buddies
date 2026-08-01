@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, useIsRestoring } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { StatusBar } from "expo-status-bar";
+import { themeColors } from "@/lib/colors";
 import {
   useFonts,
   GeistMono_400Regular,
@@ -53,6 +55,11 @@ export default function RootLayout() {
       client={queryClient}
       persistOptions={{ persister: asyncStoragePersister }}
     >
+      <StatusBar
+        style="light"
+        translucent={true}
+        backgroundColor="transparent"
+      />
       <SupabaseProvider>
         <ThemeProvider>
           <RootNavigator />
@@ -65,12 +72,19 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { isLoaded, session } = useSupabase();
-
+  const isRestoring = useIsRestoring();
+  const isAppReady = isLoaded && !isRestoring;
   useEffect(() => {
-    if (isLoaded) {
-      SplashScreen.hide();
+    if (isAppReady) {
+      setTimeout(() => {
+        SplashScreen.hideAsync();
+      }, 50);
     }
-  }, [isLoaded]);
+  }, [isAppReady]);
+
+  if (!isAppReady) {
+    return null;
+  }
 
   return (
     <Stack
@@ -79,7 +93,7 @@ function RootNavigator() {
         gestureEnabled: false,
         animation: "none",
         animationDuration: 0,
-        contentStyle: { backgroundColor: "#0B0B0C" },
+        contentStyle: { backgroundColor: themeColors.background },
       }}
     >
       <Stack.Protected guard={!!session}>

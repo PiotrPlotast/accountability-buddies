@@ -11,7 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSupabase } from "@/hooks/useSupabase";
-
+import { themeColors } from "@/lib/colors";
 export default function JoinGroupScreen() {
   const { supabase, session } = useSupabase();
   const router = useRouter();
@@ -73,7 +73,7 @@ export default function JoinGroupScreen() {
   const isJoin = mode === "JOIN";
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0B0B0C" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <View className="flex-1 px-6 justify-center">
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
           Step 01 / 01
@@ -125,7 +125,7 @@ export default function JoinGroupScreen() {
             className="h-14 rounded-tile items-center justify-center bg-neon mt-2"
           >
             {loading ? (
-              <ActivityIndicator color="#0B0B0C" />
+              <ActivityIndicator color="#18181B" />
             ) : (
               <Text className="text-bg font-mono-bold">
                 {isJoin ? "Join group" : "Create group"}
