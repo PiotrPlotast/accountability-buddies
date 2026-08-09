@@ -27,8 +27,13 @@ export default function MemberTabs({
         const isActive = member.user_id === selectedTabId;
         const isMe = member.user_id === userId;
         const label = isMe ? "You" : member.full_name.split(" ")[0];
-        const done = member.goals.filter((g) => g.completed_today).length;
-        const total = member.goals.length;
+        const todayJs = new Date().getDay();
+        const todayGoals = member.goals.filter((goal) => {
+          if (!goal.repeat_days || goal.repeat_days.length === 0) return true;
+          return goal.repeat_days.includes(todayJs);
+        });
+        const done = todayGoals.filter((g) => g.completed_today).length;
+        const total = todayGoals.length;
 
         return (
           <Pressable
