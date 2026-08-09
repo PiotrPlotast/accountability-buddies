@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { View, ScrollView, RefreshControl, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -10,7 +10,7 @@ import MemberTabs from "./MemberTabs";
 import AddGoalInput from "./AddGoalInput";
 import GoalList from "./GoalList";
 import { Goal } from "@/types/dashboardTypes";
-
+import HabitManagerModal from "./HabitsManagerModal";
 export default function Dashboard() {
   const { userId, loading, members, fetchData } = useDashboardData();
   const { accent } = useTheme();
@@ -19,16 +19,28 @@ export default function Dashboard() {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null);
   const insets = useSafeAreaInsets();
+  const [isHabitManagerVisible, setIsHabitManagerVisible] = useState(false);
   useEffect(() => {
     if (members.length > 0 && !selectedTabId) {
       setSelectedTabId(userId || members[0].user_id);
     }
   }, [members, userId, selectedTabId]);
-
-  if (!userId) return <View className="flex-1 bg-bg" />;
-
   const isViewingMe = selectedTabId === userId;
   const currentMember = members.find((m) => m.user_id === selectedTabId);
+
+  const todayGoals = useMemo(() => {
+    if (!currentMember?.goals) return [];
+
+    const todayJs = new Date().getDay();
+    const currentDayIndex = todayJs;
+
+    return currentMember.goals.filter((goal) => {
+      if (!goal.repeat_days || goal.repeat_days.length === 0) return true;
+      return goal.repeat_days.includes(currentDayIndex);
+    });
+  }, [currentMember?.goals]);
+
+  if (!userId) return <View className="flex-1 bg-bg" />;
 
   return (
     <View className="flex-1 w-full bg-bg">
@@ -44,7 +56,10 @@ export default function Dashboard() {
         }
         keyboardShouldPersistTaps="handled"
       >
-        <DashboardHeader />
+        <DashboardHeader
+          todayGoals={todayGoals}
+          onOpenHabitManager={() => setIsHabitManagerVisible(true)}
+        />
         <MemberTabs
           members={members}
           selectedTabId={selectedTabId || ""}
@@ -53,14 +68,17 @@ export default function Dashboard() {
         />
         <View className="px-5 mt-3">
           {isViewingMe && <AddGoalInput />}
+
           <GoalList
             selectedTabId={selectedTabId}
+            goals={todayGoals}
             onEdit={setEditingGoal}
             onDelete={setDeletingGoal}
           />
-          {currentMember?.goals.length === 0 && !isViewingMe && (
+
+          {todayGoals.length === 0 && !isViewingMe && (
             <Text className="text-center text-text-dim font-mono mt-10">
-              No habits yet.
+              No habits scheduled for today.
             </Text>
           )}
         </View>
@@ -75,6 +93,14 @@ export default function Dashboard() {
         goal={deletingGoal}
         isVisible={!!deletingGoal}
         onClose={() => setDeletingGoal(null)}
+      />
+      <HabitManagerModal
+        isVisible={isHabitManagerVisible}
+        onClose={() => setIsHabitManagerVisible(false)}
+        goals={currentMember?.goals || []}
+        isViewingMe={isViewingMe}
+        onEdit={setEditingGoal}
+        onDelete={setDeletingGoal}
       />
     </View>
   );

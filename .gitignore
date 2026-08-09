@@ -44,3 +44,6 @@ ios/
 android/
 
 coverage/
+
+#kilo
+.kilo

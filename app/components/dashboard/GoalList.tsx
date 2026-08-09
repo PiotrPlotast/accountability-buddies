@@ -14,67 +14,70 @@ const ACTION_GAP = 8;
 
 type Props = {
   selectedTabId: string | null;
+  goals: Goal[];
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
 };
 
-export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
+type ActionProps = {
+  drag: SharedValue<number>;
+  goal: Goal;
+  onAction: (goal: Goal) => void;
+};
+
+function RightActionComponent({ drag, goal, onAction }: ActionProps) {
+  const styleAnimation = useAnimatedStyle(() => ({
+    transform: [{ translateX: drag.value + ACTION_WIDTH + ACTION_GAP }],
+  }));
+  return (
+    <Reanimated.View style={styleAnimation}>
+      <Pressable
+        onPress={() => onAction(goal)}
+        style={{ width: ACTION_WIDTH, marginLeft: ACTION_GAP }}
+        className="px-4 py-4 rounded-tile bg-danger items-center justify-center"
+      >
+        <Text style={{ fontSize: 18 }}>🗑️</Text>
+        <Text className="text-text font-mono-medium uppercase text-[10px] tracking-widest mt-1">
+          Delete
+        </Text>
+      </Pressable>
+    </Reanimated.View>
+  );
+}
+
+function LeftActionComponent({ drag, goal, onAction }: ActionProps) {
+  const styleAnimation = useAnimatedStyle(() => ({
+    transform: [{ translateX: drag.value - ACTION_WIDTH - ACTION_GAP }],
+  }));
+  return (
+    <Reanimated.View style={styleAnimation}>
+      <Pressable
+        onPress={() => onAction(goal)}
+        style={{ width: ACTION_WIDTH, marginRight: ACTION_GAP }}
+        className="px-4 py-4 rounded-tile bg-warning items-center justify-center"
+      >
+        <Text style={{ fontSize: 18 }}>✏️</Text>
+        <Text className="text-bg font-mono-medium uppercase text-[10px] tracking-widest mt-1">
+          Edit
+        </Text>
+      </Pressable>
+    </Reanimated.View>
+  );
+}
+
+export default function GoalList({
+  selectedTabId,
+  goals,
+  onEdit,
+  onDelete,
+}: Props) {
   const { members, loading, userId, activeGroupId } = useDashboardData();
   const { toggleGoal } = useDashboardActions(activeGroupId);
   const { accent } = useTheme();
 
   const currentMember = members.find((m) => m.user_id === selectedTabId);
-  const goals = currentMember?.goals || [];
   const isViewingMe = selectedTabId === userId;
   const isLoading = loading || (members.length > 0 && !currentMember);
-
-  function RightAction(
-    _prog: SharedValue<number>,
-    drag: SharedValue<number>,
-    goal: Goal,
-  ) {
-    const styleAnimation = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value + ACTION_WIDTH + ACTION_GAP }],
-    }));
-    return (
-      <Reanimated.View style={styleAnimation}>
-        <Pressable
-          onPress={() => onDelete(goal)}
-          style={{ width: ACTION_WIDTH, marginLeft: ACTION_GAP }}
-          className="px-4 py-4 rounded-tile bg-danger items-center justify-center"
-        >
-          <Text style={{ fontSize: 18 }}>🗑️</Text>
-          <Text className="text-text font-mono-medium uppercase text-[10px] tracking-widest mt-1">
-            Delete
-          </Text>
-        </Pressable>
-      </Reanimated.View>
-    );
-  }
-
-  function LeftAction(
-    _prog: SharedValue<number>,
-    drag: SharedValue<number>,
-    goal: Goal,
-  ) {
-    const styleAnimation = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value - ACTION_WIDTH - ACTION_GAP }],
-    }));
-    return (
-      <Reanimated.View style={styleAnimation}>
-        <Pressable
-          onPress={() => onEdit(goal)}
-          style={{ width: ACTION_WIDTH, marginRight: ACTION_GAP }}
-          className="px-4 py-4 rounded-tile bg-warning items-center justify-center"
-        >
-          <Text style={{ fontSize: 18 }}>✏️</Text>
-          <Text className="text-bg font-mono-medium uppercase text-[10px] tracking-widest mt-1">
-            Edit
-          </Text>
-        </Pressable>
-      </Reanimated.View>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -99,8 +102,8 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
       <View className="mt-6 p-6 bg-surface border border-border rounded-tile items-center">
         <Text className="text-text-muted font-mono text-sm text-center">
           {isViewingMe
-            ? "No habits yet. Tap + to add one."
-            : "Nothing here yet."}
+            ? "No habits for today. Tap + to add one."
+            : "Nothing here for today."}
         </Text>
       </View>
     );
@@ -115,12 +118,24 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
             key={goal.id}
             renderRightActions={
               isViewingMe
-                ? (prog, drag) => RightAction(prog, drag, goal)
+                ? (prog, drag) => (
+                    <RightActionComponent
+                      drag={drag}
+                      goal={goal}
+                      onAction={onDelete}
+                    />
+                  )
                 : undefined
             }
             renderLeftActions={
               isViewingMe
-                ? (prog, drag) => LeftAction(prog, drag, goal)
+                ? (prog, drag) => (
+                    <LeftActionComponent
+                      drag={drag}
+                      goal={goal}
+                      onAction={onEdit}
+                    />
+                  )
                 : undefined
             }
             overshootRight={false}
@@ -130,7 +145,9 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
             <Pressable
               disabled={!isViewingMe}
               onPress={() => toggleGoal(goal)}
-              className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center"
+              className={`bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center ${
+                done ? "opacity-60" : ""
+              }`}
             >
               <View
                 className={`w-10 h-10 rounded-tile items-center justify-center mr-3 ${
@@ -147,12 +164,9 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
 
               <View className="flex-1">
                 <Text
-                  className={`font-mono-medium text-base ${
-                    done ? "text-text-dim" : "text-text"
+                  className={`text-base font-semibold tracking-tight ${
+                    done ? "text-text-dim line-through" : "text-text"
                   }`}
-                  style={
-                    done ? { textDecorationLine: "line-through" } : undefined
-                  }
                 >
                   {goal.title}
                 </Text>
@@ -162,7 +176,9 @@ export default function GoalList({ selectedTabId, onEdit, onDelete }: Props) {
                     return (
                       <View
                         key={i}
-                        className={`w-1.5 h-1.5 rounded-pill ${lit ? "" : "bg-border"}`}
+                        className={`w-1.5 h-1.5 rounded-pill ${
+                          lit ? "" : "bg-[#3A3A3C]"
+                        }`}
                         style={
                           lit ? { backgroundColor: accent.hex } : undefined
                         }
