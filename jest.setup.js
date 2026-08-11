@@ -14,6 +14,33 @@ jest.mock("react-native/Libraries/Animated/NativeAnimatedHelper", () => ({}), {
   virtual: true,
 });
 
+// Replace useTheme with a static accent. The real ThemeProvider hydrates from
+// AsyncStorage on mount, which every themed component would otherwise have to
+// wait on; tests care about behaviour, not which accent is selected.
+jest.mock("@/hooks/useTheme", () => {
+  const accent = {
+    id: "neon",
+    hex: "#C6F94A",
+    dim: "#8FB732",
+    shades: ["#1E1E21", "#3A5F10", "#6E9E22", "#C6F94A"],
+  };
+  return {
+    useTheme: () => ({
+      accentId: accent.id,
+      accent,
+      setAccent: jest.fn(),
+      palette: [accent],
+    }),
+  };
+});
+
+// Safe-area insets — the library ships a jest mock with fixed metrics, so
+// screens and modals calling useSafeAreaInsets render without a provider.
+jest.mock("react-native-safe-area-context", () =>
+  // The shipped mock is a default export.
+  require("react-native-safe-area-context/jest/mock").default,
+);
+
 // expo-haptics — no-op in tests.
 jest.mock("expo-haptics", () => ({
   notificationAsync: jest.fn(() => Promise.resolve()),

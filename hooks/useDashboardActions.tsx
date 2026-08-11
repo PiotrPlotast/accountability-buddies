@@ -32,12 +32,17 @@ export function useDashboardActions(activeGroupId: string | null) {
     await deleteMutation.mutateAsync({ goalId, groupId: activeGroupId });
   };
 
-  const editGoal = async (goalId: string, newTitle: string) => {
+  const editGoal = async (
+    goalId: string,
+    updates: { title: string; icon?: string | null; repeatDays?: number[] },
+  ) => {
     if (!activeGroupId) return;
     await editMutation.mutateAsync({
       goalId,
-      newTitle,
+      newTitle: updates.title,
       groupId: activeGroupId,
+      icon: updates.icon,
+      repeatDays: updates.repeatDays,
     });
   };
 

@@ -34,6 +34,12 @@ npx jest -t "rolls back the cache"                  # single test by name
 
 **Backend contract**: tables `groups`, `group_members`, `goals`, `logs`, `profiles`; RPCs `get_my_group_stats`, `join_group_via_code`, `get_heatmap_logs`. `types/dashboardTypes.ts` mirrors these — nested types like `GoalRow.logs` reflect PostgREST `select()` nesting, not real columns. There is no `supabase/` directory in this repo despite the README's mention; schema changes are made in the Supabase dashboard.
 
+### Stacked modals
+
+The dashboard hosts three modals (habit manager, edit, delete) and the manager can ask for the other two. Presenting a modal while the pageSheet manager is still dismissing drops it on iOS, so `Dashboard.tsx` queues the request in `pendingAction`, closes the manager, and opens the queued modal from `Modal.onDismiss` — falling back to a visibility effect off iOS, where `onDismiss` never fires. Child modals report intent and never sequence themselves; don't reintroduce a `setTimeout` to wait out an animation.
+
+The icon and repeat-day controls are shared between habit creation and editing via `app/components/habits/{IconPicker,DayPicker}.tsx`.
+
 ### `repeat_days` day indexes
 
 `goals.repeat_days` is stored as **Monday = 0 … Sunday = 6** — the order the day picker writes. JS `Date#getDay()` is Sunday = 0, so never compare a stored index against `getDay()` directly.
@@ -50,9 +56,13 @@ Static chrome colors that can't be Tailwind classes (navigator `contentStyle`) c
 
 `babel.config.js` drops the NativeWind preset when `NODE_ENV === "test"` (its CSS-interop transform breaks babel-jest), so className-driven styling is not exercised in tests.
 
-`jest.setup.js` globally mocks `expo-router`, `expo-haptics`, `expo-clipboard`, reanimated, and — importantly — replaces `@/hooks/useSupabase` with a synchronous version that reads the fake client (and its `__testSession`) straight out of `SupabaseContext`.
+`jest.setup.js` globally mocks `expo-router`, `expo-haptics`, `expo-clipboard`, reanimated, `react-native-safe-area-context` (the library's own default-exported mock), and — importantly — replaces `@/hooks/useSupabase` and `@/hooks/useTheme` with synchronous versions. The `useSupabase` stub reads the fake client (and its `__testSession`) straight out of `SupabaseContext`; the `useTheme` stub returns a fixed accent so themed components don't need a real `ThemeProvider` hydrating from AsyncStorage. Add new provider-backed hooks to that list rather than wrapping each test.
 
-Two gotchas when reading test output: `testPathIgnorePatterns` doesn't exclude `.kilo/worktrees/`, so an agent worktree checked out there gets its tests collected too and every suite appears to run twice against different source. And the suite is not green at HEAD — `Heatmap`, `ProgressRing`, `EditGoalModal`, and `DashboardHeader` fail (mostly missing `ThemeProvider` in the render wrapper), as do 7 `tsc --noEmit` errors. Compare against that baseline rather than assuming a change broke them.
+Three gotchas when reading test output:
+
+- `testPathIgnorePatterns` doesn't exclude `.kilo/worktrees/`, so an agent worktree checked out there gets its tests collected too and every suite appears to run twice against different source. Add `--testPathIgnorePatterns "/node_modules/" "/\.kilo/"` when you want just this repo.
+- Jest doesn't exit on its own after any suite that renders React ("Jest did not exit one second after the test run has completed"), so a plain `npx jest <file>` hangs until killed. This predates any recent change — use `--forceExit`.
+- The suite is not green at HEAD: `Heatmap` and `DashboardHeader` fail because they test component APIs that have since changed (a dropped `seed` prop; a now-required `todayGoals` prop), and `tsc --noEmit` reports 7 errors from the same drift. Compare against that baseline rather than assuming a change broke them.
 
 Use `__tests__/test-utils/render.tsx`: `buildFakeSupabase({ fromImpl, rpcImpl })`, `makeQueryBuilder(result)` (a thenable chainable PostgREST stand-in), `makeQueryClient()` (infinite `gcTime`/`staleTime` so seeded cache data survives), `buildWrapper()`, and `renderHookWithSession()`. Mutation tests seed the cache with `queryClient.setQueryData(queryKeys.groupMembers(id), members)` and assert on both the Supabase call and the resulting cache state.
 
