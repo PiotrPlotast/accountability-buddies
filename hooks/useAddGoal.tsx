@@ -1,5 +1,6 @@
 import { Goal } from "@/types/dashboardTypes";
 import { useOptimisticGoalMutation } from "@/lib/useOptimisticGoalMutation";
+import { ALL_DAYS } from "@/lib/repeatDays";
 
 interface AddGoalParams {
   title: string;
@@ -7,8 +8,6 @@ interface AddGoalParams {
   icon?: string | null;
   repeatDays?: number[];
 }
-
-const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 export function useAddGoal() {
   return useOptimisticGoalMutation<AddGoalParams, Goal>({

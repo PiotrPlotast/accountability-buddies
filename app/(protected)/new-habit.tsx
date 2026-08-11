@@ -13,9 +13,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
+import { DAY_LABELS } from "@/lib/repeatDays";
 
 const ICON_CHOICES = ["🧘", "📚", "💧", "🏃", "🎸", "✍️", "🥗", "💤"];
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 export default function NewHabitScreen() {
   const insets = useSafeAreaInsets();

@@ -10,6 +10,7 @@ import MemberTabs from "./MemberTabs";
 import AddGoalInput from "./AddGoalInput";
 import GoalList from "./GoalList";
 import { Goal } from "@/types/dashboardTypes";
+import { filterGoalsForToday } from "@/lib/repeatDays";
 import HabitManagerModal from "./HabitsManagerModal";
 export default function Dashboard() {
   const { userId, loading, members, fetchData } = useDashboardData();
@@ -28,17 +29,10 @@ export default function Dashboard() {
   const isViewingMe = selectedTabId === userId;
   const currentMember = members.find((m) => m.user_id === selectedTabId);
 
-  const todayGoals = useMemo(() => {
-    if (!currentMember?.goals) return [];
-
-    const todayJs = new Date().getDay();
-    const currentDayIndex = todayJs;
-
-    return currentMember.goals.filter((goal) => {
-      if (!goal.repeat_days || goal.repeat_days.length === 0) return true;
-      return goal.repeat_days.includes(currentDayIndex);
-    });
-  }, [currentMember?.goals]);
+  const todayGoals = useMemo(
+    () => filterGoalsForToday(currentMember?.goals ?? []),
+    [currentMember?.goals],
+  );
 
   if (!userId) return <View className="flex-1 bg-bg" />;
 

@@ -1,6 +1,7 @@
 import { View, Text, Modal, Pressable, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Goal } from "@/types/dashboardTypes";
+import { formatRepeatDays } from "@/lib/repeatDays";
 
 type Props = {
   isVisible: boolean;
@@ -20,15 +21,6 @@ export default function HabitManagerModal({
   onDelete,
 }: Props) {
   const insets = useSafeAreaInsets();
-
-  const formatDays = (days: number[] | null | undefined) => {
-    if (!days || days.length === 0 || days.length === 7) return "Every day";
-    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    return [...days]
-      .sort((a, b) => a - b)
-      .map((d) => dayNames[d - 1])
-      .join(", ");
-  };
 
   return (
     <Modal
@@ -74,7 +66,7 @@ export default function HabitManagerModal({
                       {goal.title}
                     </Text>
                     <Text className="text-text-muted font-mono text-xs mt-1">
-                      {formatDays(goal.repeat_days)}
+                      {formatRepeatDays(goal.repeat_days)}
                     </Text>
                   </View>
                 </View>
