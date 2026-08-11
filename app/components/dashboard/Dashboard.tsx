@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { View, ScrollView, RefreshControl, Text } from "react-native";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { View, ScrollView, RefreshControl, Text, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useTheme } from "@/hooks/useTheme";
@@ -12,6 +12,9 @@ import GoalList from "./GoalList";
 import { Goal } from "@/types/dashboardTypes";
 import { filterGoalsForToday } from "@/lib/repeatDays";
 import HabitManagerModal from "./HabitsManagerModal";
+
+type PendingAction = { type: "edit" | "delete"; goal: Goal };
+
 export default function Dashboard() {
   const { userId, loading, members, fetchData } = useDashboardData();
   const { accent } = useTheme();
@@ -21,6 +24,9 @@ export default function Dashboard() {
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null);
   const insets = useSafeAreaInsets();
   const [isHabitManagerVisible, setIsHabitManagerVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
+    null,
+  );
   useEffect(() => {
     if (members.length > 0 && !selectedTabId) {
       setSelectedTabId(userId || members[0].user_id);
@@ -33,6 +39,29 @@ export default function Dashboard() {
     () => filterGoalsForToday(currentMember?.goals ?? []),
     [currentMember?.goals],
   );
+
+  // The habit manager is a pageSheet modal. Presenting the edit/delete modal
+  // while it is still dismissing drops the new modal on iOS, so a request from
+  // the manager is queued, the sheet is closed, and the queued modal opens once
+  // the sheet is actually gone.
+  const requestFromManager = (type: PendingAction["type"], goal: Goal) => {
+    setPendingAction({ type, goal });
+    setIsHabitManagerVisible(false);
+  };
+
+  const openPendingAction = useCallback(() => {
+    if (!pendingAction) return;
+    if (pendingAction.type === "edit") setEditingGoal(pendingAction.goal);
+    else setDeletingGoal(pendingAction.goal);
+    setPendingAction(null);
+  }, [pendingAction]);
+
+  // `Modal.onDismiss` is iOS-only. Elsewhere the sheet is gone as soon as it
+  // stops rendering, so flush as soon as visibility flips off.
+  useEffect(() => {
+    if (Platform.OS === "ios") return;
+    if (!isHabitManagerVisible && pendingAction) openPendingAction();
+  }, [isHabitManagerVisible, pendingAction, openPendingAction]);
 
   if (!userId) return <View className="flex-1 bg-bg" />;
 
@@ -91,10 +120,11 @@ export default function Dashboard() {
       <HabitManagerModal
         isVisible={isHabitManagerVisible}
         onClose={() => setIsHabitManagerVisible(false)}
+        onDismiss={openPendingAction}
         goals={currentMember?.goals || []}
         isViewingMe={isViewingMe}
-        onEdit={setEditingGoal}
-        onDelete={setDeletingGoal}
+        onEdit={(goal) => requestFromManager("edit", goal)}
+        onDelete={(goal) => requestFromManager("delete", goal)}
       />
     </View>
   );

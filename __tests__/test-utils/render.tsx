@@ -119,6 +119,7 @@ export function buildWrapper(opts?: {
 }) {
   const queryClient = opts?.queryClient ?? makeQueryClient();
   const supabase = opts?.supabase ?? buildFakeSupabase();
+  // useTheme is stubbed globally in jest.setup.js, so no ThemeProvider here.
   const Wrapper = ({ children }: WrapperProps) => (
     <QueryClientProvider client={queryClient}>
       <SupabaseContext.Provider value={supabase}>

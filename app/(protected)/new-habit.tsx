@@ -13,9 +13,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
-import { DAY_LABELS } from "@/lib/repeatDays";
-
-const ICON_CHOICES = ["🧘", "📚", "💧", "🏃", "🎸", "✍️", "🥗", "💤"];
+import { DEFAULT_ICON } from "@/lib/habitIcons";
+import IconPicker from "@/app/components/habits/IconPicker";
+import DayPicker from "@/app/components/habits/DayPicker";
 
 export default function NewHabitScreen() {
   const insets = useSafeAreaInsets();
@@ -25,17 +25,11 @@ export default function NewHabitScreen() {
   const { accent } = useTheme();
 
   const [title, setTitle] = useState("");
-  const [icon, setIcon] = useState<string | null>("🧘");
+  const [icon, setIcon] = useState<string | null>(DEFAULT_ICON);
   const [repeatDays, setRepeatDays] = useState<number[]>([0, 1, 2, 3, 4]);
   const [submitting, setSubmitting] = useState(false);
 
   const canSave = title.trim().length > 0 && !submitting;
-
-  const toggleDay = (d: number) => {
-    setRepeatDays((prev) =>
-      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort(),
-    );
-  };
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -86,53 +80,12 @@ export default function NewHabitScreen() {
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
           Pick an icon
         </Text>
-        <View className="flex-row flex-wrap gap-3">
-          {ICON_CHOICES.map((emoji) => {
-            const selected = icon === emoji;
-            return (
-              <Pressable
-                key={emoji}
-                onPress={() => setIcon(emoji)}
-                style={selected ? { backgroundColor: accent.hex } : undefined}
-                className={`w-14 h-14 rounded-tile items-center justify-center ${
-                  selected ? "bg-neon" : "bg-surface border border-border"
-                }`}
-              >
-                <Text style={{ fontSize: 24 }}>{emoji}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <IconPicker value={icon} onChange={setIcon} />
 
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
           Repeat
         </Text>
-        <View className="flex-row gap-2">
-          {DAY_LABELS.map((label, idx) => {
-            const selected = repeatDays.includes(idx);
-            return (
-              <Pressable
-                key={idx}
-                onPress={() => toggleDay(idx)}
-                style={
-                  selected
-                    ? { backgroundColor: accent.hex }
-                    : {
-                        backgroundColor: "bg-surface",
-                        borderColor: "border border-border",
-                      }
-                }
-                className={`flex-1 h-12 rounded-tile items-center justify-center`}
-              >
-                <Text
-                  className={`font-mono-medium ${selected ? "text-bg" : "text-text-muted"}`}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <DayPicker value={repeatDays} onChange={setRepeatDays} />
       </ScrollView>
 
       <View

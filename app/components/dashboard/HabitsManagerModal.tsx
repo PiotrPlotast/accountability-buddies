@@ -2,10 +2,14 @@ import { View, Text, Modal, Pressable, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Goal } from "@/types/dashboardTypes";
 import { formatRepeatDays } from "@/lib/repeatDays";
+import { FALLBACK_ICON } from "@/lib/habitIcons";
 
 type Props = {
   isVisible: boolean;
   onClose: () => void;
+  // iOS-only: fires once the sheet has finished dismissing. The dashboard uses
+  // it to open the edit/delete modal without racing this one's animation.
+  onDismiss?: () => void;
   goals: Goal[];
   isViewingMe: boolean;
   onEdit: (goal: Goal) => void;
@@ -15,6 +19,7 @@ type Props = {
 export default function HabitManagerModal({
   isVisible,
   onClose,
+  onDismiss,
   goals,
   isViewingMe,
   onEdit,
@@ -28,6 +33,7 @@ export default function HabitManagerModal({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}
+      onDismiss={onDismiss}
     >
       <View
         className="flex-1 bg-bg"
@@ -56,7 +62,9 @@ export default function HabitManagerModal({
               >
                 <View className="flex-row items-center flex-1 mr-4">
                   <View className="w-10 h-10 rounded-tile bg-bg border border-border items-center justify-center mr-3">
-                    <Text style={{ fontSize: 18 }}>{goal.icon || "🎯"}</Text>
+                    <Text style={{ fontSize: 18 }}>
+                      {goal.icon || FALLBACK_ICON}
+                    </Text>
                   </View>
                   <View className="flex-1">
                     <Text
@@ -74,19 +82,17 @@ export default function HabitManagerModal({
                 {isViewingMe && (
                   <View className="flex-row gap-2">
                     <Pressable
-                      onPress={() => {
-                        onClose();
-                        setTimeout(() => onEdit(goal), 400);
-                      }}
+                      onPress={() => onEdit(goal)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${goal.title}`}
                       className="w-10 h-10 rounded-tile bg-bg border border-border items-center justify-center"
                     >
                       <Text style={{ fontSize: 16 }}>✏️</Text>
                     </Pressable>
                     <Pressable
-                      onPress={() => {
-                        onClose();
-                        setTimeout(() => onDelete(goal), 400);
-                      }}
+                      onPress={() => onDelete(goal)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${goal.title}`}
                       className="w-10 h-10 rounded-tile bg-danger border border-danger items-center justify-center opacity-80"
                     >
                       <Text style={{ fontSize: 16 }}>🗑️</Text>
