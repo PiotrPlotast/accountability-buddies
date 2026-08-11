@@ -14,6 +14,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
 import { DEFAULT_ICON } from "@/lib/habitIcons";
+import { themeColors } from "@/lib/colors";
 import IconPicker from "@/app/components/habits/IconPicker";
 import DayPicker from "@/app/components/habits/DayPicker";
 
@@ -95,11 +96,13 @@ export default function NewHabitScreen() {
         <Pressable
           onPress={handleSave}
           disabled={!canSave}
-          style={{ backgroundColor: canSave ? accent.hex : "bg-surface" }}
+          style={{
+            backgroundColor: canSave ? accent.hex : themeColors.surface,
+          }}
           className={`h-14 rounded-tile items-center justify-center`}
         >
           {submitting ? (
-            <ActivityIndicator color="#18181B" />
+            <ActivityIndicator color={themeColors.background} />
           ) : (
             <Text
               className={`font-mono-bold text-base ${canSave ? "text-bg" : "text-text-dim"}`}

@@ -15,6 +15,7 @@ import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useTheme } from "@/hooks/useTheme";
 import { ALL_DAYS } from "@/lib/repeatDays";
+import { themeColors } from "@/lib/colors";
 import IconPicker from "@/app/components/habits/IconPicker";
 import DayPicker from "@/app/components/habits/DayPicker";
 
@@ -74,15 +75,18 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
           padding: 20,
         }}
       >
-        <View className="bg-surface border border-border rounded-tile overflow-hidden">
+        <View className="bg-bg border border-border rounded-tile overflow-hidden">
           <ScrollView
             contentContainerStyle={{ padding: 24 }}
             keyboardShouldPersistTaps="handled"
           >
             <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-              Edit habit
+              Habit name
             </Text>
-            <View className="border border-border rounded-tile px-4 h-14 justify-center bg-bg">
+            <View
+              style={{ borderColor: accent.hex }}
+              className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
+            >
               <TextInput
                 value={title}
                 onChangeText={setTitle}
@@ -94,40 +98,40 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
               />
             </View>
 
-            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-6 mb-3">
-              Icon
+            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
+              Pick an icon
             </Text>
-            <IconPicker value={icon} onChange={setIcon} variant="card" />
+            <IconPicker value={icon} onChange={setIcon} />
 
-            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-6 mb-3">
+            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
               Repeat
             </Text>
-            <DayPicker
-              value={repeatDays}
-              onChange={setRepeatDays}
-              variant="card"
-            />
+            <DayPicker value={repeatDays} onChange={setRepeatDays} />
           </ScrollView>
 
           <View className="flex-row gap-3 px-6 pb-6">
             <Pressable
               onPress={onClose}
               disabled={saving}
-              className="flex-1 h-12 rounded-tile items-center justify-center bg-bg border border-border"
+              className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
             >
-              <Text className="text-text-muted font-mono-medium">Cancel</Text>
+              <Text className="text-text-muted font-mono-medium text-base">
+                Cancel
+              </Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
               disabled={!canSave}
-              className="flex-1 h-12 rounded-tile items-center justify-center"
-              style={{ backgroundColor: canSave ? accent.hex : "#3F3F46" }}
+              className="flex-1 h-14 rounded-tile items-center justify-center"
+              style={{
+                backgroundColor: canSave ? accent.hex : themeColors.surface,
+              }}
             >
               {saving ? (
-                <ActivityIndicator color="#18181B" />
+                <ActivityIndicator color={themeColors.background} />
               ) : (
                 <Text
-                  className={`font-mono-bold ${
+                  className={`font-mono-bold text-base ${
                     canSave ? "text-bg" : "text-text-dim"
                   }`}
                 >

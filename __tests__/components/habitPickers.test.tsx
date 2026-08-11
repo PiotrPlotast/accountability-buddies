@@ -5,38 +5,31 @@ import IconPicker from "@/app/components/habits/IconPicker";
 
 // NativeWind is disabled under Jest (see babel.config.js), so `className`
 // arrives as a plain string prop. That makes it the only way to assert an
-// unselected chip actually gets a background — and an unselected chip painted
-// the same colour as what's behind it is invisible on screen.
+// unselected chip actually gets a background — a chip with none (or one
+// painted the colour of what's behind it) is invisible on screen. Both
+// pickers assume a `bg-bg` surface behind them.
 describe("habit pickers", () => {
-  it("paints unselected days against a page background by default", () => {
+  it("gives unselected days a background and border", () => {
     const { getByLabelText } = render(
       <DayPicker value={[0]} onChange={() => {}} />,
     );
-    expect(getByLabelText("Tue").props.className).toContain("bg-surface");
-  });
-
-  it("inverts unselected days inside a surface card so they stay visible", () => {
-    const { getByLabelText } = render(
-      <DayPicker value={[0]} onChange={() => {}} variant="card" />,
-    );
-    // The card itself is bg-surface; a bg-surface chip on it would vanish.
     const unselected = getByLabelText("Tue").props.className;
-    expect(unselected).toContain("bg-bg");
-    expect(unselected).not.toContain("bg-surface");
+    expect(unselected).toContain("bg-surface");
+    expect(unselected).toContain("border-border");
   });
 
-  it("inverts unselected icons inside a surface card too", () => {
+  it("gives unselected icons a background and border", () => {
     const { getByLabelText } = render(
-      <IconPicker value="🧘" onChange={() => {}} variant="card" />,
+      <IconPicker value="🧘" onChange={() => {}} />,
     );
     const unselected = getByLabelText("📚").props.className;
-    expect(unselected).toContain("bg-bg");
-    expect(unselected).not.toContain("bg-surface");
+    expect(unselected).toContain("bg-surface");
+    expect(unselected).toContain("border-border");
   });
 
   it("gives the selected chip no background class, so the inline accent shows", () => {
     const { getByLabelText } = render(
-      <DayPicker value={[0]} onChange={() => {}} variant="card" />,
+      <DayPicker value={[0]} onChange={() => {}} />,
     );
     const selected = getByLabelText("Mon");
     expect(selected.props.className).not.toContain("bg-");
