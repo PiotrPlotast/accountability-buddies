@@ -5,10 +5,20 @@ import { ICON_CHOICES } from "@/lib/habitIcons";
 type Props = {
   value: string | null;
   onChange: (icon: string) => void;
+  // See DayPicker: unselected tiles have to contrast with what's behind them.
+  variant?: "page" | "card";
 };
 
-export default function IconPicker({ value, onChange }: Props) {
+export default function IconPicker({
+  value,
+  onChange,
+  variant = "page",
+}: Props) {
   const { accent } = useTheme();
+  const unselected =
+    variant === "card"
+      ? "bg-bg border border-border"
+      : "bg-surface border border-border";
 
   return (
     <View className="flex-row flex-wrap gap-3">
@@ -23,7 +33,7 @@ export default function IconPicker({ value, onChange }: Props) {
             accessibilityState={{ selected }}
             style={selected ? { backgroundColor: accent.hex } : undefined}
             className={`w-14 h-14 rounded-tile items-center justify-center ${
-              selected ? "" : "bg-surface border border-border"
+              selected ? "" : unselected
             }`}
           >
             <Text style={{ fontSize: 24 }}>{emoji}</Text>

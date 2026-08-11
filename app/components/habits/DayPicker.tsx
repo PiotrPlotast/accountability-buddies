@@ -5,11 +5,23 @@ import { DAY_LABELS, DAY_NAMES } from "@/lib/repeatDays";
 type Props = {
   value: number[];
   onChange: (days: number[]) => void;
+  // Unselected chips need to contrast with whatever sits behind them: on a
+  // `bg-bg` screen that means `bg-surface`, but inside a `bg-surface` card it
+  // has to invert or the chips vanish into the card.
+  variant?: "page" | "card";
 };
 
 // Indexes are on the stored Monday = 0 scale — see lib/repeatDays.ts.
-export default function DayPicker({ value, onChange }: Props) {
+export default function DayPicker({
+  value,
+  onChange,
+  variant = "page",
+}: Props) {
   const { accent } = useTheme();
+  const unselected =
+    variant === "card"
+      ? "bg-bg border border-border"
+      : "bg-surface border border-border";
 
   const toggle = (day: number) =>
     onChange(
@@ -32,7 +44,7 @@ export default function DayPicker({ value, onChange }: Props) {
             accessibilityState={{ selected }}
             style={selected ? { backgroundColor: accent.hex } : undefined}
             className={`flex-1 h-12 rounded-tile items-center justify-center ${
-              selected ? "" : "bg-surface border border-border"
+              selected ? "" : unselected
             }`}
           >
             <Text

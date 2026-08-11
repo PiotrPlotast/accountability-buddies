@@ -97,12 +97,16 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
             <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-6 mb-3">
               Icon
             </Text>
-            <IconPicker value={icon} onChange={setIcon} />
+            <IconPicker value={icon} onChange={setIcon} variant="card" />
 
             <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-6 mb-3">
               Repeat
             </Text>
-            <DayPicker value={repeatDays} onChange={setRepeatDays} />
+            <DayPicker
+              value={repeatDays}
+              onChange={setRepeatDays}
+              variant="card"
+            />
           </ScrollView>
 
           <View className="flex-row gap-3 px-6 pb-6">
