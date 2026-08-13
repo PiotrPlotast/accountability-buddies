@@ -38,6 +38,9 @@ export default function NewHabitScreen() {
     try {
       await addGoal(title, { icon, repeatDays });
       router.back();
+    } catch {
+      // useOptimisticGoalMutation already surfaced an Alert and rolled the
+      // cache back; stay on the screen so the habit isn't lost.
     } finally {
       setSubmitting(false);
     }

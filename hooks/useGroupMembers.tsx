@@ -35,14 +35,22 @@ export function useGroupMembers({ groupId }: UseGroupMembersProps) {
           .lte("logs.date", today),
       ]);
 
-      if (!membersRes.data || !goalsRes.data) return [];
+      // Throw rather than falling back to `[]`: an empty array is a valid
+      // result that React Query caches and persists for 24h, so swallowing a
+      // network or RLS failure here renders as "this group has no members"
+      // with no way for the UI to tell the difference or retry.
+      if (membersRes.error) throw membersRes.error;
+      if (goalsRes.error) throw goalsRes.error;
 
-      const formattedMembers: Member[] = membersRes.data.map((m) => {
+      const memberRows = membersRes.data ?? [];
+      const goalRows = goalsRes.data ?? [];
+
+      const formattedMembers: Member[] = memberRows.map((m) => {
         const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
         return {
           user_id: m.user_id,
           full_name: profile?.full_name || "Unknown",
-          goals: goalsRes.data
+          goals: goalRows
             .filter((g) => g.user_id === m.user_id)
             .map(({ logs, ...g }) => {
               const completed_dates = [

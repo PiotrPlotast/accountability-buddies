@@ -22,51 +22,73 @@ export default function JoinGroupScreen() {
   const [mode, setMode] = useState<"JOIN" | "CREATE">("JOIN");
 
   const handleJoin = async () => {
-    if (!code) return Alert.alert("Error", "Please enter a code");
+    if (loading) return;
+    if (!code.trim()) return Alert.alert("Error", "Please enter a code");
     setLoading(true);
 
-    const { data, error } = await supabase.rpc("join_group_via_code", {
-      code_input: code.trim(),
-    });
+    try {
+      const { data, error } = await supabase.rpc("join_group_via_code", {
+        code_input: code.trim(),
+      });
 
-    setLoading(false);
-
-    if (error || !data?.success) {
-      Alert.alert("Failed", data?.message || error?.message || "Invalid code");
-    } else {
+      if (error || !data?.success) {
+        Alert.alert(
+          "Failed",
+          data?.message || error?.message || "Invalid code",
+        );
+        return;
+      }
       router.replace("/");
+    } catch (err) {
+      Alert.alert(
+        "Failed",
+        err instanceof Error ? err.message : "Could not join the group.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
+  // NOTE: creating the group and joining it are two round trips, so a failure
+  // between them leaves a group nobody is a member of. Making this atomic needs
+  // a `create_group_and_join` RPC alongside `join_group_via_code`; until that
+  // exists the best we can do is report the half-finished state honestly.
   const handleCreate = async () => {
-    if (!groupName) return Alert.alert("Error", "Name your group");
-    setLoading(true);
+    if (loading) return;
+    const trimmedName = groupName.trim();
+    if (!trimmedName) return Alert.alert("Error", "Name your group");
 
     const userId = session?.user.id;
-    if (!userId) return;
+    if (!userId) return Alert.alert("Error", "You are not signed in.");
 
-    const { data: groupData, error: groupError } = await supabase
-      .from("groups")
-      .insert({ name: groupName, creator_id: userId })
-      .select()
-      .single();
+    setLoading(true);
+    try {
+      const { data: groupData, error: groupError } = await supabase
+        .from("groups")
+        .insert({ name: trimmedName, creator_id: userId })
+        .select()
+        .single();
 
-    if (groupError) {
-      setLoading(false);
-      return Alert.alert("Error", groupError.message);
-    }
+      if (groupError) return Alert.alert("Error", groupError.message);
 
-    const { error: memberError } = await supabase.from("group_members").insert({
-      group_id: groupData.id,
-      user_id: userId,
-    });
+      const { error: memberError } = await supabase
+        .from("group_members")
+        .insert({ group_id: groupData.id, user_id: userId });
 
-    setLoading(false);
-
-    if (memberError) {
-      Alert.alert("Error", "Group created but joining failed.");
-    } else {
+      if (memberError) {
+        return Alert.alert(
+          "Error",
+          `"${trimmedName}" was created but you couldn't be added to it. Try joining with its invite code, or contact support.`,
+        );
+      }
       router.replace("/");
+    } catch (err) {
+      Alert.alert(
+        "Error",
+        err instanceof Error ? err.message : "Could not create the group.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 

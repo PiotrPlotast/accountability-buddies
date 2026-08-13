@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "react-native";
 
 import { useSupabase } from "@/hooks/useSupabase";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, Member } from "@/types/dashboardTypes";
 
@@ -26,9 +27,17 @@ interface Options<TVars, TData> {
   getHeatmapDelta?: (vars: TVars) => number;
 }
 
+// `heatmap` is only present when the optimistic patch actually ran. That
+// matters because the heatmap patch writes even when nothing was cached
+// (`old || {}`), so a plain "previous value was undefined" check can't tell
+// "we wrote nothing" from "we invented an entry" — and the second case has to
+// be removed on rollback, not left behind in a cache that outlives the app.
 type RollbackContext = {
   previousMembers: Member[] | undefined;
-  previousHeatmap: Record<string, number> | undefined;
+  heatmap?: {
+    key: readonly unknown[];
+    previous: Record<string, number> | undefined;
+  };
 };
 
 export function useOptimisticGoalMutation<TVars, TData = unknown>(
@@ -49,7 +58,7 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
       const key = queryKeys.groupMembers(opts.getGroupId(vars));
       await queryClient.cancelQueries({ queryKey: key });
       const previousMembers = queryClient.getQueryData<Member[]>(key);
-      let previousHeatmap: Record<string, number> | undefined;
+      let heatmap: RollbackContext["heatmap"];
       if (!userId) return { previousMembers };
 
       const patch = opts.getPatch(vars);
@@ -63,10 +72,13 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
       if (opts.getHeatmapDelta) {
         const heatmapKey = ["heatmap", userId];
         await queryClient.cancelQueries({ queryKey: heatmapKey });
-        previousHeatmap =
-          queryClient.getQueryData<Record<string, number>>(heatmapKey);
+        heatmap = {
+          key: heatmapKey,
+          previous:
+            queryClient.getQueryData<Record<string, number>>(heatmapKey),
+        };
         const delta = opts.getHeatmapDelta(vars);
-        const today = new Date().toLocaleDateString("en-CA");
+        const today = getTodayLocalDate();
 
         queryClient.setQueryData<Record<string, number>>(heatmapKey, (old) => {
           const current = old || {};
@@ -78,16 +90,24 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
         });
       }
 
-      return { previousMembers, previousHeatmap };
+      return { previousMembers, heatmap };
     },
 
     onError: (error, vars, context) => {
       const key = queryKeys.groupMembers(opts.getGroupId(vars));
-      if (context?.previousMembers) {
+      if (context?.previousMembers !== undefined) {
         queryClient.setQueryData(key, context.previousMembers);
       }
-      if (context?.previousHeatmap && userId) {
-        queryClient.setQueryData(["heatmap", userId], context.previousHeatmap);
+      if (context?.heatmap) {
+        const { key: heatmapKey, previous } = context.heatmap;
+        if (previous === undefined) {
+          // Nothing was cached before the optimistic write, and passing
+          // `undefined` to setQueryData is a no-op — drop the entry instead so
+          // the next read refetches rather than trusting an invented count.
+          queryClient.removeQueries({ queryKey: heatmapKey, exact: true });
+        } else {
+          queryClient.setQueryData(heatmapKey, previous);
+        }
       }
       const message = error instanceof Error ? error.message : String(error);
       Alert.alert("Error", message);

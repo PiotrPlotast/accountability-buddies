@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Modal,
   View,
@@ -19,6 +20,21 @@ type Props = {
 export default function DeleteGoalModal({ goal, isVisible, onClose }: Props) {
   const { activeGroupId } = useDashboardData();
   const { deleteGoal } = useDashboardActions(activeGroupId);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!goal?.id || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteGoal(goal.id);
+      onClose();
+    } catch {
+      // useOptimisticGoalMutation already surfaced an Alert and rolled the
+      // cache back; keep the modal open so the user can retry or cancel.
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Modal visible={isVisible} animationType="fade" transparent>
@@ -41,20 +57,19 @@ export default function DeleteGoalModal({ goal, isVisible, onClose }: Props) {
           <View className="flex-row gap-3">
             <Pressable
               onPress={onClose}
+              disabled={deleting}
               className="flex-1 h-12 rounded-tile items-center justify-center bg-bg border border-border"
             >
               <Text className="text-text-muted font-mono-medium">Cancel</Text>
             </Pressable>
             <Pressable
               className="flex-1 h-12 rounded-tile items-center justify-center bg-danger"
-              onPress={async () => {
-                if (goal?.id) {
-                  await deleteGoal(goal.id);
-                  onClose();
-                }
-              }}
+              disabled={deleting}
+              onPress={handleDelete}
             >
-              <Text className="text-text font-mono-bold">Delete</Text>
+              <Text className="text-text font-mono-bold">
+                {deleting ? "Deleting…" : "Delete"}
+              </Text>
             </Pressable>
           </View>
         </View>
