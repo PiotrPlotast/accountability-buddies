@@ -1,6 +1,7 @@
 import { act, waitFor } from "@testing-library/react-native";
 
 import { useToggleGoal } from "@/hooks/useToggleGoal";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, Member } from "@/types/dashboardTypes";
 
@@ -76,6 +77,58 @@ describe("useToggleGoal", () => {
         queryKeys.groupMembers("group-1"),
       );
       expect(cached?.[0].goals[0].completed_today).toBe(false);
+    });
+  });
+
+  it("removes the optimistic heatmap entry when nothing was cached before", async () => {
+    const errorQB = makeQueryBuilder({ error: { message: "nope" } });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => errorQB) });
+
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
+      { user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] },
+    ]);
+    // Deliberately no seeded heatmap: the optimistic patch invents one, so
+    // rollback has to drop it rather than leave a fabricated count behind.
+    const { Wrapper } = buildWrapper({ supabase, queryClient });
+
+    const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
+
+    await act(async () => {
+      await expect(
+        utils.result.current.value.mutateAsync({ ...baseGoal }),
+      ).rejects.toBeTruthy();
+    });
+
+    await waitFor(() => {
+      expect(queryClient.getQueryData(["heatmap", "user-1"])).toBeUndefined();
+    });
+  });
+
+  it("restores the previous heatmap counts when one was already cached", async () => {
+    const errorQB = makeQueryBuilder({ error: { message: "nope" } });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => errorQB) });
+
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
+      { user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] },
+    ]);
+    const today = getTodayLocalDate();
+    queryClient.setQueryData(["heatmap", "user-1"], { [today]: 2 });
+    const { Wrapper } = buildWrapper({ supabase, queryClient });
+
+    const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
+
+    await act(async () => {
+      await expect(
+        utils.result.current.value.mutateAsync({ ...baseGoal }),
+      ).rejects.toBeTruthy();
+    });
+
+    await waitFor(() => {
+      expect(queryClient.getQueryData(["heatmap", "user-1"])).toEqual({
+        [today]: 2,
+      });
     });
   });
 
