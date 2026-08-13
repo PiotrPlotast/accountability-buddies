@@ -8,7 +8,7 @@ import Reanimated, {
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
-import { getGoalHistory } from "@/lib/goalHistory";
+import { getGoalHistory, type HistoryState } from "@/lib/goalHistory";
 import { themeColors } from "@/lib/colors";
 
 const ACTION_WIDTH = 72;
@@ -67,8 +67,23 @@ function LeftActionComponent({ drag, goal, onAction }: ActionProps) {
   );
 }
 
-// The trailing week for one habit. `missed` days are drawn as a hollow ring so
-// a skipped day reads differently from a day the habit was never scheduled on.
+// The trailing week for one habit, oldest dot first.
+//
+// Every dot has to stay visible against the row's own `bg-surface`, so the
+// dimmer states are the palette greys at reduced opacity rather than a colour
+// close to the card — painting one *as* the card colour makes it vanish and
+// the strip silently loses a day.
+export const DOT_STYLES: Record<
+  HistoryState,
+  (accentHex: string) => { backgroundColor: string; opacity: number }
+> = {
+  done: (accentHex) => ({ backgroundColor: accentHex, opacity: 1 }),
+  // Today, still due — accent-tinted so it reads as "this one's on you".
+  pending: (accentHex) => ({ backgroundColor: accentHex, opacity: 0.35 }),
+  missed: () => ({ backgroundColor: themeColors.surface2, opacity: 1 }),
+  off: () => ({ backgroundColor: themeColors.surface2, opacity: 0.45 }),
+};
+
 function WeekStrip({ goal, accentHex }: { goal: Goal; accentHex: string }) {
   const cells = getGoalHistory(goal);
   const doneCount = cells.filter((c) => c.state === "done").length;
@@ -83,14 +98,7 @@ function WeekStrip({ goal, accentHex }: { goal: Goal; accentHex: string }) {
         <View
           key={cell.date}
           className="w-1.5 h-1.5 rounded-pill"
-          style={{
-            backgroundColor:
-              cell.state === "done"
-                ? accentHex
-                : cell.state === "missed"
-                  ? themeColors.surface2 // a skipped day stays visible
-                  : themeColors.surface, // not scheduled — barely there
-          }}
+          style={DOT_STYLES[cell.state](accentHex)}
         />
       ))}
     </View>

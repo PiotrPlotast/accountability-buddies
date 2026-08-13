@@ -50,8 +50,14 @@ describe("getGoalHistory", () => {
     expect(byDate["2025-01-12"]).toBe("missed");
   });
 
-  it("never marks today as missed — the day is not over", () => {
+  it("marks a still-due today pending, not missed — the day is not over", () => {
     const cells = getGoalHistory(makeGoal());
+    expect(cells[cells.length - 1].state).toBe("pending");
+  });
+
+  it("marks today off when the habit isn't scheduled for it", () => {
+    // Wednesday is Mon=0 index 2, so scheduling Mon/Tue only leaves today off.
+    const cells = getGoalHistory(makeGoal({ repeat_days: [0, 1] }));
     expect(cells[cells.length - 1].state).toBe("off");
   });
 

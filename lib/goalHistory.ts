@@ -6,7 +6,10 @@ import { isScheduledOn, toRepeatDayIndex } from "@/lib/repeatDays";
 // row's week strip draws. Changing this changes both.
 export const HISTORY_DAYS = 7;
 
-export type HistoryState = "done" | "missed" | "off";
+// `pending` is today, scheduled, not ticked yet — still winnable, so it is
+// neither a miss nor an off day. Kept separate from `off` so the strip can
+// show the day that is actually on you right now.
+export type HistoryState = "done" | "pending" | "missed" | "off";
 
 export type HistoryCell = {
   date: string;
@@ -34,7 +37,7 @@ export function getGoalHistory(goal: Goal): HistoryCell[] {
 
     if (!isScheduledOn(goal, dayIndex)) return { date, state: "off" as const };
     // Today isn't a miss yet — the day isn't over.
-    if (date === today) return { date, state: "off" as const };
+    if (date === today) return { date, state: "pending" as const };
 
     return { date, state: "missed" as const };
   });
@@ -48,7 +51,7 @@ export function getCurrentStreak(goal: Goal): number {
   for (let i = cells.length - 1; i >= 0; i--) {
     if (cells[i].state === "done") streak++;
     else if (cells[i].state === "missed") break;
-    // `off` days neither extend nor break the streak.
+    // `off` and `pending` days neither extend nor break the streak.
   }
 
   return streak;
