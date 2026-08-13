@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { View, ScrollView, RefreshControl, Text, Platform } from "react-native";
+import { View, ScrollView, RefreshControl, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useTheme } from "@/hooks/useTheme";
@@ -16,7 +16,7 @@ import HabitManagerModal from "./HabitsManagerModal";
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
 
 export default function Dashboard() {
-  const { userId, loading, members, fetchData } = useDashboardData();
+  const { userId, refreshing, members, fetchData } = useDashboardData();
   const { accent } = useTheme();
 
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
@@ -72,9 +72,10 @@ export default function Dashboard() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
-            onRefresh={() => fetchData()}
+            refreshing={refreshing}
+            onRefresh={fetchData}
             tintColor={accent.hex}
+            colors={[accent.hex]}
           />
         }
         keyboardShouldPersistTaps="handled"
@@ -92,18 +93,13 @@ export default function Dashboard() {
         <View className="px-5 mt-3">
           {isViewingMe && <AddGoalInput />}
 
+          {/* GoalList renders its own empty state — don't add a second one. */}
           <GoalList
             selectedTabId={selectedTabId}
             goals={todayGoals}
             onEdit={setEditingGoal}
             onDelete={setDeletingGoal}
           />
-
-          {todayGoals.length === 0 && !isViewingMe && (
-            <Text className="text-center text-text-dim font-mono mt-10">
-              No habits scheduled for today.
-            </Text>
-          )}
         </View>
       </ScrollView>
 

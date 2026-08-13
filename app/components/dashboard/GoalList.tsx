@@ -8,6 +8,8 @@ import Reanimated, {
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
+import { getGoalHistory } from "@/lib/goalHistory";
+import { themeColors } from "@/lib/colors";
 
 const ACTION_WIDTH = 72;
 const ACTION_GAP = 8;
@@ -65,6 +67,36 @@ function LeftActionComponent({ drag, goal, onAction }: ActionProps) {
   );
 }
 
+// The trailing week for one habit. `missed` days are drawn as a hollow ring so
+// a skipped day reads differently from a day the habit was never scheduled on.
+function WeekStrip({ goal, accentHex }: { goal: Goal; accentHex: string }) {
+  const cells = getGoalHistory(goal);
+  const doneCount = cells.filter((c) => c.state === "done").length;
+
+  return (
+    <View
+      className="flex-row items-center gap-1 mt-2"
+      accessible
+      accessibilityLabel={`${doneCount} of the last ${cells.length} days completed`}
+    >
+      {cells.map((cell) => (
+        <View
+          key={cell.date}
+          className="w-1.5 h-1.5 rounded-pill"
+          style={{
+            backgroundColor:
+              cell.state === "done"
+                ? accentHex
+                : cell.state === "missed"
+                  ? themeColors.surface2 // a skipped day stays visible
+                  : themeColors.surface, // not scheduled — barely there
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 export default function GoalList({
   selectedTabId,
   goals,
@@ -87,7 +119,7 @@ export default function GoalList({
             key={i}
             style={{
               height: 72,
-              backgroundColor: "#151517",
+              backgroundColor: themeColors.surface,
               borderRadius: 14,
               opacity: 0.6,
             }}
@@ -145,6 +177,9 @@ export default function GoalList({
             <Pressable
               disabled={!isViewingMe}
               onPress={() => toggleGoal(goal)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: done, disabled: !isViewingMe }}
+              accessibilityLabel={goal.title}
               className={`bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center ${
                 done ? "opacity-60" : ""
               }`}
@@ -170,22 +205,7 @@ export default function GoalList({
                 >
                   {goal.title}
                 </Text>
-                <View className="flex-row items-center gap-1 mt-2">
-                  {Array.from({ length: 7 }).map((_, i) => {
-                    const lit = done && i === 6;
-                    return (
-                      <View
-                        key={i}
-                        className={`w-1.5 h-1.5 rounded-pill ${
-                          lit ? "" : "bg-[#3A3A3C]"
-                        }`}
-                        style={
-                          lit ? { backgroundColor: accent.hex } : undefined
-                        }
-                      />
-                    );
-                  })}
-                </View>
+                <WeekStrip goal={goal} accentHex={accent.hex} />
               </View>
 
               {done ? <Text style={{ fontSize: 16 }}>🔥</Text> : null}

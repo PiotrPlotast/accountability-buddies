@@ -28,10 +28,24 @@ export function useToggleGoal() {
       }
     },
     getGroupId: (goal) => goal.group_id,
-    getPatch: (goal) => (goals) =>
-      goals.map((g) =>
-        g.id === goal.id ? { ...g, completed_today: !goal.completed_today } : g,
-      ),
+    getPatch: (goal) => (goals) => {
+      const today = getTodayLocalDate();
+      const isNowCompleted = !goal.completed_today;
+
+      return goals.map((g) => {
+        if (g.id !== goal.id) return g;
+        const dates = g.completed_dates ?? [];
+        return {
+          ...g,
+          completed_today: isNowCompleted,
+          // Keep the week strip in step with the checkmark, or it lags a
+          // network round-trip behind the row it sits inside.
+          completed_dates: isNowCompleted
+            ? [...new Set([...dates, today])].sort()
+            : dates.filter((d) => d !== today),
+        };
+      });
+    },
     beforeOptimistic: () =>
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
     invalidateStatsOnSettle: true,

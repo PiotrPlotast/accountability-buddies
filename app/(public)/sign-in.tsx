@@ -1,33 +1,56 @@
 import "../../global.css";
-import { useState } from "react";
-import { Text, TextInput, Pressable, View, ScrollView } from "react-native";
+import { useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Text,
+  TextInput,
+  Pressable,
+  View,
+  ScrollView,
+} from "react-native";
 import { themeColors } from "@/lib/colors";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useSignIn } from "@/hooks/useSignIn";
+import FormError from "@/app/components/auth/FormError";
+import { getAuthErrorMessage } from "@/lib/authErrors";
 
 export default function Page() {
   const { signInWithPassword, isLoaded } = useSignIn();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
 
   const onSignInPress = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || submitting) return;
 
+    setError(null);
+    setSubmitting(true);
     try {
-      await signInWithPassword({ email, password });
+      await signInWithPassword({ email: email.trim(), password });
+      // On success the session guard swaps navigation groups and unmounts
+      // this screen, so there is nothing to reset.
     } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
+      setError(getAuthErrorMessage(err));
+      setSubmitting(false);
     }
   };
 
-  const canSubmit = !!email && !!password;
+  // Kept apart so the button stays filled (and the dark spinner stays visible)
+  // while the request is in flight, rather than greying out mid-submit.
+  const isFilled = !!email && !!password;
+  const canSubmit = isFilled && !submitting;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-      <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 24, gap: 16 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text
           className="text-text font-mono-bold"
           style={{ fontSize: 32, lineHeight: 36 }}
@@ -42,11 +65,19 @@ export default function Page() {
           <View className="border border-border rounded-tile px-4 h-14 justify-center bg-surface">
             <TextInput
               autoCapitalize="none"
+              autoComplete="email"
+              autoCorrect={false}
+              textContentType="username"
               keyboardType="email-address"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
               value={email}
               placeholder="you@example.com"
               placeholderTextColor="#6B7280"
-              onChangeText={setEmail}
+              onChangeText={(next) => {
+                setEmail(next);
+                setError(null);
+              }}
               className="text-text font-mono text-base"
               style={{ fontFamily: "GeistMono_400Regular" }}
             />
@@ -59,27 +90,41 @@ export default function Page() {
           </Text>
           <View className="border border-border rounded-tile px-4 h-14 justify-center bg-surface">
             <TextInput
+              ref={passwordRef}
               value={password}
               placeholder="••••••••"
               placeholderTextColor="#6B7280"
               secureTextEntry
-              onChangeText={setPassword}
+              autoComplete="current-password"
+              textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={onSignInPress}
+              onChangeText={(next) => {
+                setPassword(next);
+                setError(null);
+              }}
               className="text-text font-mono text-base"
               style={{ fontFamily: "GeistMono_400Regular" }}
             />
           </View>
         </View>
 
+        <FormError message={error} />
+
         <Pressable
           onPress={onSignInPress}
           disabled={!canSubmit}
-          className={`h-14 rounded-tile items-center justify-center mt-2 ${canSubmit ? "bg-neon" : "bg-surface"}`}
+          className={`h-14 rounded-tile items-center justify-center mt-2 ${isFilled ? "bg-neon" : "bg-surface"}`}
         >
-          <Text
-            className={`font-mono-bold ${canSubmit ? "text-bg" : "text-text-dim"}`}
-          >
-            Continue
-          </Text>
+          {submitting ? (
+            <ActivityIndicator color={themeColors.background} />
+          ) : (
+            <Text
+              className={`font-mono-bold ${isFilled ? "text-bg" : "text-text-dim"}`}
+            >
+              Continue
+            </Text>
+          )}
         </Pressable>
 
         <View className="flex-row justify-center mt-2">

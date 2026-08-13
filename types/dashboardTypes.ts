@@ -3,6 +3,10 @@ export type Goal = {
   title: string;
   user_id: string;
   completed_today: boolean;
+  // `YYYY-MM-DD` for every day in the trailing window that has a log, oldest
+  // first. Derived alongside `completed_today` from the same nested `logs`.
+  // Optional so cached entries written before the window widened still parse.
+  completed_dates?: string[];
   group_id: string;
   icon: string | null;
   repeat_days: number[];
@@ -16,7 +20,7 @@ export type GoalRow = {
   group_id: string;
   icon: string | null;
   repeat_days: number[];
-  logs: { id: string }[];
+  logs: { id: string; date: string }[];
 };
 
 // Raw Supabase row from `group_members` query

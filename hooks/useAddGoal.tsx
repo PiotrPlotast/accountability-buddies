@@ -44,6 +44,7 @@ export function useAddGoal() {
           user_id: userId,
           group_id: groupId,
           completed_today: false,
+          completed_dates: [],
           icon: icon ?? null,
           repeat_days:
             repeatDays && repeatDays.length > 0 ? repeatDays : ALL_DAYS,

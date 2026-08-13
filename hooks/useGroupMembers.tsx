@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSupabase } from "@/hooks/useSupabase";
 import { Member } from "@/types/dashboardTypes";
-import { getTodayLocalDate } from "@/lib/date";
+import { getLocalDateDaysAgo, getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
+import { HISTORY_DAYS } from "@/lib/goalHistory";
 
 interface UseGroupMembersProps {
   groupId: string | null;
@@ -17,6 +18,9 @@ export function useGroupMembers({ groupId }: UseGroupMembersProps) {
       if (!groupId) return [];
 
       const today = getTodayLocalDate();
+      // Widened from a single day so each habit row can show a real trailing
+      // week instead of only "done today".
+      const windowStart = getLocalDateDaysAgo(HISTORY_DAYS - 1);
 
       const [membersRes, goalsRes] = await Promise.all([
         supabase
@@ -25,9 +29,10 @@ export function useGroupMembers({ groupId }: UseGroupMembersProps) {
           .eq("group_id", groupId),
         supabase
           .from("goals")
-          .select("id,user_id,title,group_id,icon,repeat_days,logs(id)")
+          .select("id,user_id,title,group_id,icon,repeat_days,logs(id,date)")
           .eq("group_id", groupId)
-          .eq("logs.date", today),
+          .gte("logs.date", windowStart)
+          .lte("logs.date", today),
       ]);
 
       if (!membersRes.data || !goalsRes.data) return [];
@@ -39,7 +44,16 @@ export function useGroupMembers({ groupId }: UseGroupMembersProps) {
           full_name: profile?.full_name || "Unknown",
           goals: goalsRes.data
             .filter((g) => g.user_id === m.user_id)
-            .map((g) => ({ ...g, completed_today: g.logs.length > 0 })),
+            .map(({ logs, ...g }) => {
+              const completed_dates = [
+                ...new Set(logs.map((l) => l.date)),
+              ].sort();
+              return {
+                ...g,
+                completed_dates,
+                completed_today: completed_dates.includes(today),
+              };
+            }),
         };
       });
 
