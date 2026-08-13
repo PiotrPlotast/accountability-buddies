@@ -1,6 +1,7 @@
 import { waitFor } from "@testing-library/react-native";
 
 import { useGroupMembers } from "@/hooks/useGroupMembers";
+import { getLocalDateDaysAgo, getTodayLocalDate } from "@/lib/date";
 
 import {
   buildFakeSupabase,
@@ -11,6 +12,8 @@ import {
 
 describe("useGroupMembers", () => {
   it("maps members and derives completed_today from today's logs", async () => {
+    const today = getTodayLocalDate();
+    const yesterday = getLocalDateDaysAgo(1);
     const membersQB = makeQueryBuilder({
       data: [{ user_id: "user-1", profiles: { full_name: "Ada Lovelace" } }],
       error: null,
@@ -24,7 +27,11 @@ describe("useGroupMembers", () => {
           group_id: "group-1",
           icon: null,
           repeat_days: [0, 1, 2],
-          logs: [{ id: "l-1" }],
+          // Two logs in the trailing window, one of them today.
+          logs: [
+            { id: "l-1", date: yesterday },
+            { id: "l-2", date: today },
+          ],
         },
         {
           id: "g-2",
@@ -33,7 +40,7 @@ describe("useGroupMembers", () => {
           group_id: "group-1",
           icon: null,
           repeat_days: [0],
-          logs: [],
+          logs: [{ id: "l-3", date: yesterday }],
         },
       ],
       error: null,
@@ -55,8 +62,16 @@ describe("useGroupMembers", () => {
           user_id: "user-1",
           full_name: "Ada Lovelace",
           goals: [
-            expect.objectContaining({ id: "g-1", completed_today: true }),
-            expect.objectContaining({ id: "g-2", completed_today: false }),
+            expect.objectContaining({
+              id: "g-1",
+              completed_today: true,
+              completed_dates: [yesterday, today],
+            }),
+            expect.objectContaining({
+              id: "g-2",
+              completed_today: false,
+              completed_dates: [yesterday],
+            }),
           ],
         },
       ]);
