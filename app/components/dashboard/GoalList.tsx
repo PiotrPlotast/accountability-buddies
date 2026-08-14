@@ -1,4 +1,4 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, type ViewStyle } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
@@ -69,18 +69,22 @@ function LeftActionComponent({ drag, goal, onAction }: ActionProps) {
 
 // The trailing week for one habit, oldest dot first.
 //
-// Every dot has to stay visible against the row's own `bg-surface`, so the
-// dimmer states are the palette greys at reduced opacity rather than a colour
-// close to the card — painting one *as* the card colour makes it vanish and
-// the strip silently loses a day.
+// The accent marks the days this habit is about: full strength once done,
+// dimmed while today is still open, so the one day you can still act on
+// carries the accent rather than blending into the history behind it. Days
+// that are settled — missed, or never scheduled — stay grey.
+//
+// Every state has to stay visible against the row's own `bg-surface`. The grey
+// states are palette greys at reduced opacity rather than a colour close to
+// the card; painting one *as* the card colour makes it vanish and the strip
+// silently loses a day.
 export const DOT_STYLES: Record<
   HistoryState,
-  (accentHex: string) => { backgroundColor: string; opacity: number }
+  (accentHex: string) => ViewStyle
 > = {
-  done: (accentHex) => ({ backgroundColor: accentHex, opacity: 1 }),
-  // Today, still due — accent-tinted so it reads as "this one's on you".
+  done: (accentHex) => ({ backgroundColor: accentHex }),
   pending: (accentHex) => ({ backgroundColor: accentHex, opacity: 0.35 }),
-  missed: () => ({ backgroundColor: themeColors.surface2, opacity: 1 }),
+  missed: () => ({ backgroundColor: themeColors.surface2 }),
   off: () => ({ backgroundColor: themeColors.surface2, opacity: 0.45 }),
 };
 
