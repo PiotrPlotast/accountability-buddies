@@ -92,7 +92,7 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
                 onChangeText={setTitle}
                 autoFocus
                 placeholder="Habit name"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={themeColors.textDim}
                 className="text-text font-mono text-base"
                 style={{ fontFamily: "GeistMono_400Regular" }}
               />

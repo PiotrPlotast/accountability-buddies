@@ -74,7 +74,7 @@ export default function NewHabitScreen() {
             value={title}
             onChangeText={setTitle}
             placeholder="Meditate 10 minutes"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={themeColors.textDim}
             className="text-text font-mono text-base"
             style={{ fontFamily: "GeistMono_400Regular" }}
             autoFocus

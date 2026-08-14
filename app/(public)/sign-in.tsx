@@ -73,7 +73,7 @@ export default function Page() {
               onSubmitEditing={() => passwordRef.current?.focus()}
               value={email}
               placeholder="you@example.com"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={themeColors.textDim}
               onChangeText={(next) => {
                 setEmail(next);
                 setError(null);
@@ -93,7 +93,7 @@ export default function Page() {
               ref={passwordRef}
               value={password}
               placeholder="••••••••"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={themeColors.textDim}
               secureTextEntry
               autoComplete="current-password"
               textContentType="password"

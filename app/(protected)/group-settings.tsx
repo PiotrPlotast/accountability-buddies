@@ -16,33 +16,8 @@ import * as Clipboard from "expo-clipboard";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useUpdateGroup } from "@/hooks/useUpdateGroup";
 import { useTheme } from "@/hooks/useTheme";
-
-const ICON_CHOICES = [
-  "👥",
-  "🪵",
-  "🔥",
-  "⚡",
-  "🌱",
-  "🏔️",
-  "🌊",
-  "☀️",
-  "🌙",
-  "⭐",
-  "🎯",
-  "🏆",
-  "💪",
-  "🧠",
-  "📚",
-  "✍️",
-  "🎨",
-  "🎸",
-  "🏃",
-  "🧘",
-  "🥗",
-  "💧",
-  "🍵",
-  "🐺",
-];
+import { GROUP_ICON_CHOICES } from "@/lib/habitIcons";
+import { themeColors } from "@/lib/colors";
 
 export default function GroupSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -112,7 +87,7 @@ export default function GroupSettingsScreen() {
         >
           <Text
             className="font-mono-medium text-base"
-            style={{ color: canSave ? accent.hex : "#6B7280" }}
+            style={{ color: canSave ? accent.hex : themeColors.textDim }}
           >
             {updateGroup.isPending ? "..." : "Save"}
           </Text>
@@ -134,7 +109,7 @@ export default function GroupSettingsScreen() {
             value={name}
             onChangeText={setName}
             placeholder="Swole Mates"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={themeColors.textDim}
             className="text-text font-mono text-base"
             style={{ fontFamily: "GeistMono_400Regular" }}
           />
@@ -155,7 +130,7 @@ export default function GroupSettingsScreen() {
           </Text>
         </View>
         <View className="flex-row flex-wrap gap-3">
-          {ICON_CHOICES.map((emoji) => {
+          {GROUP_ICON_CHOICES.map((emoji) => {
             const selected = icon === emoji;
             return (
               <Pressable
@@ -209,7 +184,7 @@ export default function GroupSettingsScreen() {
                 style={{
                   backgroundColor: p.hex,
                   borderWidth: active ? 3 : 0,
-                  borderColor: "#F4F4F5",
+                  borderColor: themeColors.text,
                 }}
               >
                 {active ? (
@@ -232,14 +207,18 @@ export default function GroupSettingsScreen() {
           onPress={handleSave}
           disabled={!canSave}
           className="h-14 rounded-tile items-center justify-center"
-          style={{ backgroundColor: canSave ? accent.hex : "#151517" }}
+          style={{
+            backgroundColor: canSave ? accent.hex : themeColors.surface,
+          }}
         >
           {updateGroup.isPending ? (
-            <ActivityIndicator color="#18181B" />
+            <ActivityIndicator color={themeColors.background} />
           ) : (
             <Text
               className="font-mono-bold text-base"
-              style={{ color: canSave ? "#18181B" : "#6B7280" }}
+              style={{
+                color: canSave ? themeColors.background : themeColors.textDim,
+              }}
             >
               Save changes
             </Text>

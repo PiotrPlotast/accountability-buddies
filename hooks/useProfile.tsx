@@ -16,12 +16,11 @@ export function useProfile() {
         .from("profiles")
         .select("nickname, avatar_url")
         .eq("id", userId)
-        .single<ProfileRow>();
+        // maybeSingle: a freshly signed-up user may not have a profile row
+        // yet, which is a null result rather than a failure.
+        .maybeSingle<ProfileRow>();
 
-      if (error) {
-        console.log("PROFILE ERROR:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data;
     },

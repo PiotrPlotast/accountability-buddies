@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { useTheme } from "@/hooks/useTheme";
+import { themeColors } from "@/lib/colors";
 
 type Props = {
   size?: number;
@@ -26,7 +27,7 @@ export default function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#2A2A2E"
+          stroke={themeColors.border}
           strokeWidth={stroke}
           fill="none"
         />

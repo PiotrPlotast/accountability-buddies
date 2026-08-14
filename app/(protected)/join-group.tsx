@@ -123,7 +123,7 @@ export default function JoinGroupScreen() {
                 onChangeText={setCode}
                 autoCapitalize="characters"
                 placeholder="A8X-992"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={themeColors.textDim}
                 className="text-text text-2xl text-center tracking-widest"
                 style={{ fontFamily: "GeistMono_700Bold" }}
               />
@@ -134,7 +134,7 @@ export default function JoinGroupScreen() {
                 value={groupName}
                 onChangeText={setGroupName}
                 placeholder="Swole Mates"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={themeColors.textDim}
                 className="text-text text-base"
                 style={{ fontFamily: "GeistMono_400Regular" }}
               />
@@ -147,7 +147,7 @@ export default function JoinGroupScreen() {
             className="h-14 rounded-tile items-center justify-center bg-neon mt-2"
           >
             {loading ? (
-              <ActivityIndicator color="#18181B" />
+              <ActivityIndicator color={themeColors.background} />
             ) : (
               <Text className="text-bg font-mono-bold">
                 {isJoin ? "Join group" : "Create group"}

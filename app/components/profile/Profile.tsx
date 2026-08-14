@@ -44,7 +44,9 @@ export default function Profile() {
           try {
             await signOut();
           } catch (err) {
-            console.error(JSON.stringify(err, null, 2));
+            // JSON.stringify on an Error yields "{}" — its fields are
+            // non-enumerable. Log the value itself.
+            console.error("Sign out failed:", err);
             Alert.alert("Sign out failed", "Please try again.");
           }
         },

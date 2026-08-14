@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
 import { useHeatmapData } from "@/hooks/useHeatmapData";
+import { getRecentLocalDates } from "@/lib/date";
 
 const WEEKS = 12;
 const DAYS = 7;
+const TOTAL_CELLS = WEEKS * DAYS;
 
 type Props = {
   userId?: string;
@@ -16,13 +19,9 @@ export default function Heatmap({ userId }: Props) {
   // Zaciągamy dane z naszego nowego hooka
   const { data: heatmapDict = {}, isLoading } = useHeatmapData(userId);
 
-  // Pomocnicza funkcja: oblicza datę X dni temu i zwraca format "YYYY-MM-DD"
-  const getDateStringDaysAgo = (daysAgo: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() - daysAgo);
-    // Locale "en-CA" sprytnie wymusza format YYYY-MM-DD bez względu na ustawienia telefonu
-    return d.toLocaleDateString("en-CA");
-  };
+  // Dates for the whole grid, oldest first — ta sama kolejność co week strip.
+  // Liczone raz zamiast 84 razy przy każdym renderze.
+  const dates = useMemo(() => getRecentLocalDates(TOTAL_CELLS), []);
 
   // Zabezpieczenie UX, dopóki baza nie odpowie
   if (isLoading) {
@@ -40,13 +39,12 @@ export default function Heatmap({ userId }: Props) {
       {Array.from({ length: DAYS }).map((_, row) => (
         <View key={row} style={{ flexDirection: "row", gap: 4 }}>
           {Array.from({ length: WEEKS }).map((__, col) => {
-            // MAGIA SIATKI (Column-Major Order):
-            // Kiedy col = 11 i row = 6 (prawy dolny róg) -> cellIndex = 83.
-            // 83 - 83 = 0 (dzisiaj)
+            // MAGIA SIATKI (Column-Major Order): kolumna to tydzień, więc
+            // prawy dolny róg (col = 11, row = 6) -> cellIndex = 83, czyli
+            // ostatni element `dates` — dzisiaj.
             const cellIndex = col * DAYS + row;
-            const daysAgo = WEEKS * DAYS - 1 - cellIndex; // 83 - cellIndex
 
-            const dateStr = getDateStringDaysAgo(daysAgo);
+            const dateStr = dates[cellIndex];
 
             // Odczytujemy ze słownika ile nawyków zrobiono danego dnia (O(1))
             const count = heatmapDict[dateStr] || 0;

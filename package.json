@@ -26,7 +26,9 @@
       "/node_modules/",
       "/android/",
       "/ios/",
-      "/__tests__/test-utils/"
+      "/__tests__/test-utils/",
+      "/.claude/worktrees/",
+      "/.kilo/worktrees/"
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [
@@ -35,7 +37,9 @@
       "!**/node_modules/**",
       "!**/babel.config.js",
       "!**/expo-env.d.ts",
-      "!**/.expo/**"
+      "!**/.expo/**",
+      "!**/.claude/**",
+      "!**/.kilo/**"
     ]
   },
   "dependencies": {

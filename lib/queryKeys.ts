@@ -4,4 +4,5 @@ export const queryKeys = {
   groupMembers: (groupId: string | null) => ["groupMembers", groupId] as const,
   groupMembersAll: () => ["groupMembers"] as const,
   profile: (userId: string | undefined) => ["profile", userId] as const,
+  heatmap: (userId: string | undefined) => ["heatmap", userId] as const,
 };

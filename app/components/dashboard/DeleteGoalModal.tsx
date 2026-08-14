@@ -37,7 +37,12 @@ export default function DeleteGoalModal({ goal, isVisible, onClose }: Props) {
   };
 
   return (
-    <Modal visible={isVisible} animationType="fade" transparent>
+    <Modal
+      visible={isVisible}
+      animationType="fade"
+      transparent
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{

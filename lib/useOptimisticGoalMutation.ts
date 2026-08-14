@@ -70,7 +70,7 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
       });
 
       if (opts.getHeatmapDelta) {
-        const heatmapKey = ["heatmap", userId];
+        const heatmapKey = queryKeys.heatmap(userId);
         await queryClient.cancelQueries({ queryKey: heatmapKey });
         heatmap = {
           key: heatmapKey,
@@ -121,7 +121,7 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
         queryClient.invalidateQueries({ queryKey: queryKeys.groupStatsAll() });
       }
       if (opts.getHeatmapDelta && userId) {
-        queryClient.invalidateQueries({ queryKey: ["heatmap", userId] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.heatmap(userId) });
       }
     },
   });

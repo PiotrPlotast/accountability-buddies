@@ -12,14 +12,13 @@ export function useGroupStats() {
     queryFn: async (): Promise<GroupResult | null> => {
       if (!userId) return null;
 
+      // maybeSingle: a user with no group is an expected state (the dashboard
+      // redirects them to join-group), not a PGRST116 "no rows" error.
       const { data, error } = await supabase
         .rpc("get_my_group_stats")
-        .single<GroupResult>();
+        .maybeSingle<GroupResult>();
 
-      if (error) {
-        console.log("RPC ERROR:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return data;
     },

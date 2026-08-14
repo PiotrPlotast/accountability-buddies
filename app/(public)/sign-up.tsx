@@ -86,7 +86,7 @@ export default function Page() {
               <TextInput
                 value={token}
                 placeholder="123456"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={themeColors.textDim}
                 keyboardType="number-pad"
                 textContentType="oneTimeCode"
                 autoComplete="one-time-code"
@@ -157,7 +157,7 @@ export default function Page() {
               onSubmitEditing={() => passwordRef.current?.focus()}
               value={email}
               placeholder="you@example.com"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={themeColors.textDim}
               onChangeText={(next) => {
                 setEmail(next);
                 setError(null);
@@ -177,7 +177,7 @@ export default function Page() {
               ref={passwordRef}
               value={password}
               placeholder="••••••••"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={themeColors.textDim}
               secureTextEntry
               autoComplete="new-password"
               textContentType="newPassword"
