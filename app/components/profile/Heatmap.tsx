@@ -23,11 +23,24 @@ export default function Heatmap({ userId }: Props) {
   // Liczone raz zamiast 84 razy przy każdym renderze.
   const dates = useMemo(() => getRecentLocalDates(TOTAL_CELLS), []);
 
+  // A screen reader stepping through 84 unlabelled cells is useless, so the
+  // grid is announced as a single summary instead. `activeDays` counts the
+  // days with at least one check-in; `total` is every check-in in the window.
+  const summary = useMemo(() => {
+    const counts = dates.map((d) => heatmapDict[d] || 0);
+    const activeDays = counts.filter((c) => c > 0).length;
+    const total = counts.reduce((sum, c) => sum + c, 0);
+    return `Activity over the last ${WEEKS} weeks: ${total} check-ins across ${activeDays} of ${TOTAL_CELLS} days.`;
+  }, [dates, heatmapDict]);
+
   // Zabezpieczenie UX, dopóki baza nie odpowie
   if (isLoading) {
     return (
       <View
         style={{ height: 120, justifyContent: "center", alignItems: "center" }}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel="Loading activity"
       >
         <ActivityIndicator color={accent.hex} />
       </View>
@@ -35,7 +48,12 @@ export default function Heatmap({ userId }: Props) {
   }
 
   return (
-    <View style={{ gap: 4 }}>
+    <View
+      style={{ gap: 4 }}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={summary}
+    >
       {Array.from({ length: DAYS }).map((_, row) => (
         <View key={row} style={{ flexDirection: "row", gap: 4 }}>
           {Array.from({ length: WEEKS }).map((__, col) => {

@@ -48,4 +48,26 @@ describe("habit pickers", () => {
     fireEvent.press(getByLabelText("Mon"));
     expect(onChange).toHaveBeenLastCalledWith([4]);
   });
+
+  // An empty selection is stored as "every day", so clearing the last chip
+  // would mean the opposite of what the empty picker shows.
+  it("refuses to clear the last selected day", () => {
+    const onChange = jest.fn();
+    const { getByLabelText } = render(
+      <DayPicker value={[2]} onChange={onChange} />,
+    );
+
+    fireEvent.press(getByLabelText("Wed"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("still allows deselecting when more than one day is lit", () => {
+    const onChange = jest.fn();
+    const { getByLabelText } = render(
+      <DayPicker value={[2, 5]} onChange={onChange} />,
+    );
+
+    fireEvent.press(getByLabelText("Wed"));
+    expect(onChange).toHaveBeenCalledWith([5]);
+  });
 });

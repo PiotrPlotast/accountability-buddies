@@ -1,5 +1,6 @@
 import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { Image } from "expo-image";
+import { useRouter, type Href } from "expo-router";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
@@ -28,6 +29,7 @@ export default function Profile() {
   } = useProfileData();
   const { accent } = useTheme();
   const { session } = useSupabase();
+  const router = useRouter();
   const userId = session?.user.id;
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
@@ -66,6 +68,9 @@ export default function Profile() {
         <Pressable
           onPress={handleSignOut}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Log out"
+          accessibilityHint="Signs you out of your account"
           className="w-16 h-9 items-center justify-center"
         >
           <Text className="text-text-muted" style={{ fontSize: 12 }}>
@@ -78,6 +83,9 @@ export default function Profile() {
         <View
           className="w-20 h-20 rounded-tile items-center justify-center overflow-hidden"
           style={{ backgroundColor: accent.hex }}
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={`${displayName}'s avatar`}
         >
           {avatarUrl ? (
             <Image
@@ -129,7 +137,17 @@ export default function Profile() {
           Groups / {String(groupsCount).padStart(2, "0")}
         </Text>
         {groupName ? (
-          <View className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center gap-3">
+          // The chevron always promised this row was tappable; now it is,
+          // rather than being a decoration that leads nowhere.
+          <Pressable
+            onPress={() => router.push("/group-settings" as Href)}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`${groupName}, ${groupMemberCount} members, ${groupStreak} day streak`}
+            accessibilityHint="Opens group settings"
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center gap-3"
+          >
             <View className="w-9 h-9 rounded-tile bg-surface-2 items-center justify-center">
               <Text className="text-text-muted font-mono-bold">
                 {groupName.charAt(0).toUpperCase()}
@@ -146,7 +164,7 @@ export default function Profile() {
             <Text className="text-text-dim" style={{ fontSize: 18 }}>
               ›
             </Text>
-          </View>
+          </Pressable>
         ) : (
           <Text className="text-text-muted font-mono text-sm">
             No group yet.
@@ -167,7 +185,12 @@ function Stat({
   color: string;
 }) {
   return (
-    <View className="flex-1 bg-surface border border-border rounded-tile px-4 py-4">
+    // Grouped so it reads "3 Streak", not two unrelated announcements.
+    <View
+      className="flex-1 bg-surface border border-border rounded-tile px-4 py-4"
+      accessible
+      accessibilityLabel={`${value} ${label}`}
+    >
       <Text className="font-mono-bold" style={{ fontSize: 28, color }}>
         {value}
       </Text>

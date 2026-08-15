@@ -45,6 +45,18 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
 
   const canSave = title.trim().length > 0 && !saving;
 
+  const dirty =
+    !!goal &&
+    (title !== goal.title ||
+      icon !== goal.icon ||
+      repeatDays.join() !==
+        (goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS).join());
+
+  // Tapping outside closes only when there is nothing to lose. With edits in
+  // flight or unsaved, a stray tap on the backdrop would silently discard
+  // them, so it does nothing and Cancel stays the deliberate way out.
+  const dismissOnBackdrop = !dirty && !saving ? onClose : undefined;
+
   const handleSave = async () => {
     if (!goal?.id || !canSave) return;
     setSaving(true);
@@ -68,79 +80,92 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{
-          flex: 1,
-          backgroundColor: "rgba(0,0,0,0.7)",
-          justifyContent: "center",
-          padding: 20,
-        }}
+        style={{ flex: 1 }}
       >
-        <View className="bg-bg border border-border rounded-tile overflow-hidden">
-          <ScrollView
-            contentContainerStyle={{ padding: 24 }}
-            keyboardShouldPersistTaps="handled"
+        <Pressable
+          onPress={dismissOnBackdrop}
+          accessibilityRole={dismissOnBackdrop ? "button" : undefined}
+          accessibilityLabel={dismissOnBackdrop ? "Close" : undefined}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.7)",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          {/* Absorbs taps landing on the dialog so they don't reach the
+              backdrop. A plain responder rather than a Pressable, so the card
+              doesn't announce itself as a button. */}
+          <View
+            onStartShouldSetResponder={() => true}
+            className="bg-bg border border-border rounded-tile overflow-hidden"
           >
-            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-              Habit name
-            </Text>
-            <View
-              style={{ borderColor: accent.hex }}
-              className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
+            <ScrollView
+              contentContainerStyle={{ padding: 24 }}
+              keyboardShouldPersistTaps="handled"
             >
-              <TextInput
-                value={title}
-                onChangeText={setTitle}
-                autoFocus
-                placeholder="Habit name"
-                placeholderTextColor={themeColors.textDim}
-                className="text-text font-mono text-base"
-                style={{ fontFamily: "GeistMono_400Regular" }}
-              />
-            </View>
-
-            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-              Pick an icon
-            </Text>
-            <IconPicker value={icon} onChange={setIcon} />
-
-            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-              Repeat
-            </Text>
-            <DayPicker value={repeatDays} onChange={setRepeatDays} />
-          </ScrollView>
-
-          <View className="flex-row gap-3 px-6 pb-6">
-            <Pressable
-              onPress={onClose}
-              disabled={saving}
-              className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
-            >
-              <Text className="text-text-muted font-mono-medium text-base">
-                Cancel
+              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
+                Habit name
               </Text>
-            </Pressable>
-            <Pressable
-              onPress={handleSave}
-              disabled={!canSave}
-              className="flex-1 h-14 rounded-tile items-center justify-center"
-              style={{
-                backgroundColor: canSave ? accent.hex : themeColors.surface,
-              }}
-            >
-              {saving ? (
-                <ActivityIndicator color={themeColors.background} />
-              ) : (
-                <Text
-                  className={`font-mono-bold text-base ${
-                    canSave ? "text-bg" : "text-text-dim"
-                  }`}
-                >
-                  Save
+              <View
+                style={{ borderColor: accent.hex }}
+                className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
+              >
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  autoFocus
+                  placeholder="Habit name"
+                  placeholderTextColor={themeColors.textDim}
+                  className="text-text font-mono text-base"
+                  style={{ fontFamily: "GeistMono_400Regular" }}
+                />
+              </View>
+
+              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
+                Pick an icon
+              </Text>
+              <IconPicker value={icon} onChange={setIcon} />
+
+              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
+                Repeat
+              </Text>
+              <DayPicker value={repeatDays} onChange={setRepeatDays} />
+            </ScrollView>
+
+            <View className="flex-row gap-3 px-6 pb-6">
+              <Pressable
+                onPress={onClose}
+                disabled={saving}
+                className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
+              >
+                <Text className="text-text-muted font-mono-medium text-base">
+                  Cancel
                 </Text>
-              )}
-            </Pressable>
+              </Pressable>
+              <Pressable
+                onPress={handleSave}
+                disabled={!canSave}
+                className="flex-1 h-14 rounded-tile items-center justify-center"
+                style={{
+                  backgroundColor: canSave ? accent.hex : themeColors.surface,
+                }}
+              >
+                {saving ? (
+                  <ActivityIndicator color={themeColors.background} />
+                ) : (
+                  <Text
+                    className={`font-mono-bold text-base ${
+                      canSave ? "text-bg" : "text-text-dim"
+                    }`}
+                  >
+                    Save
+                  </Text>
+                )}
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </Pressable>
       </KeyboardAvoidingView>
     </Modal>
   );
