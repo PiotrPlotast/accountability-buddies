@@ -94,6 +94,24 @@ describe("formatRepeatDays", () => {
     expect(formatRepeatDays([4, 0, 2])).toBe("Mon, Wed, Fri");
   });
 
+  it("names the two common selections instead of listing them", () => {
+    expect(formatRepeatDays([0, 1, 2, 3, 4])).toBe("Weekdays");
+    expect(formatRepeatDays([5, 6])).toBe("Weekends");
+  });
+
+  it("recognises those selections whatever order they arrive in", () => {
+    expect(formatRepeatDays([4, 2, 0, 3, 1])).toBe("Weekdays");
+    expect(formatRepeatDays([6, 5])).toBe("Weekends");
+  });
+
+  it("still lists a selection that only overlaps a named one", () => {
+    expect(formatRepeatDays([0, 1, 2, 3])).toBe("Mon, Tue, Wed, Thu");
+    expect(formatRepeatDays([0, 1, 2, 3, 4, 5])).toBe(
+      "Mon, Tue, Wed, Thu, Fri, Sat",
+    );
+    expect(formatRepeatDays([5])).toBe("Sat");
+  });
+
   it("skips out-of-range indexes instead of rendering undefined", () => {
     expect(formatRepeatDays([0, 9])).toBe("Mon");
   });

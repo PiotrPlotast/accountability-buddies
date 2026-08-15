@@ -66,7 +66,7 @@ export default function DashboardHeader({
           className="text-text font-mono-bold"
           style={{ fontSize: 34, lineHeight: 38 }}
         >
-          {groupName}
+          {groupName ?? "Loading..."}
         </Text>
         <Text className="text-text-muted mt-1" style={{ fontSize: 24 }}>
           ›

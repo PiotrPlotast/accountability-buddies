@@ -15,7 +15,10 @@ export function useDashboardData() {
   });
 
   const loading = groupStats.isLoading || groupMembers.isLoading;
-  const groupName = groupStats.data?.name || "Loading...";
+  // `null` until the group arrives, matching `useProfileData`. It used to be
+  // the literal "Loading...", which callers then compared against — so a group
+  // actually named "Loading..." read as "not loaded yet".
+  const groupName = groupStats.data?.name ?? null;
   const groupIcon = groupStats.data?.icon || "👥";
   const streak = groupStats.data?.current_streak || 0;
   const inviteCode = groupStats.data?.invite_code || "";

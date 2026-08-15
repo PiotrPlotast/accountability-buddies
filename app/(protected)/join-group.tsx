@@ -7,6 +7,9 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -96,77 +99,85 @@ export default function JoinGroupScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-      <View className="flex-1 px-6 justify-center">
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-          Step 01 / 01
-        </Text>
-        <Text
-          className="text-text font-mono-bold"
-          style={{ fontSize: 32, lineHeight: 36 }}
+      {/* The form is vertically centred, so without this the keyboard covers
+          the input and the submit button on shorter devices. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          keyboardShouldPersistTaps="handled"
+          className="px-6"
         >
-          {isJoin ? "Join a crew." : "Start a crew."}
-        </Text>
-        <Text className="text-text-muted font-mono text-sm mt-3">
-          {isJoin
-            ? "Paste the invite code your buddy shared."
-            : "Name your group. You can invite people after."}
-        </Text>
-
-        <View className="mt-8 gap-3">
-          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
-            {isJoin ? "Invite code" : "Group name"}
+          <Text
+            className="text-text font-mono-bold"
+            style={{ fontSize: 32, lineHeight: 36 }}
+          >
+            {isJoin ? "Join a crew." : "Start a crew."}
           </Text>
-          {isJoin ? (
-            <View className="border-2 border-neon rounded-tile px-4 h-16 justify-center bg-bg">
-              <TextInput
-                value={code}
-                onChangeText={setCode}
-                autoCapitalize="characters"
-                placeholder="A8X-992"
-                placeholderTextColor={themeColors.textDim}
-                className="text-text text-2xl text-center tracking-widest"
-                style={{ fontFamily: "GeistMono_700Bold" }}
-              />
-            </View>
-          ) : (
-            <View className="border-2 border-neon rounded-tile px-4 h-14 justify-center bg-bg">
-              <TextInput
-                value={groupName}
-                onChangeText={setGroupName}
-                placeholder="Swole Mates"
-                placeholderTextColor={themeColors.textDim}
-                className="text-text text-base"
-                style={{ fontFamily: "GeistMono_400Regular" }}
-              />
-            </View>
-          )}
+          <Text className="text-text-muted font-mono text-sm mt-3">
+            {isJoin
+              ? "Paste the invite code your buddy shared."
+              : "Name your group. You can invite people after."}
+          </Text>
+
+          <View className="mt-8 gap-3">
+            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
+              {isJoin ? "Invite code" : "Group name"}
+            </Text>
+            {isJoin ? (
+              <View className="border-2 border-neon rounded-tile px-4 h-16 justify-center bg-bg">
+                <TextInput
+                  value={code}
+                  onChangeText={setCode}
+                  autoCapitalize="characters"
+                  placeholder="A8X-992"
+                  placeholderTextColor={themeColors.textDim}
+                  className="text-text text-2xl text-center tracking-widest"
+                  style={{ fontFamily: "GeistMono_700Bold" }}
+                />
+              </View>
+            ) : (
+              <View className="border-2 border-neon rounded-tile px-4 h-14 justify-center bg-bg">
+                <TextInput
+                  value={groupName}
+                  onChangeText={setGroupName}
+                  placeholder="Swole Mates"
+                  placeholderTextColor={themeColors.textDim}
+                  className="text-text text-base"
+                  style={{ fontFamily: "GeistMono_400Regular" }}
+                />
+              </View>
+            )}
+
+            <Pressable
+              onPress={isJoin ? handleJoin : handleCreate}
+              disabled={loading}
+              className="h-14 rounded-tile items-center justify-center bg-neon mt-2"
+            >
+              {loading ? (
+                <ActivityIndicator color={themeColors.background} />
+              ) : (
+                <Text className="text-bg font-mono-bold">
+                  {isJoin ? "Join group" : "Create group"}
+                </Text>
+              )}
+            </Pressable>
+          </View>
 
           <Pressable
-            onPress={isJoin ? handleJoin : handleCreate}
-            disabled={loading}
-            className="h-14 rounded-tile items-center justify-center bg-neon mt-2"
+            onPress={() => setMode(isJoin ? "CREATE" : "JOIN")}
+            className="mt-8 items-center"
           >
-            {loading ? (
-              <ActivityIndicator color={themeColors.background} />
-            ) : (
-              <Text className="text-bg font-mono-bold">
-                {isJoin ? "Join group" : "Create group"}
-              </Text>
-            )}
+            <Text className="text-neon font-mono-medium text-sm">
+              {isJoin
+                ? "No code? Create a new group"
+                : "Have a code? Join instead"}
+            </Text>
           </Pressable>
-        </View>
-
-        <Pressable
-          onPress={() => setMode(isJoin ? "CREATE" : "JOIN")}
-          className="mt-8 items-center"
-        >
-          <Text className="text-neon font-mono-medium text-sm">
-            {isJoin
-              ? "No code? Create a new group"
-              : "Have a code? Join instead"}
-          </Text>
-        </Pressable>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

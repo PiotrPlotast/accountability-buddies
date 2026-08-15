@@ -29,10 +29,19 @@ export function filterGoalsForToday<T extends Repeatable>(goals: T[]): T[] {
   return goals.filter((goal) => isScheduledOn(goal, today));
 }
 
+export const WEEKDAYS = [0, 1, 2, 3, 4];
+export const WEEKEND = [5, 6];
+
 export function formatRepeatDays(days: number[] | null | undefined): string {
   if (!days || days.length === 0 || days.length === 7) return "Every day";
-  return [...days]
-    .sort((a, b) => a - b)
+
+  const sorted = [...days].sort((a, b) => a - b);
+  // The two selections common enough to deserve a name of their own, rather
+  // than spelling out "Mon, Tue, Wed, Thu, Fri".
+  if (sorted.join() === WEEKDAYS.join()) return "Weekdays";
+  if (sorted.join() === WEEKEND.join()) return "Weekends";
+
+  return sorted
     .map((d) => DAY_NAMES[d])
     .filter(Boolean)
     .join(", ");

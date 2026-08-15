@@ -13,12 +13,19 @@ type Props = {
 export default function DayPicker({ value, onChange }: Props) {
   const { accent } = useTheme();
 
-  const toggle = (day: number) =>
+  // An empty selection is stored as "every day" (see lib/repeatDays), so
+  // clearing the last chip would silently mean the opposite of what the empty
+  // picker shows. Refuse to remove it — one day always stays lit.
+  const toggle = (day: number) => {
+    const selected = value.includes(day);
+    if (selected && value.length === 1) return;
+
     onChange(
-      value.includes(day)
+      selected
         ? value.filter((d) => d !== day)
         : [...value, day].sort((a, b) => a - b),
     );
+  };
 
   return (
     <View className="flex-row gap-2">

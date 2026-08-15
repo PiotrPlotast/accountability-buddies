@@ -146,7 +146,7 @@ export default function GoalList({
       <View className="mt-6 p-6 bg-surface border border-border rounded-tile items-center">
         <Text className="text-text-muted font-mono text-sm text-center">
           {isViewingMe
-            ? "No habits for today. Tap + to add one."
+            ? 'No habits for today. Tap "Add a new habit" to start one.'
             : "Nothing here for today."}
         </Text>
       </View>

@@ -27,15 +27,16 @@ export default function GroupSettingsScreen() {
   const { accent, palette, accentId, setAccent } = useTheme();
   const updateGroup = useUpdateGroup();
 
-  const [name, setName] = useState(groupName === "Loading..." ? "" : groupName);
+  const [name, setName] = useState(groupName ?? "");
   const [icon, setIcon] = useState(groupIcon);
 
   useEffect(() => {
     setIcon(groupIcon);
   }, [groupIcon]);
 
+  // Seed the field once the group lands; `null` just means it hasn't yet.
   useEffect(() => {
-    if (groupName !== "Loading...") {
+    if (groupName !== null) {
       setName(groupName);
     }
   }, [groupName]);
