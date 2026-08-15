@@ -23,6 +23,7 @@ export default function MemberTabs({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
       className="py-2"
+      accessibilityRole="tablist"
     >
       {members.map((member) => {
         const isActive = member.user_id === selectedTabId;
@@ -36,6 +37,14 @@ export default function MemberTabs({
           <Pressable
             key={member.user_id}
             onPress={() => onSelect(member.user_id)}
+            // Groups the name and the count into one announcement instead of
+            // two loose fragments.
+            accessible
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+            // The chip reads as "Ann, 2 of 3 done" rather than letting the
+            // label and the count be announced as two unrelated fragments.
+            accessibilityLabel={`${isMe ? "You" : member.full_name}, ${done} of ${total} done`}
             className={`px-4 h-11 rounded-pill flex-row items-center gap-2 ${
               isActive ? "" : "bg-surface border border-border"
             }`}

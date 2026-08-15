@@ -31,6 +31,9 @@ export default function DashboardHeader({
           <View
             className="w-8 h-8 rounded-tile items-center justify-center"
             style={{ backgroundColor: accent.hex }}
+            // Decorative: the member count beside it carries the meaning.
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
           >
             <Text style={{ fontSize: 16 }}>{groupIcon}</Text>
           </View>
@@ -43,6 +46,9 @@ export default function DashboardHeader({
           <Pressable
             onPress={onOpenHabitManager}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Habits"
+            accessibilityHint="Opens the list of all your habits"
             className="bg-surface border border-border px-3 h-8 rounded-pill flex-row items-center justify-center"
           >
             <Text className="text-text font-mono-medium text-xs uppercase tracking-widest">
@@ -50,7 +56,13 @@ export default function DashboardHeader({
             </Text>
           </Pressable>
 
-          <View className="bg-surface border border-border px-3 h-8 rounded-pill flex-row items-center gap-1">
+          {/* Grouped, or the flame emoji and the number are announced as two
+              fragments — and "fire, 5" isn't a streak. */}
+          <View
+            className="bg-surface border border-border px-3 h-8 rounded-pill flex-row items-center gap-1"
+            accessible
+            accessibilityLabel={`Group streak: ${streak} ${streak === 1 ? "day" : "days"}`}
+          >
             <Text style={{ fontSize: 12 }}>🔥</Text>
             <Text className="text-text font-mono-medium text-sm">{streak}</Text>
           </View>
@@ -59,12 +71,17 @@ export default function DashboardHeader({
 
       <Pressable
         onPress={() => router.push("/group-settings" as Href)}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={groupName ?? "Loading"}
+        accessibilityHint="Opens group settings"
         className="mt-5 flex-row items-center gap-2 self-start"
         style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
       >
         <Text
           className="text-text font-mono-bold"
           style={{ fontSize: 34, lineHeight: 38 }}
+          numberOfLines={1}
         >
           {groupName ?? "Loading..."}
         </Text>

@@ -20,8 +20,16 @@ export default function ProgressRing({
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - clamped);
 
+  const percent = Math.round(clamped * 100);
+
   return (
-    <View style={{ width: size, height: size }}>
+    <View
+      style={{ width: size, height: size }}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel="Today's progress"
+      accessibilityValue={{ min: 0, max: 100, now: percent }}
+    >
       <Svg width={size} height={size}>
         <Circle
           cx={size / 2}
@@ -57,7 +65,7 @@ export default function ProgressRing({
           className="text-text font-mono-medium"
           style={{ fontSize: size * 0.22 }}
         >
-          {Math.round(clamped * 100)}%
+          {percent}%
         </Text>
       </View>
     </View>
