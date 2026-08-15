@@ -1,10 +1,13 @@
 import "../../global.css";
 import { Text, Pressable, View } from "react-native";
 import { themeColors } from "@/lib/colors";
+import { useTheme } from "@/hooks/useTheme";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Page() {
+  const { accent } = useTheme();
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <View className="flex-1 px-6 justify-between pb-6">
@@ -17,7 +20,7 @@ export default function Page() {
             style={{ fontSize: 40, lineHeight: 44 }}
           >
             Start a{"\n"}
-            <Text className="text-neon">tiny crew.</Text>
+            <Text style={{ color: accent.hex }}>tiny crew.</Text>
           </Text>
           <Text className="text-text-muted font-mono text-base mt-4">
             Stay accountable with your closest friends. Share streaks, ditch the
@@ -27,7 +30,8 @@ export default function Page() {
 
         <View className="gap-3">
           <Pressable
-            className="h-14 rounded-tile items-center justify-center bg-neon"
+            className="h-14 rounded-tile items-center justify-center"
+            style={{ backgroundColor: accent.hex }}
             onPress={() => router.push("/sign-up")}
           >
             <Text className="text-bg font-mono-bold">Create account</Text>

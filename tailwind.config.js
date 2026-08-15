@@ -9,15 +9,14 @@ module.exports = {
         surface: "#27272A",
         "surface-2": "#3F3F46",
         border: "#2A2A2E",
-        neon: "#C6F94A",
-        "neon-dim": "#8FB732",
         text: "#F4F4F5",
         "text-muted": "#9CA3AF",
         "text-dim": "#6B7280",
         fire: "#F97316",
         danger: "#EF4444",
         warning: "#FACC15",
-        accent: "#FF5E2E",
+        // No accent token here on purpose: the accent is runtime state chosen
+        // by the user, so it arrives through `useTheme()` as an inline style.
       },
       fontFamily: {
         mono: ["GeistMono_400Regular"],

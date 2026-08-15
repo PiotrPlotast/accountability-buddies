@@ -30,15 +30,19 @@ jest.mock("@/hooks/useTheme", () => {
       accent,
       setAccent: jest.fn(),
       palette: [accent],
+      // Tests never wait on AsyncStorage, so the accent is always settled.
+      hydrated: true,
     }),
   };
 });
 
 // Safe-area insets — the library ships a jest mock with fixed metrics, so
 // screens and modals calling useSafeAreaInsets render without a provider.
-jest.mock("react-native-safe-area-context", () =>
-  // The shipped mock is a default export.
-  require("react-native-safe-area-context/jest/mock").default,
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    // The shipped mock is a default export.
+    require("react-native-safe-area-context/jest/mock").default,
 );
 
 // expo-haptics — no-op in tests.
@@ -64,7 +68,8 @@ jest.mock("expo-router", () => {
     back: jest.fn(),
     navigate: jest.fn(),
   };
-  const Stack = ({ children }) => React.createElement(React.Fragment, null, children);
+  const Stack = ({ children }) =>
+    React.createElement(React.Fragment, null, children);
   Stack.Screen = () => null;
   Stack.Protected = ({ children }) =>
     React.createElement(React.Fragment, null, children);

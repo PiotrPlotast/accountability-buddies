@@ -5,7 +5,11 @@ import { queryKeys } from "@/lib/queryKeys";
 import { getTodayLocalDate } from "@/lib/date";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 
-import { buildFakeSupabase, buildWrapper, makeQueryClient } from "../test-utils/render";
+import {
+  buildFakeSupabase,
+  buildWrapper,
+  makeQueryClient,
+} from "../test-utils/render";
 
 const goal: Goal = {
   id: "g-1",

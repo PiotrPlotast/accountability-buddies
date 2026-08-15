@@ -18,6 +18,7 @@ import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persi
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
 import { useSupabase } from "@/hooks/useSupabase";
+import { useTheme } from "@/hooks/useTheme";
 import { SupabaseProvider } from "@/providers/supabase-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 
@@ -73,7 +74,10 @@ export default function RootLayout() {
 function RootNavigator() {
   const { isLoaded, session } = useSupabase();
   const isRestoring = useIsRestoring();
-  const isAppReady = isLoaded && !isRestoring;
+  // `hydrated` keeps the splash up until the stored accent is known, so the
+  // first painted frame is already the user's colour rather than the default.
+  const { hydrated } = useTheme();
+  const isAppReady = isLoaded && !isRestoring && hydrated;
   useEffect(() => {
     if (isAppReady) {
       setTimeout(() => {

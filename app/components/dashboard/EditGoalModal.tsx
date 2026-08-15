@@ -3,13 +3,13 @@ import {
   Modal,
   View,
   Text,
-  TextInput,
   Pressable,
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import AppTextInput from "@/app/components/ui/AppTextInput";
 import { Goal } from "@/types/dashboardTypes";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -111,14 +111,12 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
                 style={{ borderColor: accent.hex }}
                 className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
               >
-                <TextInput
+                <AppTextInput
                   value={title}
                   onChangeText={setTitle}
                   autoFocus
                   placeholder="Habit name"
-                  placeholderTextColor={themeColors.textDim}
-                  className="text-text font-mono text-base"
-                  style={{ fontFamily: "GeistMono_400Regular" }}
+                  className="text-text text-base"
                 />
               </View>
 
