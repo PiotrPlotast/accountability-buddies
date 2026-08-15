@@ -14,6 +14,8 @@ export type ThemeContextValue = {
   accent: Accent;
   setAccent: (id: AccentId) => void;
   palette: Accent[];
+  // False until the stored accent has been read back from AsyncStorage.
+  hydrated: boolean;
 };
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);

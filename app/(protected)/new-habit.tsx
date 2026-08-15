@@ -3,11 +3,11 @@ import { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -70,13 +70,11 @@ export default function NewHabitScreen() {
           style={{ borderColor: accent.hex }}
           className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
         >
-          <TextInput
+          <AppTextInput
             value={title}
             onChangeText={setTitle}
             placeholder="Meditate 10 minutes"
-            placeholderTextColor={themeColors.textDim}
-            className="text-text font-mono text-base"
-            style={{ fontFamily: "GeistMono_400Regular" }}
+            className="text-text text-base"
             autoFocus
           />
         </View>

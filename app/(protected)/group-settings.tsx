@@ -3,12 +3,12 @@ import { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   ScrollView,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -106,13 +106,11 @@ export default function GroupSettingsScreen() {
           className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
           style={{ borderColor: accent.hex }}
         >
-          <TextInput
+          <AppTextInput
             value={name}
             onChangeText={setName}
             placeholder="Swole Mates"
-            placeholderTextColor={themeColors.textDim}
-            className="text-text font-mono text-base"
-            style={{ fontFamily: "GeistMono_400Regular" }}
+            className="text-text text-base"
           />
         </View>
 
@@ -156,10 +154,9 @@ export default function GroupSettingsScreen() {
           disabled={!inviteCode}
           className="bg-surface border border-border rounded-tile px-4 h-14 flex-row items-center justify-between"
         >
-          <Text
-            className="text-text font-mono-medium text-base tracking-widest"
-            style={{ fontFamily: "GeistMono_700Bold" }}
-          >
+          {/* A Text, so `font-mono-bold` reaches it — this used to say medium
+              in the class and bold in an inline override. */}
+          <Text className="text-text font-mono-bold text-base tracking-widest">
             {inviteCode || "—"}
           </Text>
           <Text className="text-text-dim" style={{ fontSize: 16 }}>

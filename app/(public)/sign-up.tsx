@@ -8,17 +8,20 @@ import {
   View,
   ScrollView,
 } from "react-native";
+import AppTextInput from "@/app/components/ui/AppTextInput";
 
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useSignUp } from "@/hooks/useSignUp";
 import { themeColors } from "@/lib/colors";
+import { useTheme } from "@/hooks/useTheme";
 import FormError from "@/app/components/auth/FormError";
 import { getAuthErrorMessage } from "@/lib/authErrors";
 
 export default function Page() {
   const { isLoaded, signUp, verifyOtp } = useSignUp();
+  const { accent } = useTheme();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -83,10 +86,9 @@ export default function Page() {
               Verification code
             </Text>
             <View className="border border-border rounded-tile px-4 h-14 justify-center bg-surface">
-              <TextInput
+              <AppTextInput
                 value={token}
                 placeholder="123456"
-                placeholderTextColor={themeColors.textDim}
                 keyboardType="number-pad"
                 textContentType="oneTimeCode"
                 autoComplete="one-time-code"
@@ -96,8 +98,7 @@ export default function Page() {
                   setToken(next);
                   setError(null);
                 }}
-                className="text-text font-mono text-base"
-                style={{ fontFamily: "GeistMono_400Regular" }}
+                className="text-text text-base"
               />
             </View>
           </View>
@@ -107,7 +108,10 @@ export default function Page() {
           <Pressable
             onPress={onVerifyPress}
             disabled={!canVerify}
-            className={`h-14 rounded-tile items-center justify-center mt-2 ${token ? "bg-neon" : "bg-surface"}`}
+            className="h-14 rounded-tile items-center justify-center mt-2"
+            style={{
+              backgroundColor: token ? accent.hex : themeColors.surface,
+            }}
           >
             {submitting ? (
               <ActivityIndicator color={themeColors.background} />
@@ -147,7 +151,7 @@ export default function Page() {
             Email
           </Text>
           <View className="border border-border rounded-tile px-4 h-14 justify-center bg-surface">
-            <TextInput
+            <AppTextInput
               autoCapitalize="none"
               autoComplete="email"
               autoCorrect={false}
@@ -157,13 +161,11 @@ export default function Page() {
               onSubmitEditing={() => passwordRef.current?.focus()}
               value={email}
               placeholder="you@example.com"
-              placeholderTextColor={themeColors.textDim}
               onChangeText={(next) => {
                 setEmail(next);
                 setError(null);
               }}
-              className="text-text font-mono text-base"
-              style={{ fontFamily: "GeistMono_400Regular" }}
+              className="text-text text-base"
             />
           </View>
         </View>
@@ -173,11 +175,10 @@ export default function Page() {
             Password
           </Text>
           <View className="border border-border rounded-tile px-4 h-14 justify-center bg-surface">
-            <TextInput
+            <AppTextInput
               ref={passwordRef}
               value={password}
               placeholder="••••••••"
-              placeholderTextColor={themeColors.textDim}
               secureTextEntry
               autoComplete="new-password"
               textContentType="newPassword"
@@ -187,8 +188,7 @@ export default function Page() {
                 setPassword(next);
                 setError(null);
               }}
-              className="text-text font-mono text-base"
-              style={{ fontFamily: "GeistMono_400Regular" }}
+              className="text-text text-base"
             />
           </View>
         </View>
@@ -198,7 +198,10 @@ export default function Page() {
         <Pressable
           onPress={onSignUpPress}
           disabled={!canSubmit}
-          className={`h-14 rounded-tile items-center justify-center mt-2 ${isFilled ? "bg-neon" : "bg-surface"}`}
+          className="h-14 rounded-tile items-center justify-center mt-2"
+          style={{
+            backgroundColor: isFilled ? accent.hex : themeColors.surface,
+          }}
         >
           {submitting ? (
             <ActivityIndicator color={themeColors.background} />
@@ -216,7 +219,8 @@ export default function Page() {
             Already have an account?{" "}
           </Text>
           <Text
-            className="text-neon font-mono-medium text-sm"
+            className="font-mono-medium text-sm"
+            style={{ color: accent.hex }}
             onPress={() => router.replace("/sign-in")}
           >
             Sign in

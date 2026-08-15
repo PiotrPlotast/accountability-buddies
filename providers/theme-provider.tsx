@@ -1,11 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import {
-  Accent,
-  AccentId,
-  ThemeContext,
-} from "@/context/theme-context";
+import { Accent, AccentId, ThemeContext } from "@/context/theme-context";
 
 const STORAGE_KEY = "theme.accent.v1";
 
@@ -57,11 +53,19 @@ interface ThemeProviderProps {
 
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   const [accentId, setAccentIdState] = useState<AccentId>("neon");
+  // The stored accent arrives a frame or two after mount, so anything painted
+  // before then uses the default. `_layout` holds the splash until this flips,
+  // otherwise a user who picked purple watches the app open green.
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (stored && isAccentId(stored)) setAccentIdState(stored);
-    });
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((stored) => {
+        if (stored && isAccentId(stored)) setAccentIdState(stored);
+      })
+      // A failed read just means the default accent — never a stuck splash.
+      .catch(() => {})
+      .finally(() => setHydrated(true));
   }, []);
 
   const setAccent = (id: AccentId) => {
@@ -75,8 +79,8 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   );
 
   const value = useMemo(
-    () => ({ accentId, accent, setAccent, palette: PALETTE }),
-    [accentId, accent],
+    () => ({ accentId, accent, setAccent, palette: PALETTE, hydrated }),
+    [accentId, accent, hydrated],
   );
 
   return (

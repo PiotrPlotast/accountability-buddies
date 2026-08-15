@@ -3,7 +3,6 @@ import { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   Alert,
   ActivityIndicator,
@@ -11,12 +10,16 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSupabase } from "@/hooks/useSupabase";
 import { themeColors } from "@/lib/colors";
+import { useTheme } from "@/hooks/useTheme";
+
 export default function JoinGroupScreen() {
   const { supabase, session } = useSupabase();
+  const { accent } = useTheme();
   const router = useRouter();
 
   const [code, setCode] = useState("");
@@ -127,26 +130,29 @@ export default function JoinGroupScreen() {
               {isJoin ? "Invite code" : "Group name"}
             </Text>
             {isJoin ? (
-              <View className="border-2 border-neon rounded-tile px-4 h-16 justify-center bg-bg">
-                <TextInput
+              <View
+                className="border-2 rounded-tile px-4 h-16 justify-center bg-bg"
+                style={{ borderColor: accent.hex }}
+              >
+                <AppTextInput
                   value={code}
                   onChangeText={setCode}
                   autoCapitalize="characters"
                   placeholder="A8X-992"
-                  placeholderTextColor={themeColors.textDim}
+                  weight="bold"
                   className="text-text text-2xl text-center tracking-widest"
-                  style={{ fontFamily: "GeistMono_700Bold" }}
                 />
               </View>
             ) : (
-              <View className="border-2 border-neon rounded-tile px-4 h-14 justify-center bg-bg">
-                <TextInput
+              <View
+                className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
+                style={{ borderColor: accent.hex }}
+              >
+                <AppTextInput
                   value={groupName}
                   onChangeText={setGroupName}
                   placeholder="Swole Mates"
-                  placeholderTextColor={themeColors.textDim}
                   className="text-text text-base"
-                  style={{ fontFamily: "GeistMono_400Regular" }}
                 />
               </View>
             )}
@@ -154,7 +160,8 @@ export default function JoinGroupScreen() {
             <Pressable
               onPress={isJoin ? handleJoin : handleCreate}
               disabled={loading}
-              className="h-14 rounded-tile items-center justify-center bg-neon mt-2"
+              className="h-14 rounded-tile items-center justify-center mt-2"
+              style={{ backgroundColor: accent.hex }}
             >
               {loading ? (
                 <ActivityIndicator color={themeColors.background} />
@@ -170,7 +177,10 @@ export default function JoinGroupScreen() {
             onPress={() => setMode(isJoin ? "CREATE" : "JOIN")}
             className="mt-8 items-center"
           >
-            <Text className="text-neon font-mono-medium text-sm">
+            <Text
+              className="font-mono-medium text-sm"
+              style={{ color: accent.hex }}
+            >
               {isJoin
                 ? "No code? Create a new group"
                 : "Have a code? Join instead"}
