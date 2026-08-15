@@ -13,12 +13,21 @@ type Props = TextInputProps & {
 };
 
 /**
- * `TextInput` with the app's font applied.
+ * `TextInput` with the app's font and placeholder colour applied.
  *
- * NativeWind's `font-mono` doesn't reach a TextInput's text, so every input in
- * the app carried its own `style={{ fontFamily: ... }}` plus the same
- * placeholder colour. Both live here now; callers keep `className` for size
- * and colour as before.
+ * `placeholderTextColor` is a prop rather than a style, so no class can ever
+ * set it — that repetition is the reason this component exists, along with
+ * `weight` for the bold invite-code field.
+ *
+ * The `fontFamily` default is inherited from the original styling work, which
+ * set it inline on every input on the assumption that `font-mono` doesn't
+ * reach a TextInput's text. That may no longer hold on NativeWind 4, and the
+ * test suite can't say either way — babel.config.js drops the NativeWind
+ * preset under NODE_ENV=test, so `className` never becomes a style there. It
+ * stays as a default regardless: the alternative is `font-mono` repeated at
+ * every call site, which is what this component removed.
+ *
+ * Callers keep `className` for size and colour as before.
  *
  * Forwards its ref, so screens chaining fields with `onSubmitEditing` still
  * hold a real `TextInput` and can call `.focus()` on it.
