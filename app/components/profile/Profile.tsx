@@ -66,10 +66,10 @@ export default function Profile() {
         <Pressable
           onPress={handleSignOut}
           hitSlop={8}
-          className="w-9 h-9 items-center justify-center"
+          className="w-16 h-9 items-center justify-center"
         >
-          <Text className="text-text-muted" style={{ fontSize: 18 }}>
-            ⚙
+          <Text className="text-text-muted" style={{ fontSize: 12 }}>
+            Log out
           </Text>
         </Pressable>
       </View>
