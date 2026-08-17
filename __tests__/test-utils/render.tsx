@@ -1,13 +1,16 @@
 import React, { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import {
   renderHook,
   waitFor,
   RenderHookResult,
 } from "@testing-library/react-native";
 
-import { SupabaseContext } from "@/context/supabase-context";
+import {
+  SupabaseContext,
+  SupabaseContextValue,
+} from "@/context/supabase-context";
 import { useSupabase } from "@/hooks/useSupabase";
 
 export type QueryBuilderResult<T = unknown> = {
@@ -72,7 +75,9 @@ export function buildFakeSupabase({
     : null;
 
   const supabase = {
-    // jest.setup.js's useSupabase mock reads __testSession off of this object.
+    // `buildWrapper` reads __testSession off of this object to seed the
+    // SupabaseContext value, standing in for what the real provider resolves
+    // from `auth.getSession()`.
     __testSession: session,
     auth: {
       getSession: jest.fn(() =>
@@ -123,10 +128,24 @@ export function buildWrapper(opts?: {
 }) {
   const queryClient = opts?.queryClient ?? makeQueryClient();
   const supabase = opts?.supabase ?? buildFakeSupabase();
+  // Stand in for SupabaseProvider by filling the context directly, already
+  // settled. The real provider resolves `session`/`isLoaded` from an async
+  // `getSession()`; tests have no reason to wait on that, and `useSupabase`
+  // itself is the real hook — a plain read of this value.
+  const contextValue: SupabaseContextValue = {
+    supabase,
+    session:
+      (supabase as SupabaseClient & { __testSession?: Session | null })
+        .__testSession ?? null,
+    isLoaded: true,
+    signOut: async () => {
+      await supabase.auth.signOut();
+    },
+  };
   // useTheme is stubbed globally in jest.setup.js, so no ThemeProvider here.
   const Wrapper = ({ children }: WrapperProps) => (
     <QueryClientProvider client={queryClient}>
-      <SupabaseContext.Provider value={supabase}>
+      <SupabaseContext.Provider value={contextValue}>
         {children}
       </SupabaseContext.Provider>
     </QueryClientProvider>

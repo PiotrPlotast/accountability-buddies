@@ -89,31 +89,11 @@ jest.mock("expo-router", () => {
 process.env.EXPO_PUBLIC_SUPABASE_URL = "http://localhost";
 process.env.EXPO_PUBLIC_SUPABASE_KEY = "test-anon-key";
 
-// Replace the real useSupabase with a synchronous version that reads the
-// fake supabase client (and its attached `__testSession`) directly from
-// SupabaseContext. This skips the async getSession/onAuthStateChange dance
-// that otherwise leaves session=null on the first render of every test.
-jest.mock("@/hooks/useSupabase", () => {
-  const { useContext } = require("react");
-  const { SupabaseContext } = require("@/context/supabase-context");
-  return {
-    useSupabase: () => {
-      const supabase = useContext(SupabaseContext);
-      if (!supabase) {
-        throw new Error("useSupabase must be used within a SupabaseProvider");
-      }
-      const session = supabase.__testSession ?? null;
-      return {
-        isLoaded: true,
-        session,
-        supabase,
-        signOut: async () => {
-          await supabase.auth.signOut();
-        },
-      };
-    },
-  };
-});
+// `useSupabase` is deliberately NOT mocked. It is a plain `useContext` read of
+// SupabaseContext, which `buildWrapper` in __tests__/test-utils/render.tsx
+// fills synchronously — so tests exercise the real hook. The stub that used to
+// live here existed only because the hook owned the async
+// getSession/onAuthStateChange dance itself; the provider owns that now.
 
 // Silence noisy console.error in tests for expected mutation rejections.
 const realError = console.error;
