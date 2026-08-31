@@ -32,7 +32,7 @@ npx jest -t "rolls back the cache"                  # single test by name
 
 **"Completed today" is derived, never stored.** `useGroupMembers` selects `goals(...logs(id))` filtered by `logs.date = today` and sets `completed_today = logs.length > 0`. Today is always `new Date().toLocaleDateString("en-CA")` → `YYYY-MM-DD`, wrapped as `getTodayLocalDate()` in `lib/date.ts`. Use that helper anywhere you compare against `logs.date` or `last_streak_date`.
 
-**Backend contract**: tables `groups`, `group_members`, `goals`, `logs`, `profiles`; RPCs `get_my_group_stats`, `join_group_via_code`, `get_heatmap_logs`. `types/dashboardTypes.ts` mirrors these — nested types like `GoalRow.logs` reflect PostgREST `select()` nesting, not real columns. There is no `supabase/` directory in this repo despite the README's mention; schema changes are made in the Supabase dashboard.
+**Backend contract**: tables `groups`, `group_members`, `goals`, `logs`, `profiles`; RPCs `get_my_group_stats`, `join_group_via_code`, `get_heatmap_logs`. `types/dashboardTypes.ts` mirrors these — nested types like `GoalRow.logs` reflect PostgREST `select()` nesting, not real columns. The `supabase/` directory holds the CLI project (`config.toml`) and committed migrations pulled from the live project (ref `rlvhncdzrfwjpohiqqfv`). Apply schema changes with `npx supabase db push`; re-sync from the dashboard with `npx supabase db pull <name> --diff-engine migra` — the default `pg-delta` engine fails against this project's pooler (`EAUTHQUERY` on the temp login role). Some schema still originates in the dashboard, so pull before diffing.
 
 ### Stacked modals
 
