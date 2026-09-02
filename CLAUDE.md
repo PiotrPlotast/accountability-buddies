@@ -18,13 +18,15 @@ npx jest -t "rolls back the cache"                  # single test by name
 
 `.env` needs `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY`. Expo inlines `EXPO_PUBLIC_*` at build time — changing them requires rebuilding the dev client, not just restarting Metro.
 
+**`ios/` and `android/` are gitignored generated output**, so `app.json` is the only source of truth for anything native. The app identifier is `com.piotrplotast.accountabilitybuddies` on both platforms (`ios.bundleIdentifier` / `android.package`). Editing it in `app.json` does **not** touch a native project already on disk — `project.pbxproj`, `build.gradle`'s `namespace`/`applicationId` and the Java package directory keep the old value until you run `npx expo prebuild --clean`. Until that runs, a local build still installs under the old identifier, which is what push credentials and Sign in with Apple key off.
+
 ## Architecture
 
 **Provider chain** (`app/_layout.tsx`): `PersistQueryClientProvider` (AsyncStorage persister, 24h `gcTime`, 5min `staleTime`) → `SupabaseProvider` → `ThemeProvider` → `Stack`. Routing is gated by `Stack.Protected guard={!!session}` swapping the `(protected)` and `(public)` groups. Never navigate between those groups directly — change the session and let the guard redirect. The splash screen hides only once `isLoaded && !isRestoring`.
 
 **Supabase access** goes through `hooks/useSupabase.ts` (`{ isLoaded, session, supabase, signOut }`); the provider owns the single memoized client plus the `AppState` auto-refresh wiring. Don't construct clients elsewhere.
 
-**Server state** is all TanStack Query. Keys live in `lib/queryKeys.ts` (`groupStats`, `groupMembers`, `profile`) — but `heatmap` is still an inline `["heatmap", userId]` literal in `useHeatmapData` and `useOptimisticGoalMutation`.
+**Server state** is all TanStack Query. Every key lives in `lib/queryKeys.ts` (`groupStats`, `groupMembers`, `profile`, `heatmap`) — build keys through it rather than writing an array literal at the call site.
 
 **All goal mutations must go through `lib/useOptimisticGoalMutation.ts`.** `useAddGoal`, `useToggleGoal`, `useEditGoal`, and `useDeleteGoal` are thin configs over it; the shared hook handles cancel → snapshot → patch the current user's `goals` inside the `["groupMembers", groupId]` cache → rollback on error (with an `Alert.alert`) → invalidate on settle. Options: `getGroupId`, `getPatch`, `beforeOptimistic` (haptics), `invalidateStatsOnSettle`, `getHeatmapDelta`. Writing a raw `useMutation` for goals will silently diverge from this contract.
 
@@ -58,11 +60,12 @@ Static chrome colors that can't be Tailwind classes (navigator `contentStyle`) c
 
 `jest.setup.js` globally mocks `expo-router`, `expo-haptics`, `expo-clipboard`, reanimated, `react-native-safe-area-context` (the library's own default-exported mock), and — importantly — replaces `@/hooks/useSupabase` and `@/hooks/useTheme` with synchronous versions. The `useSupabase` stub reads the fake client (and its `__testSession`) straight out of `SupabaseContext`; the `useTheme` stub returns a fixed accent so themed components don't need a real `ThemeProvider` hydrating from AsyncStorage. Add new provider-backed hooks to that list rather than wrapping each test.
 
-Three gotchas when reading test output:
+Two things to know when reading test output:
 
-- `testPathIgnorePatterns` doesn't exclude `.kilo/worktrees/`, so an agent worktree checked out there gets its tests collected too and every suite appears to run twice against different source. Add `--testPathIgnorePatterns "/node_modules/" "/\.kilo/"` when you want just this repo.
-- Jest doesn't exit on its own after any suite that renders React ("Jest did not exit one second after the test run has completed"), so a plain `npx jest <file>` hangs until killed. This predates any recent change — use `--forceExit`.
-- The suite is not green at HEAD: `Heatmap` and `DashboardHeader` fail because they test component APIs that have since changed (a dropped `seed` prop; a now-required `todayGoals` prop), and `tsc --noEmit` reports 7 errors from the same drift. Compare against that baseline rather than assuming a change broke them.
+- **The baseline is green.** As of 2026-09-01: 23 suites, 122 tests passing, `tsc --noEmit` clean. A failure is a real regression, not pre-existing drift.
+- Jest doesn't exit on its own after any suite that renders React ("Jest did not exit one second after the test run has completed"), so a plain `npx jest <file>` hangs until killed — use `--forceExit`. It also warns about a worker that failed to exit gracefully; that's the same leak and is expected.
+
+`testPathIgnorePatterns` in `package.json` already covers `.claude/worktrees/`, so an agent worktree checked out there doesn't get its tests collected alongside this repo's.
 
 Use `__tests__/test-utils/render.tsx`: `buildFakeSupabase({ fromImpl, rpcImpl })`, `makeQueryBuilder(result)` (a thenable chainable PostgREST stand-in), `makeQueryClient()` (infinite `gcTime`/`staleTime` so seeded cache data survives), `buildWrapper()`, and `renderHookWithSession()`. Mutation tests seed the cache with `queryClient.setQueryData(queryKeys.groupMembers(id), members)` and assert on both the Supabase call and the resulting cache state.
 

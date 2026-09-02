@@ -45,7 +45,5 @@ android/
 
 coverage/
 
-#kilo
-.kilo
 # agent worktrees (see jest testPathIgnorePatterns)
 .claude/worktrees

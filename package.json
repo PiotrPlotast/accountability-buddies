@@ -27,8 +27,7 @@
       "/android/",
       "/ios/",
       "/__tests__/test-utils/",
-      "/.claude/worktrees/",
-      "/.kilo/worktrees/"
+      "/.claude/worktrees/"
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [
@@ -38,8 +37,7 @@
       "!**/babel.config.js",
       "!**/expo-env.d.ts",
       "!**/.expo/**",
-      "!**/.claude/**",
-      "!**/.kilo/**"
+      "!**/.claude/**"
     ]
   },
   "dependencies": {
