@@ -27,8 +27,7 @@
       "/android/",
       "/ios/",
       "/__tests__/test-utils/",
-      "/.claude/worktrees/",
-      "/.kilo/worktrees/"
+      "/.claude/worktrees/"
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [
@@ -38,8 +37,7 @@
       "!**/babel.config.js",
       "!**/expo-env.d.ts",
       "!**/.expo/**",
-      "!**/.claude/**",
-      "!**/.kilo/**"
+      "!**/.claude/**"
     ]
   },
   "dependencies": {
@@ -89,6 +87,7 @@
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.5.11",
     "react-test-renderer": "^19.1.0",
+    "supabase": "^2.115.0",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.9.2"
   },

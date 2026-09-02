@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.flemingvincent.accountabilitybuddies",
+      "bundleIdentifier": "com.piotrplotast.accountabilitybuddies",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -29,7 +29,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.flemingvincent.accountabilitybuddies"
+      "package": "com.piotrplotast.accountabilitybuddies"
     },
     "plugins": [
       "expo-router",
