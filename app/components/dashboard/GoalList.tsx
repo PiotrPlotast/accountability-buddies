@@ -1,9 +1,16 @@
+import { useEffect } from "react";
 import { View, Text, Pressable, type ViewStyle } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
+  Easing,
   SharedValue,
+  cancelAnimation,
   useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
 } from "react-native-reanimated";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
@@ -13,6 +20,22 @@ import { themeColors } from "@/lib/colors";
 
 const ACTION_WIDTH = 72;
 const ACTION_GAP = 8;
+
+// Rozmiar kropki trzymamy tutaj, a nie w klasie Tailwinda, bo NativeWind nie
+// obsługuje `className` na `Reanimated.View` — pulsująca kropka i statyczne
+// muszą brać wymiar z jednego miejsca, inaczej rozjadą się przy pierwszej
+// zmianie.
+const DOT_SIZE = 6;
+const DOT_BASE: ViewStyle = {
+  width: DOT_SIZE,
+  height: DOT_SIZE,
+  borderRadius: DOT_SIZE / 2,
+};
+
+// Pół oddechu. Pełny cykl to dwa razy tyle, czyli ~1,8 s — wolno na tyle, żeby
+// czytać się jako „to żyje”, a nie jako miganie.
+const PULSE_MS = 900;
+const PULSE_MIN_OPACITY = 0.55;
 
 type Props = {
   selectedTabId: string | null;
@@ -69,10 +92,17 @@ function LeftActionComponent({ drag, goal, onAction }: ActionProps) {
 
 // The trailing week for one habit, oldest dot first.
 //
-// The accent marks the days this habit is about: full strength once done,
-// dimmed while today is still open, so the one day you can still act on
-// carries the accent rather than blending into the history behind it. Days
-// that are settled — missed, or never scheduled — stay grey.
+// The accent fill means done, and nothing else in the strip uses it — so the
+// week reads in one pass by counting the bright dots. Today, while still open,
+// used to be the accent at 35%; a weaker version of "done" reads as "partly
+// done", which is not what "you haven't got to this yet" means. It is now the
+// accent at full strength, told apart by a slow pulse. A dimmed hue is a
+// metaphor for *amount*; motion is a metaphor for *state*.
+//
+// These static styles are also the Reduce Motion fallback, which is why
+// `pending` here is a bright neutral rather than the accent: with no pulse to
+// separate them, a full-strength accent dot would be indistinguishable from a
+// completed day. `PendingDot` paints the accent back on when it animates.
 //
 // Every state has to stay visible against the row's own `bg-surface`. The grey
 // states are palette greys at reduced opacity rather than a colour close to
@@ -83,12 +113,40 @@ export const DOT_STYLES: Record<
   (accentHex: string) => ViewStyle
 > = {
   done: (accentHex) => ({ backgroundColor: accentHex }),
-  pending: (accentHex) => ({ backgroundColor: accentHex, opacity: 0.35 }),
+  pending: () => ({ backgroundColor: themeColors.textMuted }),
   missed: () => ({ backgroundColor: themeColors.surface2 }),
   off: () => ({ backgroundColor: themeColors.surface2, opacity: 0.45 }),
 };
 
-function WeekStrip({ goal, accentHex }: { goal: Goal; accentHex: string }) {
+// Today, still open. Every one of these on screen reads the same `pulse`, so
+// the cost is one timing loop for the whole list rather than one per habit.
+function PendingDot({
+  accentHex,
+  pulse,
+}: {
+  accentHex: string;
+  pulse: SharedValue<number>;
+}) {
+  const styleAnimation = useAnimatedStyle(() => ({ opacity: pulse.value }));
+
+  return (
+    <Reanimated.View
+      style={[DOT_BASE, { backgroundColor: accentHex }, styleAnimation]}
+    />
+  );
+}
+
+function WeekStrip({
+  goal,
+  accentHex,
+  pulse,
+  reduceMotion,
+}: {
+  goal: Goal;
+  accentHex: string;
+  pulse: SharedValue<number>;
+  reduceMotion: boolean;
+}) {
   const cells = getGoalHistory(goal);
   const doneCount = cells.filter((c) => c.state === "done").length;
 
@@ -98,13 +156,16 @@ function WeekStrip({ goal, accentHex }: { goal: Goal; accentHex: string }) {
       accessible
       accessibilityLabel={`${doneCount} of the last ${cells.length} days completed`}
     >
-      {cells.map((cell) => (
-        <View
-          key={cell.date}
-          className="w-1.5 h-1.5 rounded-pill"
-          style={DOT_STYLES[cell.state](accentHex)}
-        />
-      ))}
+      {cells.map((cell) =>
+        cell.state === "pending" && !reduceMotion ? (
+          <PendingDot key={cell.date} accentHex={accentHex} pulse={pulse} />
+        ) : (
+          <View
+            key={cell.date}
+            style={[DOT_BASE, DOT_STYLES[cell.state](accentHex)]}
+          />
+        ),
+      )}
     </View>
   );
 }
@@ -118,6 +179,26 @@ export default function GoalList({
   const { members, loading, userId, activeGroupId } = useDashboardData();
   const { toggleGoal } = useDashboardActions(activeGroupId);
   const { accent } = useTheme();
+
+  // Jeden zegar na całą listę — `WeekStrip` tylko go czyta. Musi stać przed
+  // wcześniejszymi `return`ami niżej, więc żyje tutaj, a nie w `WeekStrip`.
+  const reduceMotion = useReducedMotion();
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+
+    pulse.value = withRepeat(
+      withTiming(PULSE_MIN_OPACITY, {
+        duration: PULSE_MS,
+        easing: Easing.inOut(Easing.quad),
+      }),
+      -1,
+      true,
+    );
+
+    return () => cancelAnimation(pulse);
+  }, [reduceMotion, pulse]);
 
   const currentMember = members.find((m) => m.user_id === selectedTabId);
   const isViewingMe = selectedTabId === userId;
@@ -217,7 +298,12 @@ export default function GoalList({
                 >
                   {goal.title}
                 </Text>
-                <WeekStrip goal={goal} accentHex={accent.hex} />
+                <WeekStrip
+                  goal={goal}
+                  accentHex={accent.hex}
+                  pulse={pulse}
+                  reduceMotion={reduceMotion}
+                />
               </View>
 
               {done ? <Text style={{ fontSize: 16 }}>🔥</Text> : null}
