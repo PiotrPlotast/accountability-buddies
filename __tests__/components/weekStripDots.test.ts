@@ -20,32 +20,35 @@ describe("week strip dot styles", () => {
   // and the strip appeared to have six days instead of seven.
   it("leaves every dot visible against the row it sits on", () => {
     STATES.forEach((state) => {
-      const style = DOT_STYLES[state](ACCENT);
-      const filled =
-        !!style.backgroundColor &&
-        style.backgroundColor !== "transparent" &&
-        style.backgroundColor !== themeColors.surface;
-      const outlined = !!style.borderWidth && !!style.borderColor;
+      const { backgroundColor } = DOT_STYLES[state](ACCENT);
 
-      expect(filled || outlined).toBe(true);
+      expect(backgroundColor).toBeTruthy();
+      expect(backgroundColor).not.toBe(themeColors.surface);
       expect(opacityOf(state)).toBeGreaterThan(0.3);
     });
   });
 
-  it("gives the accent to the habit's own days and grey to the settled ones", () => {
+  it("reserves the accent fill for completed days", () => {
     expect(DOT_STYLES.done(ACCENT).backgroundColor).toBe(ACCENT);
-    expect(DOT_STYLES.pending(ACCENT).backgroundColor).toBe(ACCENT);
 
-    (["missed", "off"] as HistoryState[]).forEach((state) => {
+    (["pending", "missed", "off"] as HistoryState[]).forEach((state) => {
       expect(DOT_STYLES[state](ACCENT).backgroundColor).not.toBe(ACCENT);
     });
   });
 
-  it("dims a still-due today below a completed one", () => {
-    expect(opacityOf("pending")).toBeLessThan(opacityOf("done"));
+  // These styles are what a viewer with Reduce Motion on actually sees —
+  // `GoalList` swaps in an accent `PendingDot` only when it may animate. So a
+  // still-due today has to stand on its own here: full strength, and its own
+  // colour rather than a weaker copy of any neighbour.
+  it("gives the reduced-motion today its own colour at full strength", () => {
+    const pending = DOT_STYLES.pending(ACCENT);
+
+    expect(pending.backgroundColor).toBe(themeColors.textMuted);
+    expect(opacityOf("pending")).toBe(1);
   });
 
-  it("distinguishes a still-due today from an unscheduled day", () => {
+  it("distinguishes a still-due today from a settled day", () => {
+    expect(DOT_STYLES.pending(ACCENT)).not.toEqual(DOT_STYLES.missed(ACCENT));
     expect(DOT_STYLES.pending(ACCENT)).not.toEqual(DOT_STYLES.off(ACCENT));
   });
 
