@@ -10,7 +10,7 @@ the dependencies**, it does not repeat that plan.
 | Area | State |
 | --- | --- |
 | Tests | **green** — 23 suites, 122 tests, `tsc --noEmit` clean |
-| Push | no infrastructure at all; the plan is ready in `todo/push-notifications.md` |
+| Push | no app code yet; the plan is ready in `todo/push-notifications.md`. The iOS APNs key **exists** — created and assigned 2026-09-03 |
 | Haptics | **1** call in the repo (`hooks/useToggleGoal.tsx`) |
 | Animations | **1** file uses Reanimated (`GoalList.tsx`, swipe only) |
 | Sign-in | email + password + OTP only (`useSignIn` / `useSignUp`) |
@@ -74,14 +74,23 @@ Everything here is cheap and unblocks the rest. Do it in this order.
 to confirm the changed identifier installs cleanly on a device. All four items
 are ticked off; nothing here blocks the later stages.
 
-The first thing worth doing with the new account — before starting E3 at all —
-is `eas credentials` → iOS → push key. Expo generates and uploads the APNs `.p8`
-key for you, one key for the whole account, and it is the only iOS credential
-push needs. Doing it now turns day one of E3 from "fighting with code signing"
-into ordinary coding. The verification gate from `todo/push-notifications.md` —
-a real `ExponentPushToken` from a physical iPhone and a test push from
-https://expo.dev/notifications — is now reachable too, and it still applies
-before any feature code gets written.
+~~The first thing worth doing with the new account is `eas credentials` → iOS →
+push key.~~ — **done 2026-09-03.** Generated through
+`eas credentials` → iOS → `development` → "Set up your project to use Push
+Notifications", which created the APNs `.p8` key and assigned it to
+`com.piotrplotast.accountabilitybuddies`. It is account-wide — one key covers
+every app and both the sandbox and production environments (Apple caps an
+account at two), so this does not get revisited. **Day one of E3 is now ordinary
+coding rather than code signing.**
+
+The verification gate from `todo/push-notifications.md` — a real
+`ExponentPushToken` from a physical iPhone and a test push from
+https://expo.dev/notifications — is reachable as soon as token registration
+exists, and it still applies before any feature code gets written.
+
+**The Android half is still outstanding**: an FCM v1 service-account JSON has to
+be uploaded to EAS. That is not a gate on anything today — it sits inside E3
+proper — but the credential work is half done, not done.
 
 ---
 
@@ -225,8 +234,11 @@ and the config plugin, the schema migration (`device_push_tokens`,
 registration and the settings screen, and token cleanup after
 `DeviceNotRegistered`.
 
-Two emphases that follow from this roadmap:
+Three emphases that follow from this roadmap:
 
+- **The iOS APNs key is already done** (E0, 2026-09-03). What remains on the
+  credential side is the Android FCM v1 service-account JSON uploaded to EAS —
+  do that before the first Android push test, not after.
 - The stage ends with **verification on a physical device**, not on the
   simulator. The simulator stays the iteration loop for deep links (E4), but
   never the gate.
@@ -313,8 +325,8 @@ E0 (bundle ID) ──► Apple Developer ──► E3 ──┐
      └──► E1 (animations/haptics) — in parallel, no blockers
 ```
 
-As of 2026-09-03 the left edge of this diagram is behind us: E0 is closed and
-the Apple account is active. In practice: create the APNs key through
-`eas credentials` right away (a few minutes), then pick — E1 gives a fast effect
-visible in the app, E2/E3 takes the longest stretch off the critical path.
-Nothing forces the order any more.
+As of 2026-09-03 the left edge of this diagram is behind us: E0 is closed, the
+Apple account is active, and the APNs key is created and assigned. Every arrow
+out of "Apple Developer" is now clear, so the remaining choice is purely one of
+value against cost — E1 gives a fast effect visible in the app, E2/E3 takes the
+longest stretch off the critical path. Nothing forces the order any more.
