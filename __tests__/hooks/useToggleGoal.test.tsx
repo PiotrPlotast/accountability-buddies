@@ -1,6 +1,7 @@
 import { act, waitFor } from "@testing-library/react-native";
 
 import * as haptics from "@/lib/haptics";
+import * as dayCompleteSignal from "@/lib/dayCompleteSignal";
 import { useToggleGoal } from "@/hooks/useToggleGoal";
 import { getTodayLocalDate } from "@/lib/date";
 import { getTodayDayIndex } from "@/lib/repeatDays";
@@ -191,11 +192,15 @@ describe("useToggleGoal haptics", () => {
   let done: jest.SpyInstance;
   let undone: jest.SpyInstance;
   let party: jest.SpyInstance;
+  let emit: jest.SpyInstance;
 
   beforeEach(() => {
     done = jest.spyOn(haptics, "toggleDone").mockImplementation(() => {});
     undone = jest.spyOn(haptics, "toggleUndone").mockImplementation(() => {});
     party = jest.spyOn(haptics, "celebrate").mockImplementation(() => {});
+    emit = jest
+      .spyOn(dayCompleteSignal, "emitDayComplete")
+      .mockImplementation(() => {});
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -210,6 +215,7 @@ describe("useToggleGoal haptics", () => {
     expect(done).toHaveBeenCalledTimes(1);
     expect(party).not.toHaveBeenCalled();
     expect(undone).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it("celebrates instead when the tick closes out the day", async () => {
@@ -222,6 +228,9 @@ describe("useToggleGoal haptics", () => {
     expect(party).toHaveBeenCalledTimes(1);
     // Otherwise the fanfare is just a louder version of the ordinary tick.
     expect(done).not.toHaveBeenCalled();
+    // The ring pulses off the same transition, so the buzz and the animation
+    // can never disagree about whether the day is finished.
+    expect(emit).toHaveBeenCalledTimes(1);
   });
 
   it("ignores habits not scheduled for today when deciding to celebrate", async () => {
@@ -242,6 +251,8 @@ describe("useToggleGoal haptics", () => {
     expect(undone).toHaveBeenCalledTimes(1);
     expect(party).not.toHaveBeenCalled();
     expect(done).not.toHaveBeenCalled();
+    // Unticking the last habit un-finishes the day; nothing to celebrate.
+    expect(emit).not.toHaveBeenCalled();
   });
 
   // An empty cache is the cold-start case: buzz the ordinary confirmation

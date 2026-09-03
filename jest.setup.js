@@ -4,10 +4,14 @@
 
 require("react-native-gesture-handler/jestSetup");
 
-// Reanimated 4 ships its own jest helper.
-jest.mock("react-native-reanimated", () =>
-  require("react-native-reanimated/mock"),
-);
+// Reanimated 4 ships its own jest helper, but it leaves `useReducedMotion` out
+// ("ADD ME IF NEEDED" in its source). Components that degrade for Reduce Motion
+// would throw without it. Default to false — the ordinary path is what tests
+// assert; a test wanting the degraded path spies on this export.
+jest.mock("react-native-reanimated", () => ({
+  ...require("react-native-reanimated/mock"),
+  useReducedMotion: () => false,
+}));
 
 // Silence "useNativeDriver" warning emitted by Animated under Jest.
 jest.mock("react-native/Libraries/Animated/NativeAnimatedHelper", () => ({}), {

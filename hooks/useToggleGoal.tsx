@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { Goal, Member } from "@/types/dashboardTypes";
 import { getTodayLocalDate } from "@/lib/date";
+import { emitDayComplete } from "@/lib/dayCompleteSignal";
 import { celebrate, toggleDone, toggleUndone } from "@/lib/haptics";
 import { isDayComplete } from "@/lib/isDayComplete";
 import { queryKeys } from "@/lib/queryKeys";
@@ -80,8 +81,14 @@ export function useToggleGoal() {
       // The last habit of the day gets the fanfare *instead of* the ordinary
       // confirmation — two buzzes on top of each other would just read as one
       // long one.
-      if (closesOutTheDay(goal)) celebrate();
-      else toggleDone();
+      if (closesOutTheDay(goal)) {
+        celebrate();
+        // The ring pulses off the same transition — one decision, so the buzz
+        // and the animation can never disagree.
+        emitDayComplete();
+      } else {
+        toggleDone();
+      }
     },
     invalidateStatsOnSettle: true,
     getHeatmapDelta: (goal) => (!goal.completed_today ? 1 : -1),
