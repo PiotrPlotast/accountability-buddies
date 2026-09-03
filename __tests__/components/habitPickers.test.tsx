@@ -1,5 +1,6 @@
 import { render, fireEvent } from "@testing-library/react-native";
 
+import * as haptics from "@/lib/haptics";
 import DayPicker from "@/app/components/habits/DayPicker";
 import IconPicker from "@/app/components/habits/IconPicker";
 
@@ -69,5 +70,48 @@ describe("habit pickers", () => {
 
     fireEvent.press(getByLabelText("Wed"));
     expect(onChange).toHaveBeenCalledWith([5]);
+  });
+});
+
+describe("habit picker haptics", () => {
+  let tap: jest.SpyInstance;
+
+  beforeEach(() => {
+    tap = jest.spyOn(haptics, "tapLight").mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("taps when a day is selected", () => {
+    const { getByLabelText } = render(
+      <DayPicker value={[0]} onChange={() => {}} />,
+    );
+    fireEvent.press(getByLabelText("Wed"));
+    expect(tap).toHaveBeenCalledTimes(1);
+  });
+
+  it("taps when a day is deselected", () => {
+    const { getByLabelText } = render(
+      <DayPicker value={[0, 2]} onChange={() => {}} />,
+    );
+    fireEvent.press(getByLabelText("Wed"));
+    expect(tap).toHaveBeenCalledTimes(1);
+  });
+
+  // Clearing the last day is refused (it would silently mean "every day"), and
+  // a press that changes nothing must not feel like a press that does.
+  it("stays silent on the refused last-day tap", () => {
+    const { getByLabelText } = render(
+      <DayPicker value={[0]} onChange={() => {}} />,
+    );
+    fireEvent.press(getByLabelText("Mon"));
+    expect(tap).not.toHaveBeenCalled();
+  });
+
+  it("taps when an icon is picked", () => {
+    const { getByLabelText } = render(
+      <IconPicker value="🧘" onChange={() => {}} />,
+    );
+    fireEvent.press(getByLabelText("📚"));
+    expect(tap).toHaveBeenCalledTimes(1);
   });
 });

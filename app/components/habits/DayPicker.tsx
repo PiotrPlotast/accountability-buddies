@@ -1,5 +1,6 @@
 import { View, Text, Pressable } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
+import { tapLight } from "@/lib/haptics";
 import { DAY_LABELS, DAY_NAMES } from "@/lib/repeatDays";
 
 type Props = {
@@ -18,8 +19,11 @@ export default function DayPicker({ value, onChange }: Props) {
   // picker shows. Refuse to remove it — one day always stays lit.
   const toggle = (day: number) => {
     const selected = value.includes(day);
+    // Refused, so no buzz either — a press that changes nothing must not feel
+    // like one that does.
     if (selected && value.length === 1) return;
 
+    tapLight();
     onChange(
       selected
         ? value.filter((d) => d !== day)

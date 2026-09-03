@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "react-native";
 
 import { useSupabase } from "@/hooks/useSupabase";
+import { error as errorHaptic } from "@/lib/haptics";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, Member } from "@/types/dashboardTypes";
@@ -109,6 +110,9 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
           queryClient.setQueryData(heatmapKey, previous);
         }
       }
+      // Felt before the Alert is read — one buzz for every rollback in the app,
+      // because they all come through here.
+      errorHaptic();
       const message = error instanceof Error ? error.message : String(error);
       Alert.alert("Error", message);
     },

@@ -1,3 +1,4 @@
+import { tapLight } from "@/lib/haptics";
 import { useOptimisticGoalMutation } from "@/lib/useOptimisticGoalMutation";
 import { ALL_DAYS } from "@/lib/repeatDays";
 
@@ -43,6 +44,7 @@ export function useEditGoal() {
       if (error) throw error;
     },
     getGroupId: ({ groupId }) => groupId,
+    beforeOptimistic: () => tapLight(),
     getPatch: (vars) => (goals) =>
       goals.map((g) =>
         g.id === vars.goalId ? { ...g, ...buildEdits(vars) } : g,

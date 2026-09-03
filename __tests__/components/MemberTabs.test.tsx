@@ -1,5 +1,6 @@
 import { render, fireEvent } from "@testing-library/react-native";
 
+import * as haptics from "@/lib/haptics";
 import MemberTabs from "@/app/components/dashboard/MemberTabs";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Goal, Member } from "@/types/dashboardTypes";
@@ -99,5 +100,30 @@ describe("MemberTabs", () => {
     );
     expect(getByText("1/2")).toBeTruthy();
     expect(queryByText("1/3")).toBeNull();
+  });
+});
+
+describe("MemberTabs haptics", () => {
+  let tap: jest.SpyInstance;
+
+  beforeEach(() => {
+    tap = jest.spyOn(haptics, "tapLight").mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("taps when a member tab is chosen", () => {
+    const onSelect = jest.fn();
+    const { getByText } = wrap(
+      <MemberTabs
+        members={members}
+        selectedTabId="user-1"
+        onSelect={onSelect}
+        userId="user-1"
+      />,
+    );
+
+    fireEvent.press(getByText("Bob"));
+    expect(tap).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith("user-2");
   });
 });

@@ -2,8 +2,10 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { Accent, AccentId, ThemeContext } from "@/context/theme-context";
+import { setHapticsEnabled as syncHaptics } from "@/lib/haptics";
 
 const STORAGE_KEY = "theme.accent.v1";
+const HAPTICS_KEY = "theme.haptics.v1";
 
 const PALETTE: Accent[] = [
   {
@@ -53,17 +55,29 @@ interface ThemeProviderProps {
 
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   const [accentId, setAccentIdState] = useState<AccentId>("neon");
+  const [hapticsEnabled, setHapticsEnabledState] = useState(true);
   // The stored accent arrives a frame or two after mount, so anything painted
   // before then uses the default. `_layout` holds the splash until this flips,
   // otherwise a user who picked purple watches the app open green.
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((stored) => {
-        if (stored && isAccentId(stored)) setAccentIdState(stored);
+    Promise.all([
+      AsyncStorage.getItem(STORAGE_KEY),
+      AsyncStorage.getItem(HAPTICS_KEY),
+    ])
+      .then(([storedAccent, storedHaptics]) => {
+        if (storedAccent && isAccentId(storedAccent))
+          setAccentIdState(storedAccent);
+        // Only an explicit "false" turns haptics off. Anything else — nothing
+        // stored, a value from a future version — leaves them on, which is the
+        // safe direction: a lost preference is a nuisance, a silently dead
+        // Taptic Engine reads as a broken app.
+        const on = storedHaptics !== "false";
+        setHapticsEnabledState(on);
+        syncHaptics(on);
       })
-      // A failed read just means the default accent — never a stuck splash.
+      // A failed read just means the defaults — never a stuck splash.
       .catch(() => {})
       .finally(() => setHydrated(true));
   }, []);
@@ -73,14 +87,30 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
     AsyncStorage.setItem(STORAGE_KEY, id).catch(() => {});
   };
 
+  // The module flag is what every call site reads, so it moves first and
+  // without waiting on storage — the next tap has to be silent already.
+  const setHapticsEnabled = (on: boolean) => {
+    syncHaptics(on);
+    setHapticsEnabledState(on);
+    AsyncStorage.setItem(HAPTICS_KEY, String(on)).catch(() => {});
+  };
+
   const accent = useMemo(
     () => PALETTE.find((p) => p.id === accentId) ?? PALETTE[0],
     [accentId],
   );
 
   const value = useMemo(
-    () => ({ accentId, accent, setAccent, palette: PALETTE, hydrated }),
-    [accentId, accent, hydrated],
+    () => ({
+      accentId,
+      accent,
+      setAccent,
+      palette: PALETTE,
+      hapticsEnabled,
+      setHapticsEnabled,
+      hydrated,
+    }),
+    [accentId, accent, hapticsEnabled, hydrated],
   );
 
   return (

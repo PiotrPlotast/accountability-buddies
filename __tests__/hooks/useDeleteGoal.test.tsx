@@ -1,6 +1,7 @@
 import { act, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
 
+import * as haptics from "@/lib/haptics";
 import { useDeleteGoal } from "@/hooks/useDeleteGoal";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, Member } from "@/types/dashboardTypes";
@@ -89,5 +90,64 @@ describe("useDeleteGoal", () => {
       "Error",
       expect.stringContaining("Could not delete"),
     );
+  });
+});
+
+describe("useDeleteGoal haptics", () => {
+  let destructive: jest.SpyInstance;
+  let errorBuzz: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    destructive = jest
+      .spyOn(haptics, "destructive")
+      .mockImplementation(() => {});
+    errorBuzz = jest.spyOn(haptics, "error").mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("warns on the way out, before the row is gone", async () => {
+    const deleteQB = makeQueryBuilder({ data: { id: "g-1" }, error: null });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => deleteQB) });
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
+      { user_id: "user-1", full_name: "Me", goals: [goal] },
+    ]);
+    const { Wrapper } = buildWrapper({ supabase, queryClient });
+    const utils = await renderHookWithSession(() => useDeleteGoal(), Wrapper);
+
+    await act(async () => {
+      await utils.result.current.value.mutateAsync({
+        goalId: "g-1",
+        groupId: "group-1",
+      });
+    });
+
+    expect(destructive).toHaveBeenCalledTimes(1);
+    expect(errorBuzz).not.toHaveBeenCalled();
+  });
+
+  // The rollback already shows an Alert; the buzz is the half of it a user
+  // feels before they have read anything.
+  it("buzzes an error when the delete fails and the cache rolls back", async () => {
+    const failQB = makeQueryBuilder({ data: null, error: { message: "nope" } });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => failQB) });
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
+      { user_id: "user-1", full_name: "Me", goals: [goal] },
+    ]);
+    const { Wrapper } = buildWrapper({ supabase, queryClient });
+    const utils = await renderHookWithSession(() => useDeleteGoal(), Wrapper);
+
+    await act(async () => {
+      await expect(
+        utils.result.current.value.mutateAsync({
+          goalId: "g-1",
+          groupId: "group-1",
+        }),
+      ).rejects.toBeTruthy();
+    });
+
+    await waitFor(() => expect(errorBuzz).toHaveBeenCalledTimes(1));
   });
 });

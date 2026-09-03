@@ -14,7 +14,12 @@ export type ThemeContextValue = {
   accent: Accent;
   setAccent: (id: AccentId) => void;
   palette: Accent[];
-  // False until the stored accent has been read back from AsyncStorage.
+  // Per-device, exactly like the accent — the same phone, not the same
+  // account. `lib/haptics.ts` holds the copy that call sites actually read;
+  // this one exists so the settings row has something to render.
+  hapticsEnabled: boolean;
+  setHapticsEnabled: (on: boolean) => void;
+  // False until the stored preferences have been read back from AsyncStorage.
   hydrated: boolean;
 };
 
