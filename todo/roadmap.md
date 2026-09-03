@@ -48,16 +48,21 @@ Wszystko tu jest tanie, a odblokowuje resztę. Rób w tej kolejności.
    Zero wystąpień starego ID w całym drzewie. **Credentiale Apple można ruszać.**
 2. **Zapisz się do Apple Developer Program.** Akceptacja zwykle tego samego dnia,
    czasem 2–3 dni. Zrób to **pierwsze**, bo to jedyna rzecz z kolejką.
-3. **Zmerguj `feature/supabase-cli-security-hardening` do `main`** i usuń 9
-   nieaktywnych gałęzi lokalnych — startujemy nowe strumienie z czystego `main`.
+3. ~~**Zmerguj `feature/supabase-cli-security-hardening` do `main`** i usuń
+   nieaktywne gałęzie lokalne~~ — **zrobione 2026-09-02.** PR #24 zmergowany
+   (`16544ac`), usuniętych 14 zmergowanych gałęzi. Zostały dwie, obie celowo:
+   `refactor/switch-to-tanstack` (niezmergowany commit `e769d79 "test"`) oraz
+   `worktree-fix+ui-ux-round-1` (aktywny worktree w `.claude/worktrees/`).
+   Suite na `main` zielony: 23 suity, 122 testy.
 4. ~~**Napraw CLAUDE.md**~~ — **zrobione 2026-09-02.** Nieaktualny baseline testów
    i akapit o inline'owym kluczu `heatmap` poprawione; doszedł akapit o tym, że
    `ios/`/`android/` to gitignorowany generowany output, a identyfikator zmienia
    się wyłącznie przez `app.json` + `prebuild --clean`.
 
-**Zostało w E0:** punkty 2 i 3 — wniosek do Apple (zrób dziś, ma kolejkę) oraz
-merge do `main` i sprzątnięcie gałęzi. Domknięcie etapu potwierdzasz jednym
-uruchomieniem `npm run ios` na świeżym prebuildzie.
+**Zostało w E0:** wyłącznie punkt 2 — wniosek do Apple. To jedyna rzecz z kolejką
+i jedyna, której nie da się przyspieszyć kodem, więc złóż go zanim wejdziesz w E1.
+Domknięcie etapu potwierdzasz jednym uruchomieniem `npm run ios` na świeżym
+prebuildzie.
 
 ---
 

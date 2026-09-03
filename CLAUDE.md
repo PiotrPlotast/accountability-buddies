@@ -2,6 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Workflow
+
+**Ask for the specific requirements before writing anything.** Every feature or bug-fix request starts with questions back to the user — never infer the spec from the code or fill gaps with assumptions. Ask about the exact user-visible behaviour, the edge cases (empty state, offline/failed mutation, a goal with no `repeat_days`, a user with no group), what should *not* change, and how you'll know it works. Ask even when the request looks obvious; the answers are the test cases. Don't touch a file until they're answered.
+
+**TDD is the default loop.** For any change to a hook, a `lib/` module, or a component:
+
+1. Write the tests first, in `__tests__/`, one per agreed behaviour including the edge cases. No implementation file is opened yet.
+2. Run them and confirm they fail *for the right reason* — `npx jest <file> --forceExit`. A new test that passes before the code exists is testing nothing; fix the test.
+3. Write the smallest implementation that makes them pass.
+4. Re-run `npm test`, then `npx tsc --noEmit`, then `npm run lint`.
+5. Refactor only once the suite is green, re-running it after each step.
+
+Never write the implementation first and backfill tests against it — a test written to match existing behaviour encodes whatever bug is already there.
+
+Changes that genuinely aren't testable here — styling and copy, `app.json`/config, docs, SQL migrations — skip step 1, but say out loud that you're skipping it and why rather than dropping it quietly. Everything else gets a failing test first.
+
 ## Commands
 
 ```bash
@@ -55,6 +71,8 @@ NativeWind v4 + the custom Tailwind theme in `tailwind.config.js` (`bg`, `surfac
 Static chrome colors that can't be Tailwind classes (navigator `contentStyle`) come from `lib/colors.ts`. The user-selectable accent is runtime state: `useTheme()` returns `{ accent: { hex, dim, shades }, setAccent, palette }`, persisted to AsyncStorage. Accent-colored UI uses inline `style={{ ... accent.hex }}`, not classes.
 
 ## Testing
+
+Tests come first — see **Workflow** above.
 
 `babel.config.js` drops the NativeWind preset when `NODE_ENV === "test"` (its CSS-interop transform breaks babel-jest), so className-driven styling is not exercised in tests.
 
