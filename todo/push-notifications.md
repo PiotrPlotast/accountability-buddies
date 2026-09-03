@@ -23,7 +23,7 @@ Delivery is Expo Push + Supabase Edge Functions, with `pg_cron` driving schedule
 | Names | Add real name capture as a prerequisite |
 | Backend source | Install the Supabase CLI, commit `supabase/` — **done**, see Phase 0 |
 | Platforms | iOS + Android, **iOS first** — Android deferred |
-| Apple Developer Program | **Enrolling.** $99/yr is accepted as a cost of the feature, so it is a Phase 0 prerequisite, not a deferred gate |
+| Apple Developer Program | **Active since 2026-09-03.** $99/yr paid; the `aps-environment` entitlement and Sign in with Apple are both unblocked |
 
 ### Build-tooling note
 
@@ -103,9 +103,9 @@ The `icon` and `color` options are **Android-only** — iOS uses the app icon �
 
 Then `npx expo prebuild --clean && npm run ios`.
 
-**iOS credentials** — do this first; everything else in this phase is cheap to redo, and this one has a queue:
+**iOS credentials** — do this first; everything else in this phase is cheap to redo, and a wrong credential is the one thing that costs a full re-walk of the path:
 
-1. Enrol in the Apple Developer Program ($99/yr). **Start the enrollment before writing any of this feature** — approval is usually same-day but can take a couple of days, and the useful non-blocked work is listed above.
+1. ~~Enrol in the Apple Developer Program ($99/yr).~~ **Done 2026-09-03** — the membership is active, so this step is no longer a queue.
 2. `eas credentials` → iOS → push key. Expo generates and uploads an APNs `.p8` key for you; one key works across every app on the account, and it is the only iOS credential push needs.
 3. Build to a real device: `eas build --profile development --platform ios` (or `npx expo run:ios --device` if you're signing locally). That profile is `"distribution": "internal"`, which on iOS means an Ad Hoc provisioning profile — another thing a free team cannot produce.
 
