@@ -46,6 +46,10 @@ npx jest -t "rolls back the cache"                  # single test by name
 
 **All goal mutations must go through `lib/useOptimisticGoalMutation.ts`.** `useAddGoal`, `useToggleGoal`, `useEditGoal`, and `useDeleteGoal` are thin configs over it; the shared hook handles cancel → snapshot → patch the current user's `goals` inside the `["groupMembers", groupId]` cache → rollback on error (with an `Alert.alert`) → invalidate on settle. Options: `getGroupId`, `getPatch`, `beforeOptimistic` (haptics), `invalidateStatsOnSettle`, `getHeatmapDelta`. Writing a raw `useMutation` for goals will silently diverge from this contract.
 
+**All haptics go through `lib/haptics.ts`** — the only file allowed to import `expo-haptics`. It exports domain names, not API names: `tapLight`, `toggleDone`, `toggleUndone`, `destructive`, `celebrate`, `error`. Three rules the file states in its own header and that a reviewer should hold you to: one kill switch (every function returns early on a module-level flag, so no call site branches on it), never `await` (they return `void` and swallow their own failure, because a buzz must not delay an optimistic update), and never vibrate in response to server data — a vibration confirms the user's touch, so `celebrate()` fires from the toggle path, never from an effect watching the cache. Goal mutations reach it through `beforeOptimistic`; `onError` in the shared hook fires `error()` beside the `Alert.alert`.
+
+**`isDayComplete(goals)` in `lib/isDayComplete.ts`** is the one definition of "closed out the day": the goals scheduled for today (via `filterGoalsForToday`) are non-empty and all `completed_today`. An empty schedule is `false` — a day with nothing due was never closed out. It has two consumers already, the `celebrate()` haptic and the ring pulse, and E5's `buddy_done` SQL has to agree with it, `extract(isodow) - 1` included.
+
 **Composition hooks** are what screens consume: `useDashboardData` (group + members + `fetchData`, and redirects to `join-group` when the user has none), `useDashboardActions` (no-ops when `activeGroupId` is null, so callers need no guard), `useDashboardStatus`. Both `useDashboardData` and `useDashboardStatus` call `useGroupStats`/`useGroupMembers` independently — that's fine, they dedupe through the query cache.
 
 **"Completed today" is derived, never stored.** `useGroupMembers` selects `goals(...logs(id))` filtered by `logs.date = today` and sets `completed_today = logs.length > 0`. Today is always `new Date().toLocaleDateString("en-CA")` → `YYYY-MM-DD`, wrapped as `getTodayLocalDate()` in `lib/date.ts`. Use that helper anywhere you compare against `logs.date` or `last_streak_date`.
@@ -58,6 +62,16 @@ The dashboard hosts three modals (habit manager, edit, delete) and the manager c
 
 The icon and repeat-day controls are shared between habit creation and editing via `app/components/habits/{IconPicker,DayPicker}.tsx`.
 
+### Animations
+
+Reanimated 4 with `newArchEnabled`, so layout animations work without extra setup. The animated surfaces are `GoalList` (the checkbox and the rows) and `ProgressRing` (the sweep and the day-close pulse); `DashboardHeader` animates nothing itself, it subscribes to the day-close signal and hands the ring a `pulseKey`. Two rules hold them together:
+
+**Nothing animates on first paint.** Every animation runs through `hooks/useOnValueChange.ts`, which fires on a change and never on mount. Without it the ring sweeps up from zero every time the dashboard mounts and the checkbox springs for habits ticked hours ago.
+
+**The day-close pulse is an event, not a derived state.** `lib/dayCompleteSignal.ts` is a module-level emitter (`emitDayComplete` / `onDayComplete` / `useDayCompleteSignal`) that `useToggleGoal` fires from the same branch as `celebrate()`. Deriving the pulse from `progress === 1` instead would fire it on a refetch, on a tab switch, and on every launch on an already-finished day — the animation version of the third haptics rule. `ProgressRing` takes it as an optional `pulseKey` and never decides to celebrate on its own.
+
+`useReducedMotion()` degrades movement only: no springs, no scale, no sliding, but colour cross-fades and opacity stay, since losing them makes the checkbox snap between two very different colours. NativeWind doesn't support `className` on a `Reanimated.View`, so animated components use inline styles.
+
 ### `repeat_days` day indexes
 
 `goals.repeat_days` is stored as **Monday = 0 … Sunday = 6** — the order the day picker writes. JS `Date#getDay()` is Sunday = 0, so never compare a stored index against `getDay()` directly.
@@ -68,7 +82,9 @@ The icon and repeat-day controls are shared between habit creation and editing v
 
 NativeWind v4 + the custom Tailwind theme in `tailwind.config.js` (`bg`, `surface`, `border`, `neon`, `text-muted`, `rounded-tile`, `font-mono*` Geist Mono). The content globs cover only `./app/**` and `./components/**` — classes written outside those paths generate nothing. Every screen file starts with an `import "../../global.css"` line; keep it when adding screens.
 
-Static chrome colors that can't be Tailwind classes (navigator `contentStyle`) come from `lib/colors.ts`. The user-selectable accent is runtime state: `useTheme()` returns `{ accent: { hex, dim, shades }, setAccent, palette }`, persisted to AsyncStorage. Accent-colored UI uses inline `style={{ ... accent.hex }}`, not classes.
+Static chrome colors that can't be Tailwind classes (navigator `contentStyle`) come from `lib/colors.ts`. The user-selectable accent is runtime state: `useTheme()` returns `{ accentId, accent: { hex, dim, shades }, setAccent, palette, hapticsEnabled, setHapticsEnabled, hydrated }`, persisted to AsyncStorage. Accent-colored UI uses inline `style={{ ... accent.hex }}`, not classes.
+
+`hapticsEnabled` is a per-device preference alongside the accent, and the context copy exists only so the settings row in `Profile.tsx` has something to render — the copy that call sites actually obey lives in `lib/haptics.ts`, which the provider syncs on hydration and on every toggle. E3 moves that switch onto the "Notifications and feedback" screen.
 
 ## Testing
 
@@ -76,11 +92,11 @@ Tests come first — see **Workflow** above.
 
 `babel.config.js` drops the NativeWind preset when `NODE_ENV === "test"` (its CSS-interop transform breaks babel-jest), so className-driven styling is not exercised in tests.
 
-`jest.setup.js` globally mocks `expo-router`, `expo-haptics`, `expo-clipboard`, reanimated, `react-native-safe-area-context` (the library's own default-exported mock), and — importantly — replaces `@/hooks/useSupabase` and `@/hooks/useTheme` with synchronous versions. The `useSupabase` stub reads the fake client (and its `__testSession`) straight out of `SupabaseContext`; the `useTheme` stub returns a fixed accent so themed components don't need a real `ThemeProvider` hydrating from AsyncStorage. Add new provider-backed hooks to that list rather than wrapping each test.
+`jest.setup.js` globally mocks `expo-router`, `expo-haptics`, `expo-clipboard`, reanimated, `react-native-safe-area-context` (the library's own default-exported mock), and — importantly — replaces `@/hooks/useSupabase` and `@/hooks/useTheme` with synchronous versions. Two of those mocks are deliberately wider than the libraries' own: the shipped reanimated mock omits `useReducedMotion` ("ADD ME IF NEEDED" in its source), so it's supplied here and defaults to false, and the `expo-haptics` feedback-type enums are filled in completely, because a missing member reads as `undefined` and the call still "succeeds" — a half-filled mock hides exactly the bug it should catch. The `useSupabase` stub reads the fake client (and its `__testSession`) straight out of `SupabaseContext`; the `useTheme` stub returns a fixed accent so themed components don't need a real `ThemeProvider` hydrating from AsyncStorage. Add new provider-backed hooks to that list rather than wrapping each test.
 
 Two things to know when reading test output:
 
-- **The baseline is green.** As of 2026-09-01: 23 suites, 122 tests passing, `tsc --noEmit` clean. A failure is a real regression, not pre-existing drift.
+- **The baseline is green.** As of 2026-09-04: 27 suites, 169 tests passing, `tsc --noEmit` clean. A failure is a real regression, not pre-existing drift. `npm run lint` is *not* clean — 2 errors and 4 warnings, all in `jest.setup.js` and test files, all pre-existing. Don't read those as something you broke.
 - Jest doesn't exit on its own after any suite that renders React ("Jest did not exit one second after the test run has completed"), so a plain `npx jest <file>` hangs until killed — use `--forceExit`. It also warns about a worker that failed to exit gracefully; that's the same leak and is expected.
 
 `testPathIgnorePatterns` in `package.json` already covers `.claude/worktrees/`, so an agent worktree checked out there doesn't get its tests collected alongside this repo's.

@@ -5,14 +5,14 @@ haptics, Google/Apple sign-in, and release polish. The details of push and
 nudges live in `todo/push-notifications.md` — this document sets the **order and
 the dependencies**, it does not repeat that plan.
 
-## Starting state (verified 2026-09-01)
+## Starting state (verified 2026-09-01, E1 column updated 2026-09-04)
 
 | Area | State |
 | --- | --- |
-| Tests | **green** — 23 suites, 122 tests, `tsc --noEmit` clean |
+| Tests | **green** — 27 suites, 169 tests, `tsc --noEmit` clean (was 23/122 on 2026-09-01) |
 | Push | no app code yet; the plan is ready in `todo/push-notifications.md`. The iOS APNs key **exists** — created and assigned 2026-09-03 |
-| Haptics | **1** call in the repo (`hooks/useToggleGoal.tsx`) |
-| Animations | **1** file uses Reanimated (`GoalList.tsx`, swipe only) |
+| Haptics | **done (E1)** — `lib/haptics.ts` is the only importer of `expo-haptics`; every goal mutation, the pickers and the tab strip go through it |
+| Animations | **done (E1)** — checkbox, ring, list transitions and the day-close pulse, all degrading under Reduce Motion |
 | Sign-in | email + password + OTP only (`useSignIn` / `useSignUp`) |
 | Names | `profiles.full_name` is empty for everyone → the UI shows "Unknown" |
 | Bundle ID | `com.piotrplotast.accountabilitybuddies` — changed and prebuilt 2026-09-02 |
@@ -94,12 +94,18 @@ proper — but the credential work is half done, not done.
 
 ---
 
-## E1 — Animations and haptics (~3–4 days, **does not need Apple**)
+## E1 — Animations and haptics — **done 2026-09-04**
 
-No backend, no credentials, immediate visual payoff. Now that the Apple account
-is active this stage is no longer "work to do while waiting" but an ordinary
-choice of ordering — still the cheapest and least risky one, but now competing
-for time with E2/E3, which have just opened up.
+Landed in two PRs off `feature/haptics-layer` and `feature/haptics-animations`:
+**#27** (haptics, merged as `f10b175`) and **#29** (animations, merged as
+`2edf539`). #29 replaces #28, which GitHub closed on its own when #27's branch
+was deleted out from under it — a stacked PR whose base ref disappears cannot be
+reopened, so the child has to be retargeted before the parent's branch goes.
+
+Everything below is the plan as written before the work; it is kept for the
+reasoning, not as an outstanding list. What actually shipped is recorded under
+**Shipped** at the end of the stage. The haptics half has its own plan in
+`todo/haptics.md`, followed as written.
 
 ### Haptics — one source of truth first
 
@@ -160,8 +166,33 @@ of the box.
   ordinary test. We do not test the animations themselves; we test
   `isDayComplete()`.
 
-**Done when:** every goal mutation has a haptic confirmation, the four
-animations work, the kill switch works, and reduced-motion is respected.
+### Shipped
+
+All four "done when" conditions are met: every goal mutation confirms with a
+haptic, the four animations work, the kill switch silences all of it from
+`Profile.tsx` and survives a restart, and Reduce Motion is respected.
+
+| Piece | Where |
+| --- | --- |
+| Haptics layer + kill switch | `lib/haptics.ts`, mirrored from `ThemeProvider`; the only importer of `expo-haptics` |
+| Settings row | `Profile.tsx` for now — **E3 moves it** onto the "Notifications and feedback" screen |
+| Day-close predicate | `lib/isDayComplete.ts`; an empty schedule is `false` |
+| Day-close event | `lib/dayCompleteSignal.ts` — emitted by the tap, never derived from `progress === 1` |
+| "Not on first paint" | `hooks/useOnValueChange.ts`, used by all four animations |
+| Animated surfaces | `GoalList.tsx` (checkbox spring, `LinearTransition` rows), `ProgressRing.tsx` (`strokeDashoffset` + `pulseKey`), `DashboardHeader.tsx` |
+
+Suite went from 23 suites / 122 tests to **27 / 169**, `tsc --noEmit` clean.
+Animations are not tested, per the plan; `isDayComplete()`, `useOnValueChange`
+and the signal module are, and were written test-first.
+
+**Two things this stage hands forward.** `isDayComplete()` already has two
+consumers, so E5's `buddy_done` SQL has to agree with it — `extract(isodow) - 1`
+for the Monday = 0 convention. And the haptics toggle is sitting in the wrong
+screen on purpose, waiting for E3 to build the right one.
+
+**Not covered by any of this:** the E0 sign-off. Haptics don't fire in the
+simulator at all, and the four animations were verified there rather than on a
+device. One `npm run ios` on a fresh prebuild closes both that and E0.
 
 ---
 
@@ -308,9 +339,10 @@ Concrete things found in the repo, not generalities:
 
 ## Order, if something has to be cut
 
-1. **E0** — non-negotiable, blocks everything, and is cheap.
-2. **E1** — the best effect-to-risk ratio, zero external dependencies.
-3. **E2** — sign-in is the first screen; it also unblocks nudges.
+1. ~~**E0**~~ — closed, bar the device sign-off.
+2. ~~**E1**~~ — **done 2026-09-04.**
+3. **E2** — next. Sign-in is the first screen; it also unblocks nudges, and
+   **names are the part that gates E4**, not the OAuth.
 4. **E3 + E4** — the heart of the product, but the most expensive and the most
    dependent.
 5. **E5** — valuable, not critical for a first release.
@@ -325,8 +357,17 @@ E0 (bundle ID) ──► Apple Developer ──► E3 ──┐
      └──► E1 (animations/haptics) — in parallel, no blockers
 ```
 
-As of 2026-09-03 the left edge of this diagram is behind us: E0 is closed, the
-Apple account is active, and the APNs key is created and assigned. Every arrow
-out of "Apple Developer" is now clear, so the remaining choice is purely one of
-value against cost — E1 gives a fast effect visible in the app, E2/E3 takes the
-longest stretch off the critical path. Nothing forces the order any more.
+The left edge of this diagram is behind us. E0 closed on 2026-09-03 (bar the
+device sign-off), the Apple account is active, the APNs key is created and
+assigned, and **E1 landed on 2026-09-04** — the bottom branch is finished.
+
+What remains is the top of the diagram, and its order is no longer free: E2 and
+E3 can start in either order, but **E4 needs both**, and the cheapest thing that
+unblocks it is the names phase of E2, not the OAuth. `profiles.full_name` is
+still empty for everyone, so a nudge today would read "Unknown nudged you".
+Names are a day of work against E3's three to four, which is the argument for
+taking E2 next and doing its first phase first.
+
+Still outstanding on the credential side, and easy to forget now that iOS is
+sorted: the **Android FCM v1 service-account JSON** has to be uploaded to EAS
+before the first Android push test.
