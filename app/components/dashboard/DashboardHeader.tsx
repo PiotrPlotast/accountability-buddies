@@ -2,6 +2,7 @@ import { View, Text, Pressable } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useTheme } from "@/hooks/useTheme";
+import { useDayCompleteSignal } from "@/lib/dayCompleteSignal";
 import ProgressRing from "./ProgressRing";
 import { Goal } from "@/types/dashboardTypes";
 
@@ -17,6 +18,9 @@ export default function DashboardHeader({
   const { groupName, groupIcon, streak, members } = useDashboardData();
   const { accent } = useTheme();
   const router = useRouter();
+  // Emitted by the tap that finishes the day, never derived from `progress`
+  // reaching 1 — see lib/dayCompleteSignal.ts.
+  const pulseKey = useDayCompleteSignal();
 
   const peopleCount = members.length;
 
@@ -99,7 +103,12 @@ export default function DashboardHeader({
             {done} of {total} done
           </Text>
         </View>
-        <ProgressRing progress={progress} size={56} stroke={6} />
+        <ProgressRing
+          progress={progress}
+          size={56}
+          stroke={6}
+          pulseKey={pulseKey}
+        />
       </View>
     </View>
   );

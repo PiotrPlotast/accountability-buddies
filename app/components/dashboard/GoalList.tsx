@@ -1,20 +1,27 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Pressable, type ViewStyle } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
   Easing,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
   SharedValue,
   cancelAnimation,
+  interpolateColor,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withRepeat,
+  withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
+import { useOnValueChange } from "@/hooks/useOnValueChange";
 import { getGoalHistory, type HistoryState } from "@/lib/goalHistory";
 import { themeColors } from "@/lib/colors";
 
@@ -170,6 +177,84 @@ function WeekStrip({
   );
 }
 
+// `rounded-tile` z tailwind.config.js. NativeWind nie obsługuje `className` na
+// `Reanimated.View` (patrz komentarz przy DOT_BASE), więc kafelek checkboxa
+// musi brać wymiary i promień ze stylu inline.
+const CHECKBOX_SIZE = 40;
+const TILE_RADIUS = 14;
+const CHECKBOX_BASE: ViewStyle = {
+  width: CHECKBOX_SIZE,
+  height: CHECKBOX_SIZE,
+  borderRadius: TILE_RADIUS,
+  borderWidth: 1,
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 12,
+};
+
+const FILL_MS = 190;
+
+type CheckboxProps = {
+  done: boolean;
+  icon: string | null;
+  accentHex: string;
+  reduceMotion: boolean;
+};
+
+// Najczęstszy gest w aplikacji, więc jedyny, któremu opłaca się sprężyna.
+//
+// Two separate channels on purpose: the colour fill runs even under Reduce
+// Motion — a cross-fade is not movement, and without it the tile would snap
+// between two very different colours — while the scale spring is movement and
+// is the part that gets dropped.
+function GoalCheckbox({ done, icon, accentHex, reduceMotion }: CheckboxProps) {
+  // Both start where the goal already is: a habit ticked off hours ago must not
+  // spring when you open the app or switch back to your own tab.
+  const fill = useSharedValue(done ? 1 : 0);
+  const scale = useSharedValue(1);
+
+  useOnValueChange(done, (next) => {
+    fill.value = withTiming(next ? 1 : 0, {
+      duration: FILL_MS,
+      easing: Easing.out(Easing.quad),
+    });
+
+    if (reduceMotion) return;
+    // Ticking off overshoots and settles; unticking just settles back. Undoing
+    // should feel like a correction, not like a second achievement.
+    scale.value = next
+      ? withSequence(
+          withSpring(1.18, { damping: 8, stiffness: 340 }),
+          withSpring(1, { damping: 12, stiffness: 260 }),
+        )
+      : withSpring(1, { damping: 14, stiffness: 240 });
+  });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    backgroundColor: interpolateColor(
+      fill.value,
+      [0, 1],
+      [themeColors.background, accentHex],
+    ),
+    borderColor: interpolateColor(
+      fill.value,
+      [0, 1],
+      [themeColors.border, accentHex],
+    ),
+  }));
+
+  return (
+    <Reanimated.View style={[CHECKBOX_BASE, animatedStyle]}>
+      {done ? (
+        <Text className="text-bg font-mono-bold text-base">✓</Text>
+      ) : icon ? (
+        <Text style={{ fontSize: 18 }}>{icon}</Text>
+      ) : null}
+    </Reanimated.View>
+  );
+}
+
 export default function GoalList({
   selectedTabId,
   goals,
@@ -184,6 +269,11 @@ export default function GoalList({
   // wcześniejszymi `return`ami niżej, więc żyje tutaj, a nie w `WeekStrip`.
   const reduceMotion = useReducedMotion();
   const pulse = useSharedValue(1);
+
+  // Flips after the first commit, so the initial list is simply there rather
+  // than fading itself in every time the screen mounts.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => setSettled(true), []);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -239,76 +329,82 @@ export default function GoalList({
       {goals.map((goal) => {
         const done = goal.completed_today;
         return (
-          <Swipeable
+          <Reanimated.View
             key={goal.id}
-            renderRightActions={
-              isViewingMe
-                ? (prog, drag) => (
-                    <RightActionComponent
-                      drag={drag}
-                      goal={goal}
-                      onAction={onDelete}
-                    />
-                  )
-                : undefined
-            }
-            renderLeftActions={
-              isViewingMe
-                ? (prog, drag) => (
-                    <LeftActionComponent
-                      drag={drag}
-                      goal={goal}
-                      onAction={onEdit}
-                    />
-                  )
-                : undefined
-            }
-            overshootRight={false}
-            overshootLeft={false}
-            friction={2}
+            // `settled` keeps the first paint still: entering animations fire
+            // on mount, and every row mounts when the dashboard opens or a tab
+            // switches. Only rows that appear afterwards — an optimistic
+            // insert — actually fade in.
+            entering={settled ? FadeIn.duration(180) : undefined}
+            exiting={FadeOut.duration(140)}
+            // Movement, so Reduce Motion drops it and the rows re-stack
+            // instantly. The fades above are opacity and stay either way.
+            layout={reduceMotion ? undefined : LinearTransition.duration(220)}
           >
-            <Pressable
-              disabled={!isViewingMe}
-              onPress={() => toggleGoal(goal)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: done, disabled: !isViewingMe }}
-              accessibilityLabel={goal.title}
-              className={`bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center ${
-                done ? "opacity-60" : ""
-              }`}
+            <Swipeable
+              renderRightActions={
+                isViewingMe
+                  ? (prog, drag) => (
+                      <RightActionComponent
+                        drag={drag}
+                        goal={goal}
+                        onAction={onDelete}
+                      />
+                    )
+                  : undefined
+              }
+              renderLeftActions={
+                isViewingMe
+                  ? (prog, drag) => (
+                      <LeftActionComponent
+                        drag={drag}
+                        goal={goal}
+                        onAction={onEdit}
+                      />
+                    )
+                  : undefined
+              }
+              overshootRight={false}
+              overshootLeft={false}
+              friction={2}
             >
-              <View
-                className={`w-10 h-10 rounded-tile items-center justify-center mr-3 ${
-                  done ? "" : "bg-bg border border-border"
+              <Pressable
+                disabled={!isViewingMe}
+                onPress={() => toggleGoal(goal)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: done, disabled: !isViewingMe }}
+                accessibilityLabel={goal.title}
+                className={`bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center ${
+                  done ? "opacity-60" : ""
                 }`}
-                style={done ? { backgroundColor: accent.hex } : undefined}
               >
-                {done ? (
-                  <Text className="text-bg font-mono-bold text-base">✓</Text>
-                ) : goal.icon ? (
-                  <Text style={{ fontSize: 18 }}>{goal.icon}</Text>
-                ) : null}
-              </View>
-
-              <View className="flex-1">
-                <Text
-                  className={`text-base font-semibold tracking-tight ${
-                    done ? "text-text-dim line-through" : "text-text"
-                  }`}
-                >
-                  {goal.title}
-                </Text>
-                <WeekStrip
-                  goal={goal}
+                <GoalCheckbox
+                  done={done}
+                  icon={goal.icon}
                   accentHex={accent.hex}
-                  pulse={pulse}
                   reduceMotion={reduceMotion}
                 />
-              </View>
 
-              {done ? <Text style={{ fontSize: 16 }}>🔥</Text> : null}
-            </Pressable>
-          </Swipeable>
+                <View className="flex-1">
+                  <Text
+                    className={`text-base font-semibold tracking-tight ${
+                      done ? "text-text-dim line-through" : "text-text"
+                    }`}
+                  >
+                    {goal.title}
+                  </Text>
+                  <WeekStrip
+                    goal={goal}
+                    accentHex={accent.hex}
+                    pulse={pulse}
+                    reduceMotion={reduceMotion}
+                  />
+                </View>
+
+                {done ? <Text style={{ fontSize: 16 }}>🔥</Text> : null}
+              </Pressable>
+            </Swipeable>
+          </Reanimated.View>
         );
       })}
     </View>
