@@ -1,19 +1,45 @@
-import * as Haptics from "expo-haptics";
+import { useQueryClient } from "@tanstack/react-query";
 
-import { Goal } from "@/types/dashboardTypes";
+import { Goal, Member } from "@/types/dashboardTypes";
 import { getTodayLocalDate } from "@/lib/date";
+import { celebrate, toggleDone, toggleUndone } from "@/lib/haptics";
+import { isDayComplete } from "@/lib/isDayComplete";
+import { queryKeys } from "@/lib/queryKeys";
+import { useSupabase } from "@/hooks/useSupabase";
 import { useOptimisticGoalMutation } from "@/lib/useOptimisticGoalMutation";
 
 export function useToggleGoal() {
+  const queryClient = useQueryClient();
+  const { session } = useSupabase();
+  const userId = session?.user.id;
+
+  // Odczyt cache'u wisi na dotknięciu, nie na odpowiedzi serwera — dlatego to
+  // nie łamie zasady „nigdy nie wibruj w reakcji na dane z serwera"
+  // (lib/haptics.ts). Odświeżenie cache'u samo z siebie nic tu nie uruchomi.
+  const closesOutTheDay = (goal: Goal): boolean => {
+    const members = queryClient.getQueryData<Member[]>(
+      queryKeys.groupMembers(goal.group_id),
+    );
+    const mine = members?.find((m) => m.user_id === userId)?.goals;
+    // Nothing cached yet — a cold start. Fall back to the ordinary tick rather
+    // than guessing at a milestone we cannot see.
+    if (!mine) return false;
+
+    const projected = mine.map((g) =>
+      g.id === goal.id ? { ...g, completed_today: true } : g,
+    );
+    return isDayComplete(projected);
+  };
+
   return useOptimisticGoalMutation<Goal, void>({
-    mutationFn: async (goal, { supabase, userId }) => {
+    mutationFn: async (goal, { supabase, userId: uid }) => {
       const today = getTodayLocalDate();
       const isNowCompleted = !goal.completed_today;
 
       if (isNowCompleted) {
         const { error } = await supabase.from("logs").insert({
           goal_id: goal.id,
-          user_id: userId,
+          user_id: uid,
           date: today,
         });
         if (error) throw error;
@@ -22,7 +48,7 @@ export function useToggleGoal() {
           .from("logs")
           .delete()
           .eq("goal_id", goal.id)
-          .eq("user_id", userId)
+          .eq("user_id", uid)
           .eq("date", today);
         if (error) throw error;
       }
@@ -46,8 +72,17 @@ export function useToggleGoal() {
         };
       });
     },
-    beforeOptimistic: () =>
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+    beforeOptimistic: (goal) => {
+      if (goal.completed_today) {
+        toggleUndone();
+        return;
+      }
+      // The last habit of the day gets the fanfare *instead of* the ordinary
+      // confirmation — two buzzes on top of each other would just read as one
+      // long one.
+      if (closesOutTheDay(goal)) celebrate();
+      else toggleDone();
+    },
     invalidateStatsOnSettle: true,
     getHeatmapDelta: (goal) => (!goal.completed_today ? 1 : -1),
   });

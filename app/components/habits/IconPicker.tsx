@@ -1,5 +1,6 @@
 import { View, Text, Pressable } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
+import { tapLight } from "@/lib/haptics";
 import { ICON_CHOICES } from "@/lib/habitIcons";
 
 type Props = {
@@ -19,7 +20,10 @@ export default function IconPicker({ value, onChange }: Props) {
         return (
           <Pressable
             key={emoji}
-            onPress={() => onChange(emoji)}
+            onPress={() => {
+              tapLight();
+              onChange(emoji);
+            }}
             accessibilityRole="button"
             accessibilityLabel={emoji}
             accessibilityState={{ selected }}

@@ -30,7 +30,12 @@ jest.mock("@/hooks/useTheme", () => {
       accent,
       setAccent: jest.fn(),
       palette: [accent],
-      // Tests never wait on AsyncStorage, so the accent is always settled.
+      // The real kill switch lives in `lib/haptics`; this is only what a
+      // settings row would render. Tests that care about silencing haptics
+      // call `setHapticsEnabled` from that module directly.
+      hapticsEnabled: true,
+      setHapticsEnabled: jest.fn(),
+      // Tests never wait on AsyncStorage, so the preferences are always settled.
       hydrated: true,
     }),
   };
@@ -45,12 +50,19 @@ jest.mock(
     require("react-native-safe-area-context/jest/mock").default,
 );
 
-// expo-haptics — no-op in tests.
+// expo-haptics — no-op in tests. The feedback-type enums have to be complete:
+// a missing member reads as `undefined` and the call still "succeeds", so a
+// half-filled mock hides exactly the bug it should catch.
 jest.mock("expo-haptics", () => ({
   notificationAsync: jest.fn(() => Promise.resolve()),
-  NotificationFeedbackType: { Success: "success" },
+  NotificationFeedbackType: {
+    Success: "success",
+    Warning: "warning",
+    Error: "error",
+  },
   impactAsync: jest.fn(() => Promise.resolve()),
   ImpactFeedbackStyle: { Light: "light", Medium: "medium", Heavy: "heavy" },
+  selectionAsync: jest.fn(() => Promise.resolve()),
 }));
 
 // expo-clipboard

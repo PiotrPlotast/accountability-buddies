@@ -1,9 +1,10 @@
-import { View, Text, Pressable, ScrollView, Alert } from "react-native";
+import { View, Text, Pressable, ScrollView, Switch, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, type Href } from "expo-router";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
+import { themeColors } from "@/lib/colors";
 import Heatmap from "./Heatmap";
 
 const AVATAR_BLURHASH =
@@ -27,7 +28,7 @@ export default function Profile() {
     groupMemberCount,
     signOut,
   } = useProfileData();
-  const { accent } = useTheme();
+  const { accent, hapticsEnabled, setHapticsEnabled } = useTheme();
   const { session } = useSupabase();
   const router = useRouter();
   const userId = session?.user.id;
@@ -170,6 +171,34 @@ export default function Profile() {
             No group yet.
           </Text>
         )}
+      </View>
+
+      {/* Temporary home. E3 adds a "Notifications and feedback" screen and this
+          row moves onto it — one settings surface, not two. */}
+      <View className="px-5 mt-8">
+        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
+          Feedback
+        </Text>
+        <View className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center gap-3">
+          <View className="flex-1">
+            <Text className="text-text font-mono-medium text-base">
+              Haptics
+            </Text>
+            <Text className="text-text-muted font-mono text-xs mt-1">
+              Vibration on taps, check-ins and errors.
+            </Text>
+          </View>
+          <Switch
+            value={hapticsEnabled}
+            onValueChange={setHapticsEnabled}
+            accessibilityLabel="Haptics"
+            trackColor={{ false: themeColors.surface2, true: accent.dim }}
+            thumbColor={hapticsEnabled ? accent.hex : themeColors.textDim}
+          />
+        </View>
+        <Text className="text-text-dim font-mono text-xs mt-2">
+          Stored on this device only.
+        </Text>
       </View>
     </ScrollView>
   );

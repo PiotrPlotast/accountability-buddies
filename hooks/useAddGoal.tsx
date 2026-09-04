@@ -1,4 +1,5 @@
 import { Goal } from "@/types/dashboardTypes";
+import { tapLight } from "@/lib/haptics";
 import { useOptimisticGoalMutation } from "@/lib/useOptimisticGoalMutation";
 import { ALL_DAYS } from "@/lib/repeatDays";
 
@@ -34,6 +35,10 @@ export function useAddGoal() {
       return data as Goal;
     },
     getGroupId: ({ groupId }) => groupId,
+    // A tap, not a `Success` — ticking off a habit is the one gesture that gets
+    // the celebratory pattern, and it stops being distinct if everything
+    // shares it.
+    beforeOptimistic: () => tapLight(),
     getPatch:
       ({ title, groupId, icon, repeatDays }) =>
       (goals, userId) => [

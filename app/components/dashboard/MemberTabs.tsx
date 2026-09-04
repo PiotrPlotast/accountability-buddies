@@ -1,6 +1,7 @@
 import { Text, Pressable, ScrollView } from "react-native";
 import { Member } from "@/types/dashboardTypes";
 import { useTheme } from "@/hooks/useTheme";
+import { tapLight } from "@/lib/haptics";
 import { filterGoalsForToday } from "@/lib/repeatDays";
 
 type Props = {
@@ -36,7 +37,10 @@ export default function MemberTabs({
         return (
           <Pressable
             key={member.user_id}
-            onPress={() => onSelect(member.user_id)}
+            onPress={() => {
+              tapLight();
+              onSelect(member.user_id);
+            }}
             // Groups the name and the count into one announcement instead of
             // two loose fragments.
             accessible

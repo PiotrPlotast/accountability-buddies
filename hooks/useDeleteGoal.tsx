@@ -1,3 +1,4 @@
+import { destructive } from "@/lib/haptics";
 import { useOptimisticGoalMutation } from "@/lib/useOptimisticGoalMutation";
 
 interface DeleteGoalParams {
@@ -25,6 +26,7 @@ export function useDeleteGoal() {
         );
     },
     getGroupId: ({ groupId }) => groupId,
+    beforeOptimistic: () => destructive(),
     getPatch:
       ({ goalId }) =>
       (goals) =>
