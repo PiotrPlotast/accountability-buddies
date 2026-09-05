@@ -4,6 +4,14 @@
 
 require("react-native-gesture-handler/jestSetup");
 
+// Reanimated's own mock stopped being self-contained in 4.2 (SDK 55): it
+// imports runtime values from `./index`, which boots react-native-worklets and
+// throws "Native part of Worklets doesn't seem to be initialized". Worklets
+// ships its own mock, so mock that layer first and the chain stays inert.
+jest.mock("react-native-worklets", () =>
+  require("react-native-worklets/lib/module/mock"),
+);
+
 // Reanimated 4 ships its own jest helper, but it leaves `useReducedMotion` out
 // ("ADD ME IF NEEDED" in its source). Components that degrade for Reduce Motion
 // would throw without it. Default to false — the ordinary path is what tests
