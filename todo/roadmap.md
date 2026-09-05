@@ -5,11 +5,14 @@ haptics, Google/Apple sign-in, and release polish. The details of push and
 nudges live in `todo/push-notifications.md` — this document sets the **order and
 the dependencies**, it does not repeat that plan.
 
-## Starting state (verified 2026-09-01, E1 column updated 2026-09-04)
+## Starting state (verified 2026-09-01; E1 rows 2026-09-04, toolchain rows 2026-09-05)
 
 | Area | State |
 | --- | --- |
+| Expo SDK | **57** — upgraded from 54 one SDK at a time on 2026-09-05 (PR #31). RN 0.86.3, React 19.2.3, TypeScript 6. Expo Go is reachable again; `expo-doctor` 21/21 |
 | Tests | **green** — 27 suites, 169 tests, `tsc --noEmit` clean (was 23/122 on 2026-09-01) |
+| Lint | **not clean** — 10 errors, 4 warnings. Eight errors arrived with eslint-config-expo 56; see E6 |
+| Xcode | **26.0.1**, but SDK 56 raised the minimum to **26.4**. Expo Go is unaffected; a local `npm run ios` is not |
 | Push | no app code yet; the plan is ready in `todo/push-notifications.md`. The iOS APNs key **exists** — created and assigned 2026-09-03 |
 | Haptics | **done (E1)** — `lib/haptics.ts` is the only importer of `expo-haptics`; every goal mutation, the pickers and the tab strip go through it |
 | Animations | **done (E1)** — checkbox, ring, list transitions and the day-close pulse, all degrading under Reduce Motion |
@@ -334,6 +337,30 @@ Concrete things found in the repo, not generalities:
   client IDs, `EXPO_ACCESS_TOKEN`, `DISPATCH_SECRET` on the Supabase side).
 - **The `fix/accessibility` branch** — check whether anything on it is still
   relevant before deleting it in E0.
+- **Ten lint errors, eight of them new and worth reading.** The SDK 54 → 57
+  upgrade (PR #31, 2026-09-05) brought eslint-config-expo 56, which turns on the
+  React Compiler-era hook rules. They flag patterns that pre-date the upgrade
+  and were simply never checked before:
+
+  | Rule | Where |
+  | --- | --- |
+  | `react-hooks/set-state-in-effect` | `Dashboard.tsx:32` and `:63`, `EditGoalModal.tsx:41`, `GoalList.tsx:276`, `group-settings.tsx:34` and `:40` |
+  | `react-hooks/immutability` | `__tests__/providers/supabaseProvider.test.tsx:53` |
+  | `react-hooks/globals` | `__tests__/providers/themeProvider.test.tsx:86` |
+  | `react/display-name` | `jest.setup.js:92` and `:93` — the only two that pre-date SDK 56 |
+
+  All six `set-state-in-effect` hits are the same shape: seeding state from a
+  prop or a query result in an effect, which is the pattern React's own docs
+  argue against. **This is not cosmetic.** `experiments.reactCompiler` is `true`
+  in `app.json`, so the compiler is already making assumptions about these
+  components, and a rule that says "this effect causes a cascading render" is
+  telling us where those assumptions are shakiest. The fix is usually deriving
+  during render or resetting via `key`, not silencing the rule.
+
+  Each one changes component behaviour, so each needs a test first — which is
+  why it did not ride along with the SDK bump. Do it as its own pass, before
+  E6's polish rather than during it, since `GoalList` and `Dashboard` are the
+  two files every later stage keeps touching.
 
 ---
 
