@@ -56,11 +56,9 @@ export default function RootLayout() {
       client={queryClient}
       persistOptions={{ persister: asyncStoragePersister }}
     >
-      <StatusBar
-        style="light"
-        translucent={true}
-        backgroundColor="transparent"
-      />
+      {/* Edge-to-edge is mandatory from SDK 55, so the status bar is always
+          translucent over a transparent background; both props were removed. */}
+      <StatusBar style="light" />
       <SupabaseProvider>
         <ThemeProvider>
           <RootNavigator />
