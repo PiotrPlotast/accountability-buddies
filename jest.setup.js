@@ -21,11 +21,6 @@ jest.mock("react-native-reanimated", () => ({
   useReducedMotion: () => false,
 }));
 
-// Silence "useNativeDriver" warning emitted by Animated under Jest.
-jest.mock("react-native/Libraries/Animated/NativeAnimatedHelper", () => ({}), {
-  virtual: true,
-});
-
 // Replace useTheme with a static accent. The real ThemeProvider hydrates from
 // AsyncStorage on mount, which every themed component would otherwise have to
 // wait on; tests care about behaviour, not which accent is selected.
