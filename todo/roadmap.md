@@ -12,7 +12,7 @@ the dependencies**, it does not repeat that plan.
 | Expo SDK | **57** — upgraded from 54 one SDK at a time on 2026-09-05 (PR #31). RN 0.86.3, React 19.2.3, TypeScript 6. Expo Go is reachable again; `expo-doctor` 21/21 |
 | Tests | **green** — 27 suites, 169 tests, `tsc --noEmit` clean (was 23/122 on 2026-09-01) |
 | Lint | **not clean** — 10 errors, 4 warnings. Eight errors arrived with eslint-config-expo 56; see E6 |
-| Xcode | **26.0.1**, but SDK 56 raised the minimum to **26.4**. Expo Go is unaffected; a local `npm run ios` is not |
+| Xcode | **26.6** (iOS SDK 26.5), updated 2026-09-05 — clear of the **26.4** minimum SDK 56 introduced. Not a blocker on anything |
 | Push | no app code yet; the plan is ready in `todo/push-notifications.md`. The iOS APNs key **exists** — created and assigned 2026-09-03 |
 | Haptics | **done (E1)** — `lib/haptics.ts` is the only importer of `expo-haptics`; every goal mutation, the pickers and the tab strip go through it |
 | Animations | **done (E1)** — checkbox, ring, list transitions and the day-close pulse, all degrading under Reduce Motion |
@@ -64,10 +64,20 @@ Everything here is cheap and unblocks the rest. Do it in this order.
    with no risk of having to walk that path twice.
 3. ~~**Merge `feature/supabase-cli-security-hardening` into `main`** and delete
    the stale local branches~~ — **done 2026-09-02.** PR #24 merged (`16544ac`),
-   14 merged branches deleted. Two remain, both deliberately:
-   `refactor/switch-to-tanstack` (unmerged commit `e769d79 "test"`) and
-   `worktree-fix+ui-ux-round-1` (an active worktree in `.claude/worktrees/`).
-   The suite on `main` is green: 23 suites, 122 tests.
+   14 merged branches deleted. The suite on `main` was green: 23 suites,
+   122 tests.
+
+   **Finished off 2026-09-06: the repository is now `main` and nothing else**,
+   local and remote, with no stashes and no extra worktrees.
+   `fix/habits-manager-modal-flow` was fully merged.
+   `fix/week-strip-today-pulse` looked like it still held three commits —
+   `git log main..branch` listed them — but each had a patch-id identical to a
+   commit already on `main` (`b3c499b`, `e7c0aef`, `256631e`): the branch had
+   been rebased after PR #25 merged, so the same work existed under new SHAs.
+   **Compare patch-ids, not hashes, before deleting a branch that looks
+   unmerged** — a rebase makes identical work look like lost work.
+   `refactor/switch-to-tanstack`, `worktree-fix+ui-ux-round-1` and
+   `fix/accessibility` were already gone from the remote by then.
 4. ~~**Fix CLAUDE.md**~~ — **done 2026-09-02.** The stale test baseline and the
    paragraph about the inline `heatmap` key were corrected; a paragraph was
    added explaining that `ios/`/`android/` are gitignored generated output and
@@ -76,6 +86,15 @@ Everything here is cheap and unblocks the rest. Do it in this order.
 **Left in E0:** only the sign-off — a single `npm run ios` on a fresh prebuild,
 to confirm the changed identifier installs cleanly on a device. All four items
 are ticked off; nothing here blocks the later stages.
+
+The SDK upgrade briefly put a toolchain gate in front of this: SDK 56 raised
+the minimum to Xcode 26.4. **That is settled — Xcode was updated to 26.6 on
+2026-09-05**, so nothing external stands between here and the sign-off.
+
+One thing to do first, since both landed after the last prebuild:
+`expo-system-ui` was added and `react-native-worklets-core` removed, so the
+native projects want one `npx expo prebuild --clean && npx pod-install` before
+that first device build.
 
 ~~The first thing worth doing with the new account is `eas credentials` → iOS →
 push key.~~ — **done 2026-09-03.** Generated through
@@ -335,8 +354,6 @@ Concrete things found in the repo, not generalities:
   "no connection" state on the dashboard.
 - **`.env.example`** needs extending with the variables from E2/E3 (the Google
   client IDs, `EXPO_ACCESS_TOKEN`, `DISPATCH_SECRET` on the Supabase side).
-- **The `fix/accessibility` branch** — check whether anything on it is still
-  relevant before deleting it in E0.
 - **Ten lint errors, eight of them new and worth reading.** The SDK 54 → 57
   upgrade (PR #31, 2026-09-05) brought eslint-config-expo 56, which turns on the
   React Compiler-era hook rules. They flag patterns that pre-date the upgrade
