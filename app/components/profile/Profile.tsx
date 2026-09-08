@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View, Text, Pressable, ScrollView, Switch, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, type Href } from "expo-router";
@@ -6,6 +7,7 @@ import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
 import { themeColors } from "@/lib/colors";
 import Heatmap from "./Heatmap";
+import RenameModal from "./RenameModal";
 
 const AVATAR_BLURHASH =
   "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
@@ -19,7 +21,7 @@ function formatMemberSince(iso: string | null): string {
 
 export default function Profile() {
   const {
-    nickname,
+    fullName,
     avatarUrl,
     memberSince,
     groupStreak,
@@ -34,7 +36,10 @@ export default function Profile() {
   const userId = session?.user.id;
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
-  const displayName = nickname || "You";
+  const [renaming, setRenaming] = useState(false);
+  // The name gate means `fullName` is set for anyone who reaches this screen;
+  // the fallback only covers the frame before the profile query resolves.
+  const displayName = fullName || "You";
   const initial = displayName.charAt(0).toUpperCase();
 
   const handleSignOut = () => {
@@ -102,12 +107,20 @@ export default function Profile() {
           )}
         </View>
         <View className="flex-1">
-          <Text
-            className="text-text font-mono-bold"
-            style={{ fontSize: 28, lineHeight: 30 }}
+          <Pressable
+            onPress={() => setRenaming(true)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Change your name"
+            accessibilityHint="Opens a dialog to rename yourself"
           >
-            {displayName}
-          </Text>
+            <Text
+              className="text-text font-mono-bold"
+              style={{ fontSize: 28, lineHeight: 30 }}
+            >
+              {displayName}
+            </Text>
+          </Pressable>
           <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-1">
             Member since {formatMemberSince(memberSince)}
           </Text>
@@ -200,6 +213,12 @@ export default function Profile() {
           Stored on this device only.
         </Text>
       </View>
+
+      <RenameModal
+        isVisible={renaming}
+        currentName={fullName ?? ""}
+        onClose={() => setRenaming(false)}
+      />
     </ScrollView>
   );
 }

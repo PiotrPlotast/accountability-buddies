@@ -31,7 +31,7 @@ export function useProfileData() {
 
   return {
     userId,
-    nickname: profile.data?.nickname ?? null,
+    fullName: profile.data?.full_name ?? null,
     avatarUrl: profile.data?.avatar_url ?? null,
     email: session?.user.email ?? null,
     memberSince: session?.user.created_at ?? null,
