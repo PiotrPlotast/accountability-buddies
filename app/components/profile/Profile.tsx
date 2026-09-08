@@ -8,6 +8,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { themeColors } from "@/lib/colors";
 import Heatmap from "./Heatmap";
 import RenameModal from "./RenameModal";
+import PencilIcon from "@/app/components/ui/PencilIcon";
 
 const AVATAR_BLURHASH =
   "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
@@ -107,19 +108,27 @@ export default function Profile() {
           )}
         </View>
         <View className="flex-1">
+          {/* The pencil is the whole affordance — without it this is text that
+              happens to react to a tap, which nobody discovers. The pressed
+              dip matches the group row below. `self-start` keeps the target on
+              the name rather than the full column width. */}
           <Pressable
             onPress={() => setRenaming(true)}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Change your name"
             accessibilityHint="Opens a dialog to rename yourself"
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            className="flex-row items-center gap-2 self-start"
           >
             <Text
               className="text-text font-mono-bold"
               style={{ fontSize: 28, lineHeight: 30 }}
+              numberOfLines={1}
             >
               {displayName}
             </Text>
+            <PencilIcon color={accent.hex} />
           </Pressable>
           <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-1">
             Member since {formatMemberSince(memberSince)}
