@@ -57,8 +57,31 @@ npm run ios                   # rebuild the dev client
 ```
 
 `ios/` is gitignored generated output, so the entitlement does not exist until
-this runs. Sign in with Apple **cannot be tested in Expo Go** and needs a real
-device or a simulator signed into an Apple ID.
+this runs. The simulator or device also has to be signed into an Apple ID —
+Settings -> Sign in to your iPhone — or the sheet fails with
+`AKAuthenticationError -7026` exactly as if the entitlement were missing.
+
+**A development certificate is required even for the simulator.** `@expo/cli`
+keeps a list of entitlements that force code signing on simulator builds
+(`run/ios/codeSigning/simulatorCodeSigning.js`), and
+`com.apple.developer.applesignin` is on it. With no identity in the keychain,
+`expo run:ios` fails with "No code signing certificates are available to use"
+before `xcodebuild` starts. Fix it once in Xcode -> Settings -> Accounts; use
+the account that owns the APNs key, since Sign in with Apple needs the paid
+membership anyway.
+
+### Expo Go
+
+`expo-apple-authentication` **is** included in Expo Go, so the sheet opens
+there — but the entitlement belongs to Expo Go's own binary, so the identity
+token is issued to Expo Go's client ID rather than this app's. Supabase checks
+that `aud` claim, so the exchange fails with `Unacceptable audience in
+id_token`.
+
+Expo Go is therefore good for checking that the sheet presents, that the scope
+is email-only and that cancelling stays silent. It cannot complete a sign-in.
+Adding Expo Go's client ID to Supabase's Client IDs would make it pass and is a
+bad trade: every Expo Go user's token would then be accepted by this project.
 
 ## What a wrong value looks like
 
