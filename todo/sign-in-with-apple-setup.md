@@ -70,18 +70,25 @@ before `xcodebuild` starts. Fix it once in Xcode -> Settings -> Accounts; use
 the account that owns the APNs key, since Sign in with Apple needs the paid
 membership anyway.
 
-### Expo Go
+### Expo Go — does not work, build only
 
-`expo-apple-authentication` **is** included in Expo Go, so the sheet opens
-there — but the entitlement belongs to Expo Go's own binary, so the identity
-token is issued to Expo Go's client ID rather than this app's. Supabase checks
-that `aud` claim, so the exchange fails with `Unacceptable audience in
-id_token`.
+The sign-in screen in Expo Go shows a grey "Unimplemented component:
+ViewManagerAdapter_ExpoAppleAuthentication" box where the button should be.
+That is not a misconfiguration: `expo-apple-authentication` is not in the Expo
+Go binary, so the native view its JS asks for does not exist.
 
-Expo Go is therefore good for checking that the sheet presents, that the scope
-is email-only and that cancelling stays silent. It cannot complete a sign-in.
-Adding Expo Go's client ID to Supabase's Client IDs would make it pass and is a
-bad trade: every Expo Go user's token would then be accepted by this project.
+Verified against Expo Go 57.0.9 rather than taken from the docs, whose badge
+claims "Included in Expo Go":
+
+```
+strings <Expo Go binary> | grep -c ExpoAppleAuthentication   # 0
+strings <Expo Go binary> | grep -c ExpoImage                 # 180  (control)
+strings <Expo Go binary> | grep -c ExpoCrypto                # 38   (control)
+```
+
+`expo-crypto` *is* there, so the nonce half of the flow would run — but the
+sheet cannot open, so nothing reaches Supabase. Test Sign in with Apple in a
+development build only.
 
 ## What a wrong value looks like
 
