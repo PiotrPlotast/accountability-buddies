@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useSignIn } from "@/hooks/useSignIn";
+import AppleAuth from "@/app/components/auth/AppleAuth";
 import FormError from "@/app/components/auth/FormError";
 import { getAuthErrorMessage } from "@/lib/authErrors";
 
@@ -128,6 +129,8 @@ export default function Page() {
             </Text>
           )}
         </Pressable>
+
+        <AppleAuth onError={setError} />
 
         <View className="flex-row justify-center mt-2">
           <Text className="text-text-muted font-mono text-sm">

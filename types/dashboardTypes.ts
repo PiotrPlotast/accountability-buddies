@@ -36,7 +36,7 @@ export type Member = {
 };
 
 export type ProfileRow = {
-  nickname: string | null;
+  full_name: string | null;
   avatar_url: string | null;
 };
 

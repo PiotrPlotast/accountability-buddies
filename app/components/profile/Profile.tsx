@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View, Text, Pressable, ScrollView, Switch, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, type Href } from "expo-router";
@@ -6,6 +7,8 @@ import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
 import { themeColors } from "@/lib/colors";
 import Heatmap from "./Heatmap";
+import RenameModal from "./RenameModal";
+import PencilIcon from "@/app/components/ui/PencilIcon";
 
 const AVATAR_BLURHASH =
   "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
@@ -19,7 +22,7 @@ function formatMemberSince(iso: string | null): string {
 
 export default function Profile() {
   const {
-    nickname,
+    fullName,
     avatarUrl,
     memberSince,
     groupStreak,
@@ -34,7 +37,10 @@ export default function Profile() {
   const userId = session?.user.id;
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
-  const displayName = nickname || "You";
+  const [renaming, setRenaming] = useState(false);
+  // The name gate means `fullName` is set for anyone who reaches this screen;
+  // the fallback only covers the frame before the profile query resolves.
+  const displayName = fullName || "You";
   const initial = displayName.charAt(0).toUpperCase();
 
   const handleSignOut = () => {
@@ -102,12 +108,28 @@ export default function Profile() {
           )}
         </View>
         <View className="flex-1">
-          <Text
-            className="text-text font-mono-bold"
-            style={{ fontSize: 28, lineHeight: 30 }}
+          {/* The pencil is the whole affordance — without it this is text that
+              happens to react to a tap, which nobody discovers. The pressed
+              dip matches the group row below. `self-start` keeps the target on
+              the name rather than the full column width. */}
+          <Pressable
+            onPress={() => setRenaming(true)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Change your name"
+            accessibilityHint="Opens a dialog to rename yourself"
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            className="flex-row items-center gap-2 self-start"
           >
-            {displayName}
-          </Text>
+            <Text
+              className="text-text font-mono-bold"
+              style={{ fontSize: 28, lineHeight: 30 }}
+              numberOfLines={1}
+            >
+              {displayName}
+            </Text>
+            <PencilIcon color={accent.hex} />
+          </Pressable>
           <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-1">
             Member since {formatMemberSince(memberSince)}
           </Text>
@@ -200,6 +222,12 @@ export default function Profile() {
           Stored on this device only.
         </Text>
       </View>
+
+      <RenameModal
+        isVisible={renaming}
+        currentName={fullName ?? ""}
+        onClose={() => setRenaming(false)}
+      />
     </ScrollView>
   );
 }

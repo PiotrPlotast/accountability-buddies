@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useGroupStats } from "@/hooks/useGroupStats";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
+import { useNameGate } from "@/hooks/useNameGate";
 
 export function useDashboardData() {
   const { session } = useSupabase();
@@ -42,12 +43,21 @@ export function useDashboardData() {
     }
   }, [refetchStats, refetchMembers]);
 
-  // Redirect if no group
+  // Redirect if no group — but never ahead of the name gate. A brand new
+  // account has neither a name nor a group, and both answers arrive from
+  // separate round trips, so whichever resolved last used to win. The name
+  // screen owns that user; this waits for a name before sending anyone
+  // anywhere. `(protected)/_layout.tsx` normally keeps the dashboard
+  // unmounted in that state, which leaves this covering the window before the
+  // profile has been read.
+  const { isResolved: nameResolved, needsName } = useNameGate();
+
   useEffect(() => {
+    if (!nameResolved || needsName) return;
     if (groupStats.isFetched && !groupStats.data) {
       router.replace("/(protected)/join-group");
     }
-  }, [groupStats.isFetched, groupStats.data, router]);
+  }, [groupStats.isFetched, groupStats.data, nameResolved, needsName, router]);
 
   return {
     userId,

@@ -78,6 +78,72 @@ jest.mock("expo-clipboard", () => ({
   getStringAsync: jest.fn(() => Promise.resolve("")),
 }));
 
+// expo-crypto — deterministic, so a test can prove which of the two nonce
+// values reached which side of the handshake. The digest is a readable stand-in
+// for a real SHA-256, not a reimplementation: what matters is that it differs
+// from its input and that the algorithm asked for is the one Apple expects.
+jest.mock("expo-crypto", () => ({
+  digestStringAsync: jest.fn((algorithm, data) =>
+    Promise.resolve(`${algorithm}:${data}`),
+  ),
+  getRandomBytesAsync: jest.fn((n) =>
+    Promise.resolve(Uint8Array.from({ length: n }, (_, i) => i)),
+  ),
+  getRandomBytes: jest.fn((n) => Uint8Array.from({ length: n }, (_, i) => i)),
+  randomUUID: jest.fn(() => "00000000-0000-4000-8000-000000000000"),
+  CryptoDigestAlgorithm: {
+    SHA1: "SHA-1",
+    SHA256: "SHA-256",
+    SHA384: "SHA-384",
+    SHA512: "SHA-512",
+    MD5: "MD5",
+  },
+  CryptoEncoding: { HEX: "hex", BASE64: "base64" },
+}));
+
+// expo-apple-authentication. The enums are filled in completely for the same
+// reason expo-haptics' are: a missing member reads as `undefined` and the call
+// still "succeeds", hiding exactly the bug the mock should catch — here, a
+// scope of `undefined` would look like a passing "email scope only" test.
+//
+// The button stands in as a Pressable labelled the way the native one renders
+// for each `buttonType`, so tests press it by the words a user would read.
+jest.mock("expo-apple-authentication", () => {
+  const React = require("react");
+  const { Pressable, Text } = require("react-native");
+  const LABELS = {
+    0: "Sign in with Apple",
+    1: "Continue with Apple",
+    2: "Sign up with Apple",
+  };
+  return {
+    isAvailableAsync: jest.fn(() => Promise.resolve(true)),
+    signInAsync: jest.fn(() => Promise.resolve({ identityToken: "id-token" })),
+    refreshAsync: jest.fn(),
+    signOutAsync: jest.fn(),
+    getCredentialStateAsync: jest.fn(),
+    AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
+    AppleAuthenticationButtonType: { SIGN_IN: 0, CONTINUE: 1, SIGN_UP: 2 },
+    AppleAuthenticationButtonStyle: {
+      WHITE: 0,
+      WHITE_OUTLINE: 1,
+      BLACK: 2,
+    },
+    AppleAuthenticationCredentialState: {
+      REVOKED: 0,
+      AUTHORIZED: 1,
+      NOT_FOUND: 2,
+      TRANSFERRED: 3,
+    },
+    AppleAuthenticationButton: ({ buttonType, onPress, ...rest }) =>
+      React.createElement(
+        Pressable,
+        { onPress, accessibilityRole: "button", ...rest },
+        React.createElement(Text, null, LABELS[buttonType ?? 0]),
+      ),
+  };
+});
+
 // expo-router — minimal stand-in for the bits the app uses.
 jest.mock("expo-router", () => {
   const React = require("react");

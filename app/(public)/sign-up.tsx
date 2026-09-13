@@ -13,9 +13,12 @@ import AppTextInput from "@/app/components/ui/AppTextInput";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import * as AppleAuthentication from "expo-apple-authentication";
+
 import { useSignUp } from "@/hooks/useSignUp";
 import { themeColors } from "@/lib/colors";
 import { useTheme } from "@/hooks/useTheme";
+import AppleAuth from "@/app/components/auth/AppleAuth";
 import FormError from "@/app/components/auth/FormError";
 import { getAuthErrorMessage } from "@/lib/authErrors";
 
@@ -213,6 +216,11 @@ export default function Page() {
             </Text>
           )}
         </Pressable>
+
+        <AppleAuth
+          onError={setError}
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+        />
 
         <View className="flex-row justify-center mt-2">
           <Text className="text-text-muted font-mono text-sm">

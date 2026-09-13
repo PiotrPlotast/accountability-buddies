@@ -88,6 +88,7 @@ export function buildFakeSupabase({
       signInWithPassword: jest.fn(() => Promise.resolve({ error: null })),
       signUp: jest.fn(() => Promise.resolve({ error: null })),
       verifyOtp: jest.fn(() => Promise.resolve({ error: null })),
+      signInWithIdToken: jest.fn(() => Promise.resolve({ error: null })),
       startAutoRefresh: jest.fn(),
       stopAutoRefresh: jest.fn(),
     },
