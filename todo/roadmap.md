@@ -1,7 +1,7 @@
 # Roadmap — Accountability Buddies
 
 Ties together five streams of work: push notifications, nudges, animations +
-haptics, Google/Apple sign-in, and release polish. The details of push and
+haptics, Sign in with Apple (Google deferred), and release polish. The details of push and
 nudges live in `todo/push-notifications.md` — this document sets the **order and
 the dependencies**, it does not repeat that plan.
 
@@ -16,8 +16,8 @@ the dependencies**, it does not repeat that plan.
 | Push | no app code yet; the plan is ready in `todo/push-notifications.md`. The iOS APNs key **exists** — created and assigned 2026-09-03 |
 | Haptics | **done (E1)** — `lib/haptics.ts` is the only importer of `expo-haptics`; every goal mutation, the pickers and the tab strip go through it |
 | Animations | **done (E1)** — checkbox, ring, list transitions and the day-close pulse, all degrading under Reduce Motion |
-| Sign-in | email + password + OTP only (`useSignIn` / `useSignUp`) |
-| Names | `profiles.full_name` is empty for everyone → the UI shows "Unknown" |
+| Sign-in | email + password + OTP only (`useSignIn` / `useSignUp`). **Sign in with Apple is next (E2); Google is deferred, maybe never** |
+| Names | **two columns, read in different places** — buddies see `full_name` (`useGroupMembers.tsx:28`), you see `nickname` (`useProfile.tsx:17`). Both live users have both filled and they differ. E2 collapses them into `full_name` |
 | Bundle ID | `com.piotrplotast.accountabilitybuddies` — changed and prebuilt 2026-09-02 |
 | Apple account | **active** — Apple Developer Program paid for and approved 2026-09-03 |
 
@@ -83,9 +83,9 @@ Everything here is cheap and unblocks the rest. Do it in this order.
    added explaining that `ios/`/`android/` are gitignored generated output and
    that the identifier only changes through `app.json` + `prebuild --clean`.
 
-**Left in E0:** only the sign-off — a single `npm run ios` on a fresh prebuild,
-to confirm the changed identifier installs cleanly on a device. All four items
-are ticked off; nothing here blocks the later stages.
+**E0 is closed.** The last item was the sign-off — a build confirming the changed
+identifier installs cleanly — and the app is running on a physical iPhone as of
+2026-09-08. Nothing here blocks the later stages.
 
 The SDK upgrade briefly put a toolchain gate in front of this: SDK 56 raised
 the minimum to Xcode 26.4. **That is settled — Xcode was updated to 26.6 on
@@ -212,70 +212,171 @@ consumers, so E5's `buddy_done` SQL has to agree with it — `extract(isodow) - 
 for the Monday = 0 convention. And the haptics toggle is sitting in the wrong
 screen on purpose, waiting for E3 to build the right one.
 
-**Not covered by any of this:** the E0 sign-off. Haptics don't fire in the
-simulator at all, and the four animations were verified there rather than on a
-device. One `npm run ios` on a fresh prebuild closes both that and E0.
+**Not covered by any of this:** the E0 sign-off, which was still open when E1
+landed — haptics don't fire in the simulator at all, and the four animations
+were verified there rather than on a device. **Closed 2026-09-08**: the app runs
+on a physical iPhone.
 
 ---
 
-## E2 — Identity: names + Google/Apple (~4–5 days, needs E0)
+## E2 — Identity: one name, Sign in with Apple, account deletion (~4–5 days)
 
-The order within the stage matters: **names before OAuth, OAuth before nudges.**
+Scoped in full on 2026-09-08. **Three PRs, in this order: names, Apple,
+deletion.** Each merges to `main` on its own before the next opens.
 
-### Names (Phase 1 from `push-notifications.md`)
+### What this stage found wrong in its own starting assumptions
 
-Without this, every nudge reads "Unknown nudged you". This is not a separate
-feature — it is a precondition for E4 working at all. The scope is unchanged
-from that plan: a "Your name" field in `sign-up.tsx`, a new
-`hooks/useUpdateProfile.ts`, name editing in `Profile.tsx`, and a server-side
-`coalesce()` as a safety net for existing accounts.
+Worth reading before the plan, because three of them were load-bearing:
 
-### Sign in with Apple
+- **"`profiles.full_name` is empty for everyone"** — false since at least
+  2026-09-07. Both live users have a name. "Unknown nudged you" is a problem for
+  the *next* person who signs up, not for the two accounts that exist.
+- **Two name columns, no rule.** `full_name` and `nickname` both hold values,
+  and they differ (`Piotr`/`Pietrell`, `Zofia`/`Burrito`). Your buddies see
+  `full_name` via `useGroupMembers.tsx:52`; you see `nickname` via
+  `Profile.tsx:37`. Nothing syncs them, and the push plan's server-side
+  `coalesce` picks the opposite priority to `MemberTabs`.
+- **Account deletion is not a consequence of social sign-in.** Apple requires
+  in-app deletion of any app that lets people create accounts, so email sign-up
+  already triggers it. It was parked in E6 on the wrong reasoning; it moves here.
 
-`expo-apple-authentication` → `identityToken` → `supabase.auth.signInWithIdToken({
-provider: "apple", token })`. A native flow, not a web one — you have a dev
-client, so nothing is in the way.
+Two facts about the database that shape the work:
 
-Three traps, each of which costs its own day if you fall into it:
+- **`profiles` has no INSERT policy** (`initial_schema.sql:445` grants UPDATE
+  only). The signup trigger `handle_new_user` creates the row. So the name
+  screen **updates** that row; an upsert from the client is not the reliable
+  path the push plan claims.
+- **Nothing cascades from `profiles`.** `goals.user_id`, `group_members.user_id`,
+  `logs.user_id` and `groups.creator_id` are all `NO ACTION`; only `logs → goals`
+  cascades. A plain delete fails on a foreign key. PR 3 deletes in order itself.
 
-- **Apple gives you the full name exactly once** — on the first authorization.
-  On every subsequent sign-in the field is empty, *including after reinstalling
-  the app*. The write to `profiles` has to happen in that one pass, because
-  there is no second chance (recovering it means manually detaching the app in
-  Apple ID settings). This is a place worth a comment in the code.
-- **Nonce.** `expo-apple-authentication` takes the nonce already hashed
-  (SHA-256), while Supabase verifies the raw one. Generate it once, pass the
-  hash to Apple and the raw value to Supabase — confusing the two produces a
-  misleading `invalid nonce`.
-- **Private Relay.** A user can hide their email; you get an
-  `@privaterelay.appleid.com` address. Anything that assumes "email = identity"
-  (e.g. the `split_part(u.email,'@',1)` fallback from the push plan) has to
-  survive that.
+### Why Apple and not Google
 
-### Google
+Email and password stay — the two existing accounts need them, and Apple-only
+would close the door on Android permanently. Apple is added because typing an
+email and password is where new users bounce.
 
-`@react-native-google-signin/google-signin` → `idToken` → the same
-`signInWithIdToken`. You need a **Web client ID** (that is the one Supabase
-verifies as the audience) plus iOS/Android client IDs. On Android there is also
-the SHA-1 fingerprint of the signing key — with EAS builds you take it from
-`eas credentials`, not from a local keystore.
+Google is **deferred, possibly indefinitely**: three client IDs, an Android
+signing fingerprint, a second native library, for one more button on an
+iOS-first app. Note the direction of the App Store constraint — offering Google
+*requires* Sign in with Apple, so doing Apple first costs nothing later; doing
+Google first would have forced Apple anyway.
 
-### Product consequences
+### PR 1 — One name column, asked once
 
-- **Store ordering:** if you offer Google sign-in, the App Store expects an
-  equivalent private option — Sign in with Apple. We do Apple **before** Google
-  so that a build breaking that condition never exists.
-- **Same email, two methods.** Supabase links accounts by verified address by
-  default, but Apple with Private Relay hands you a different address than the
-  same person's password account — so **two accounts, two separate groups**.
-  Decide now whether you accept that or add explicit account linking in the
-  profile. For an app built around groups, the split is painful.
-- **Account deletion.** Third-party sign-in in practice also drags in the
-  requirement for a "delete account" path inside the app. Plan an RPC
-  `delete_my_account` — it fits in E6.
+**Migration.** Drop `nickname`. The values in it are discarded; `full_name` is
+the single display name. `full_name` survives rather than `nickname` because the
+signup trigger already writes it, every identity provider hands you that key,
+and `useGroupMembers`, `MemberTabs` and `types/dashboardTypes.ts` already read
+it — two files to change instead of five.
 
-**Done when:** all three sign-in methods work on a physical device, the name is
-saved after each of them, and signing out and back in preserves the profile.
+**The name screen.** A new screen in `(protected)`, gated on an empty name and
+redirecting the way the group gate does (`useDashboardData.tsx:45-49`). A brand
+new user has neither a name nor a group, so **the name gate has to win** — two
+redirect effects racing is the failure mode to write carefully rather than
+copy-paste. This is the same effect-driven pattern the React Compiler rules
+already flag in `Dashboard.tsx` (E6), so don't add a seventh instance casually.
+
+The screen is asked of **everyone**, email and Apple alike. That kills the
+roadmap's worst trap before it exists: Apple hands over a name exactly once and
+never again, and an app that never depends on that value cannot be hurt by a
+user who hid it, reinstalled, or hit a network blip on the one pass. It also
+means **`sign-up.tsx` is not touched** — the "Your name" field from
+`push-notifications.md` Phase 1 is dead.
+
+Empty field with a placeholder. **No skip and no prefilled random name**: most
+people accept a prefill, which rebuilds "Unknown" under a friendlier label, and
+a skip button puts the cost of a nameless user on the rest of their group.
+Validation is trim, non-empty, a sane maximum — nothing else. Duplicate names
+inside one group are allowed; a tiny crew of friends sorts that out in seconds,
+and blocking it costs a server check, two error states and an ugly edge case on
+joining.
+
+**`hooks/useUpdateProfile.ts`** (new) — a hand-rolled `useMutation`, optimistic
+over `queryKeys.profile(userId)`, rollback plus `Alert.alert`, modelled on
+`useUpdateGroup.tsx`. **Not** through `lib/useOptimisticGoalMutation.ts`, which
+hard-codes the `groupMembers` cache and "patch my own goals".
+
+**Renaming** is in E2, not deferred — it is the only recovery path if a name is
+ever wrong, and the profile screen is where it belongs. A modal, matching the
+edit/delete modal idiom, rather than inline editing on a scrolling screen with a
+keyboard in the way.
+
+**Touched:** the migration, the new screen and its gate, `useUpdateProfile.ts`,
+`useProfile.tsx:17`, `useProfileData.tsx:34`, `Profile.tsx:37`, the rename modal.
+The `"Unknown"` fallback at `useGroupMembers.tsx:52` **stays** — one `||` against
+a null nobody predicted beats a blank tab.
+
+Tests first for the hook and the gate. The migration is SQL and gets none —
+stated, not skipped quietly.
+
+### PR 2 — Sign in with Apple
+
+`expo-apple-authentication` → `identityToken` → `signInWithIdToken({ provider:
+"apple", token })`. Needs a prebuild for the capability.
+
+- **Email scope only.** Apple's name has nowhere to live now and would never be
+  shown, so don't ask for it. Supabase still needs an address.
+- **Button placement: below the form**, under an "or" divider, on the sign-in
+  and sign-up screens. `welcome.tsx` is untouched. The cost is one extra tap for
+  an Apple user, who must open a form screen to find the option that skips
+  forms — accepted, because it is the layout people recognise.
+- **`useAppleSignIn`, Apple-specific.** No shared `useOAuthSignIn`: the two
+  flows only converge on the final `signInWithIdToken` line, and an abstraction
+  built from one example is a guess about a provider that may never ship.
+- **Tested**, unlike the animations, with `expo-apple-authentication` mocked in
+  `jest.setup.js`. The nonce is why: Apple wants it SHA-256 hashed, Supabase
+  wants the raw value, and swapping them produces a misleading `invalid nonce`
+  that reads as a credentials problem. That is a pure function; pin it in a test
+  rather than in a device build. The native handshake stays a device check.
+- New Apple users land on PR 1's name screen like everyone else.
+
+**Accepted, not solved: the same person can end up with two accounts.** Sign up
+with email, later tap Continue with Apple and choose Hide My Email, and Supabase
+sees a different address and makes a second account — new id, empty profile, no
+group, a stranger to their own crew. Nobody can fix that from inside the app.
+With two test users it is theoretical, and proper account linking is real work
+before anyone has hit the problem. **Revisit when there are real users.** This
+is the one known hole in E2.
+
+### PR 3 — Delete my account
+
+Moved out of E6, written last so it targets the post-migration schema.
+
+`delete_my_account`, `SECURITY DEFINER` (the client cannot reach `auth.users`),
+deleting in order because nothing cascades:
+
+```
+goals            → logs cascade with them
+group_members
+groups           → delete the group if they were its last member,
+                   otherwise just null creator_id
+profiles
+auth.users
+```
+
+`creator_id` gives no real powers — it appears only in the "Create groups"
+insert policy and in `"See my groups"` (`initial_schema.sql:437`, letting a
+creator see a group they are not a member of). There is no owner role to
+transfer. An **empty group is deleted rather than left behind**, because an
+orphaned row keeps a working invite code pointing at a dead room.
+
+**Hard delete, not anonymisation.** A "Former member" ghost tab that nobody can
+nudge or remove is worse for the group than the person simply being gone. The
+group's `current_streak` is a stored column and does not move when their logs
+go.
+
+Entry point on the profile screen, behind a **two-step alert** matching the
+existing sign-out alert (`Profile.tsx:41`). Not a type-the-word-DELETE field —
+that friction is for destroying something big and shared, and this is one
+person's habit list — and not a single tap, on a screen that also has "Log out".
+
+### Done when
+
+Email and Apple sign-in both work on a physical device; every new account of
+either kind is asked for a name and cannot get past it; the name shows the same
+everywhere; renaming works and survives a restart; deleting an account removes
+every trace and leaves no broken group behind.
 
 ---
 
@@ -348,7 +449,11 @@ Concrete things found in the repo, not generalities:
 - **The app name** — `"accountabilitybuddies"` as one word, which is how it will
   appear under the icon. Worth splitting `name` (visible) from `slug`
   (technical).
-- **The `delete_my_account` RPC** plus an entry point in the profile (see E2).
+- ~~**The `delete_my_account` RPC** plus an entry point in the profile.~~ —
+  **moved into E2** as its own PR, on 2026-09-08. It was listed here as a
+  consequence of third-party sign-in, which is wrong: Apple requires in-app
+  deletion of any app that lets people create accounts, so email sign-up
+  already triggered it. Skipping Google would never have skipped this.
 - **Empty states and network errors** — today errors are an `Alert.alert` from
   the mutation hook. Before the store, it is worth having a consistent
   "no connection" state on the dashboard.
@@ -385,8 +490,9 @@ Concrete things found in the repo, not generalities:
 
 1. ~~**E0**~~ — closed, bar the device sign-off.
 2. ~~**E1**~~ — **done 2026-09-04.**
-3. **E2** — next. Sign-in is the first screen; it also unblocks nudges, and
-   **names are the part that gates E4**, not the OAuth.
+3. **E2** — next, and fully scoped as of 2026-09-08: three PRs, names → Apple →
+   deletion. **The names PR is the part that gates E4**, not the Apple one, so
+   if the stage gets cut short it gets cut after PR 1.
 4. **E3 + E4** — the heart of the product, but the most expensive and the most
    dependent.
 5. **E5** — valuable, not critical for a first release.
@@ -407,10 +513,14 @@ assigned, and **E1 landed on 2026-09-04** — the bottom branch is finished.
 
 What remains is the top of the diagram, and its order is no longer free: E2 and
 E3 can start in either order, but **E4 needs both**, and the cheapest thing that
-unblocks it is the names phase of E2, not the OAuth. `profiles.full_name` is
-still empty for everyone, so a nudge today would read "Unknown nudged you".
-Names are a day of work against E3's three to four, which is the argument for
-taking E2 next and doing its first phase first.
+unblocks it is E2's first PR, not the Apple one.
+
+Note the correction, though — the old argument here was that
+`profiles.full_name` is empty for everyone, so a nudge would read "Unknown
+nudged you". That has not been true for a while: both live users have names, and
+`useGroupMembers.tsx:52` only falls back to "Unknown" for an account that never
+set one. So the names PR is not repairing today's users, it is closing the gap
+for tomorrow's — still first, still about a day, but for the right reason.
 
 Still outstanding on the credential side, and easy to forget now that iOS is
 sorted: the **Android FCM v1 service-account JSON** has to be uploaded to EAS

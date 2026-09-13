@@ -9,7 +9,7 @@ This plan adds four notification types, ordered by how much they carry the produ
 1. **Nudges** — you tap a buddy who hasn't finished today and send them a short custom message. This is the feature the product is actually about.
 2. **Habit reminders** — per-habit reminder times, sent server-side so a habit you already completed does not nag you.
 3. **Social events** — a buddy finished their day, someone joined the group.
-4. (Enabling work) **display names**, without which every nudge reads "Unknown nudged you".
+4. (Enabling work) **display names**, without which every nudge reads "Unknown nudged you". **This moved out of this plan on 2026-09-08** — it is E2's first PR in `todo/roadmap.md`, scoped rather differently to Phase 1 below.
 
 Delivery is Expo Push + Supabase Edge Functions, with `pg_cron` driving scheduled sends. Backend source moves into a committed `supabase/` directory, which the README already (wrongly) claims exists.
 
@@ -37,7 +37,7 @@ Remote push to a physical iPhone requires the **Push Notifications capability** 
 
 Since the membership is being bought, that stops being an architectural constraint and becomes a purchase order: **enrol first, then build against real delivery from day one.** This is strictly the better order — a push feature validated only against simulated payloads accumulates unverified assumptions (token shape, entitlement wiring, APNs error codes, background delivery) that all surface at once, late, when they are hardest to attribute.
 
-**While enrollment is pending.** Approval is usually same-day but occasionally takes a couple of days, and there is useful work that does not need it: Phase 1 (display names) is pure app code, Phase 2 (schema) is pure SQL, and the Edge Functions of Phases 4–5 can be written and driven with a fictional token. Start there rather than idling. Note that a free-provisioned dev client expires after **7 days**, so don't invest in that build.
+~~**While enrollment is pending.**~~ — moot since 2026-09-03; the membership is active. It said to fill the wait with Phase 1 (display names), Phase 2 (schema) and the Edge Functions driven by a fictional token. Phase 1 has since become E2's first PR, so what is left to start early here is Phase 2 and the dispatcher.
 
 ### The simulator loop (keep it, but it is not the gate)
 
@@ -130,14 +130,25 @@ Land the simulator loop in the same sitting (`npm run push:sim`, see *Testing*),
 
 ---
 
-## Phase 1 — Display names (prerequisite for nudges)
+## Phase 1 — Display names — **moved to E2, and re-scoped**
 
-`app/(public)/sign-up.tsx` collects only email + password and never writes to `profiles`; the row is created by a dashboard trigger on `auth.users`. So `full_name` is NULL for everyone, `useGroupMembers` (`hooks/useGroupMembers.tsx:39`) falls back to `"Unknown"`, and `Profile.tsx` falls back to `"You"`. Nudges are unusable until this is fixed.
+**Superseded on 2026-09-08.** Names are E2's first PR in `todo/roadmap.md`, which is where the current plan lives. This section is kept only because the shape below is what the rest of this document was written against, and three of its assumptions turned out to be wrong. Read the differences, not the plan.
 
-- **`app/(public)/sign-up.tsx`** — add a "Your name" `TextInput` above email, matching the existing accent-bordered input idiom from `app/(protected)/new-habit.tsx`. Pass it through as `signUp({ …, options: { data: { full_name } } })` so it lands in `raw_user_meta_data`, and update the dashboard's `handle_new_user` trigger to read it. **Also** write it explicitly from the client after `verifyOtp` succeeds — the trigger is invisible to this repo and may not be updatable in one pass; an explicit upsert is the reliable path.
-- **`hooks/useUpdateProfile.ts`** (new) — hand-rolled `useMutation` over `profiles`, modeled on `hooks/useUpdateGroup.tsx` (the repo's only non-goal mutation). Optimistic over `queryKeys.profile(userId)`, rollback + `Alert.alert`. Do **not** route this through `lib/useOptimisticGoalMutation.ts` — that helper hard-codes the `groupMembers` cache and "patch my own goals".
-- **`app/components/profile/Profile.tsx`** — make the display name editable. This is the app's first write to `profiles`.
-- **Server-side fallback** — every notification body resolves the sender name as `coalesce(nullif(p.nickname,''), nullif(p.full_name,''), split_part(u.email,'@',1), 'Your buddy')`, so existing users are never "Unknown".
+What this section said, and why it changed:
+
+- **"`full_name` is NULL for everyone."** Not true — both live users have a name, and a `nickname` too. The real problem was different: **two name columns read in different places**, `full_name` by buddies (`useGroupMembers.tsx:52`) and `nickname` by you (`Profile.tsx:37`), with nothing keeping them in step. E2 drops `nickname` and keeps `full_name` as the single display name.
+- **"Add a 'Your name' field to `sign-up.tsx`."** Dropped. The name is asked on **its own screen inside `(protected)`**, gated on an empty name, of every new user regardless of how they signed in. That is what makes Sign in with Apple safe: Apple hands over a name exactly once and never again, and an app that never depends on that value cannot be hurt by a user who hid it or reinstalled. **`sign-up.tsx` is not touched at all.** No skip, no prefilled random name.
+- **"An explicit upsert from the client is the reliable path."** Wrong in a way that would have failed at runtime: `profiles` has **no INSERT policy** — `initial_schema.sql:445` grants UPDATE to self only. The signup trigger `handle_new_user` creates the row (and it is *not* invisible to this repo; it is committed at `initial_schema.sql:185-192` and already reads `raw_user_meta_data->>'full_name'`). The name screen therefore **updates** that row.
+
+What survives unchanged: **`hooks/useUpdateProfile.ts`**, a hand-rolled `useMutation` over `profiles` modelled on `hooks/useUpdateGroup.tsx`, optimistic over `queryKeys.profile(userId)` with rollback + `Alert.alert`, deliberately **not** routed through `lib/useOptimisticGoalMutation.ts` — that helper hard-codes the `groupMembers` cache and "patch my own goals". Renaming from the profile screen survives too, as a modal.
+
+**The server-side fallback changes shape.** It was `coalesce(nullif(p.nickname,''), nullif(p.full_name,''), split_part(u.email,'@',1), 'Your buddy')`. Two corrections: `nickname` will not exist, and the email fallback is actively harmful once Sign in with Apple ships, because a Private Relay address yields a random hex string — "3f9a2b1c nudged you" is worse than a generic label. Every notification body should resolve the sender as:
+
+```sql
+coalesce(nullif(p.full_name, ''), 'Your buddy')
+```
+
+With the name gate in place this should never fall through; it is a backstop for a row nobody predicted, matching the `"Unknown"` fallback the client keeps at `useGroupMembers.tsx:52`.
 
 ---
 

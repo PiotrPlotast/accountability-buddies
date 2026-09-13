@@ -1,4 +1,5 @@
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { Alert, AlertButton } from "react-native";
 
 import Profile from "@/app/components/profile/Profile";
 import { queryKeys } from "@/lib/queryKeys";
@@ -14,11 +15,32 @@ import {
 function setup(profile: ProfileRow) {
   const qb = makeQueryBuilder({ data: [{ id: "user-1" }], error: null });
   const fromImpl = jest.fn(() => qb);
-  const supabase = buildFakeSupabase({ fromImpl });
+  // The heatmap on this screen calls `get_heatmap_logs` on mount, so the RPC
+  // stub has to answer that too — assertions below filter by name.
+  const rpcImpl = jest.fn(() => makeQueryBuilder({ data: [], error: null }));
+  const supabase = buildFakeSupabase({ fromImpl, rpcImpl });
   const queryClient = makeQueryClient();
   queryClient.setQueryData(queryKeys.profile("user-1"), profile);
   const { Wrapper } = buildWrapper({ supabase, queryClient });
-  return { qb, Wrapper };
+  return { qb, rpcImpl, Wrapper };
+}
+
+/** How many times the account-deletion RPC was called, ignoring the heatmap. */
+function deleteCalls(rpcImpl: jest.Mock) {
+  return rpcImpl.mock.calls.filter((c) => c[0] === "delete_my_account").length;
+}
+
+/** Press a button by its label in the most recent `Alert.alert` call. */
+function pressAlertButton(label: string) {
+  const calls = (Alert.alert as jest.Mock).mock.calls;
+  const buttons = calls[calls.length - 1][2] as AlertButton[];
+  const button = buttons.find((b) => b.text === label);
+  if (!button) {
+    throw new Error(
+      `No "${label}" button. Saw: ${buttons.map((b) => b.text).join(", ")}`,
+    );
+  }
+  button.onPress?.();
 }
 
 describe("Profile", () => {
@@ -56,5 +78,78 @@ describe("Profile", () => {
     await waitFor(() => {
       expect(qb.update).toHaveBeenCalledWith({ full_name: "Zofia" });
     });
+  });
+});
+
+describe("Profile danger zone", () => {
+  beforeEach(() => {
+    jest.spyOn(Alert, "alert").mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("offers account deletion away from the sign-out control", () => {
+    const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
+    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+
+    expect(getByLabelText("Delete account")).toBeTruthy();
+  });
+
+  it("deletes nothing on the first tap", () => {
+    const { rpcImpl, Wrapper } = setup({
+      full_name: "Piotr",
+      avatar_url: null,
+    });
+    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+
+    fireEvent.press(getByLabelText("Delete account"));
+
+    expect(Alert.alert).toHaveBeenCalled();
+    expect(deleteCalls(rpcImpl)).toBe(0);
+  });
+
+  it("deletes nothing after only the first confirmation", () => {
+    const { rpcImpl, Wrapper } = setup({
+      full_name: "Piotr",
+      avatar_url: null,
+    });
+    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+
+    fireEvent.press(getByLabelText("Delete account"));
+    pressAlertButton("Delete");
+
+    // The second alert is the point of the two-step: one destructive tap on a
+    // screen that also carries "Log out" is too easy to hit by accident.
+    expect(Alert.alert).toHaveBeenCalledTimes(2);
+    expect(deleteCalls(rpcImpl)).toBe(0);
+  });
+
+  it("deletes once both steps are confirmed", async () => {
+    const { rpcImpl, Wrapper } = setup({
+      full_name: "Piotr",
+      avatar_url: null,
+    });
+    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+
+    fireEvent.press(getByLabelText("Delete account"));
+    pressAlertButton("Delete");
+    pressAlertButton("Delete forever");
+
+    await waitFor(() => {
+      expect(deleteCalls(rpcImpl)).toBe(1);
+    });
+  });
+
+  it("deletes nothing when the second step is cancelled", () => {
+    const { rpcImpl, Wrapper } = setup({
+      full_name: "Piotr",
+      avatar_url: null,
+    });
+    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+
+    fireEvent.press(getByLabelText("Delete account"));
+    pressAlertButton("Delete");
+    pressAlertButton("Cancel");
+
+    expect(deleteCalls(rpcImpl)).toBe(0);
   });
 });

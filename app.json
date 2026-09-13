@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "accountabilitybuddies",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "web": {
       "bundler": "metro"
     },

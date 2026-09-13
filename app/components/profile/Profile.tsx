@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, Switch, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, type Href } from "expo-router";
 import { useSupabase } from "@/hooks/useSupabase";
+import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
 import { themeColors } from "@/lib/colors";
@@ -38,6 +39,7 @@ export default function Profile() {
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
   const [renaming, setRenaming] = useState(false);
+  const { mutate: deleteAccount, isPending: isDeleting } = useDeleteAccount();
   // The name gate means `fullName` is set for anyone who reaches this screen;
   // the fallback only covers the frame before the profile query resolves.
   const displayName = fullName || "You";
@@ -61,6 +63,40 @@ export default function Profile() {
         },
       },
     ]);
+  };
+
+  // Two alerts rather than one, and deliberately not a type-the-word-DELETE
+  // field: that friction belongs to destroying something big and shared, and
+  // this is one person's habit list. One tap is still too few on a screen that
+  // also carries "Log out".
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Delete forever?",
+      "Last chance. Your account and everything in it goes for good.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete forever",
+          style: "destructive",
+          onPress: () => deleteAccount(),
+        },
+      ],
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete account",
+      "This removes your habits, your check-in history and your place in the group. It can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: confirmDeleteAccount,
+        },
+      ],
+    );
   };
 
   return (
@@ -221,6 +257,42 @@ export default function Profile() {
         <Text className="text-text-dim font-mono text-xs mt-2">
           Stored on this device only.
         </Text>
+      </View>
+
+      {/* Deliberately the last thing on the screen, and nowhere near the
+          "Log out" control in the header — the two read alike for a second
+          and only one of them is recoverable. */}
+      <View className="px-5 mt-8">
+        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
+          Danger zone
+        </Text>
+        <Pressable
+          onPress={handleDeleteAccount}
+          disabled={isDeleting}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel="Delete account"
+          accessibilityHint="Asks twice, then permanently deletes your account"
+          accessibilityState={{ disabled: isDeleting }}
+          style={({ pressed }) => ({
+            opacity: pressed || isDeleting ? 0.6 : 1,
+          })}
+          className="bg-surface border border-danger rounded-tile px-4 py-4 flex-row items-center gap-3"
+        >
+          <View className="flex-1">
+            <Text className="text-danger font-mono-medium text-base">
+              Delete account
+            </Text>
+            <Text className="text-text-muted font-mono text-xs mt-1">
+              {isDeleting
+                ? "Deleting…"
+                : "Removes your habits, your check-in history and your place in the group."}
+            </Text>
+          </View>
+          <Text className="text-danger" style={{ fontSize: 18 }}>
+            ›
+          </Text>
+        </Pressable>
       </View>
 
       <RenameModal
