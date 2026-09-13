@@ -40,14 +40,31 @@ Authentication → Sign In / Providers → **Apple** → enable, then:
 
 | Field | Value |
 | --- | --- |
-| Client IDs | `com.piotrplotast.accountabilitybuddies.signin`, `com.piotrplotast.accountabilitybuddies` |
-| Secret Key (for OAuth) | contents of the `.p8` |
-| Key ID | from the key you just made |
-| Team ID | your Apple team |
+| Client IDs | `com.piotrplotast.accountabilitybuddies` |
+| Secret Key (for OAuth) | *blank* — see below |
+| Key ID | *blank* |
+| Team ID | *blank* |
 
-**The bundle ID in "Client IDs" is the part that is easy to miss.** The native
-flow sends a token whose `aud` claim is the *bundle* ID, not the Services ID.
-If only the Services ID is listed, every native sign-in fails.
+**The bundle ID in "Client IDs" is the whole requirement.** The native flow
+sends a token whose `aud` claim is the *bundle* ID, not the Services ID. If
+only the Services ID is listed, every native sign-in fails.
+
+**The `.p8` secret is not needed for the native flow.** It exists so Supabase
+can call Apple's token endpoint during the *web* OAuth redirect. This app never
+redirects — it hands Supabase a token Apple already signed, and Supabase only
+verifies the signature and checks `aud` against Client IDs. Add the Services ID
+and the key only if a web or Android flow is ever added.
+
+Check the switch without rebuilding — the endpoint is public and needs only the
+publishable key:
+
+```bash
+set -a && . ./.env && set +a
+curl -s "$EXPO_PUBLIC_SUPABASE_URL/auth/v1/settings" -H "apikey: $EXPO_PUBLIC_SUPABASE_KEY" | python3 -m json.tool
+```
+
+`external.apple` is `false` until the provider is on. Nothing needs a new build
+when it flips — the check happens server-side on every sign-in attempt.
 
 ## 3. Local build
 
@@ -97,7 +114,7 @@ development build only.
 | Sheet doesn't open; the button does nothing | Entitlement missing — the App ID capability or the prebuild |
 | `Unacceptable audience in id_token` | Bundle ID not in Supabase's Client IDs |
 | `invalid nonce` | Not a credentials problem. The raw and hashed nonce are swapped — pinned against this by `__tests__/lib/appleNonce.test.ts` |
-| `Unsupported provider: provider is not enabled` | Apple provider still off in Supabase |
+| `Provider issuer appleid.apple.com is not enabled` | Apple provider still off in Supabase. The sheet opening and returning a token first means sections 1 and 3 are already right |
 
 ## Known hole, accepted
 
