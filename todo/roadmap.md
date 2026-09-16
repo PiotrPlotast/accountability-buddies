@@ -5,19 +5,20 @@ haptics, Sign in with Apple (Google deferred), and release polish. The details o
 nudges live in `todo/push-notifications.md` — this document sets the **order and
 the dependencies**, it does not repeat that plan.
 
-## Starting state (verified 2026-09-01; E1 rows 2026-09-04, toolchain rows 2026-09-05)
+## Starting state (verified 2026-09-01; E1 rows 2026-09-04, toolchain rows 2026-09-05,
+E2 rows 2026-09-14)
 
 | Area | State |
 | --- | --- |
 | Expo SDK | **57** — upgraded from 54 one SDK at a time on 2026-09-05 (PR #31). RN 0.86.3, React 19.2.3, TypeScript 6. Expo Go is reachable again; `expo-doctor` 21/21 |
-| Tests | **green** — 27 suites, 169 tests, `tsc --noEmit` clean (was 23/122 on 2026-09-01) |
-| Lint | **not clean** — 10 errors, 4 warnings. Eight errors arrived with eslint-config-expo 56; see E6 |
+| Tests | **green** — 38 suites, 241 tests, `tsc --noEmit` clean (was 27/169 before E2, 23/122 on 2026-09-01) |
+| Lint | **not clean** — 11 errors, 4 warnings. Eight arrived with eslint-config-expo 56; the eleventh is a `prettier/prettier` newline in the generated `expo-env.d.ts`; see E6 |
 | Xcode | **26.6** (iOS SDK 26.5), updated 2026-09-05 — clear of the **26.4** minimum SDK 56 introduced. Not a blocker on anything |
 | Push | no app code yet; the plan is ready in `todo/push-notifications.md`. The iOS APNs key **exists** — created and assigned 2026-09-03 |
 | Haptics | **done (E1)** — `lib/haptics.ts` is the only importer of `expo-haptics`; every goal mutation, the pickers and the tab strip go through it |
 | Animations | **done (E1)** — checkbox, ring, list transitions and the day-close pulse, all degrading under Reduce Motion |
-| Sign-in | email + password + OTP only (`useSignIn` / `useSignUp`). **Sign in with Apple is next (E2); Google is deferred, maybe never** |
-| Names | **two columns, read in different places** — buddies see `full_name` (`useGroupMembers.tsx:28`), you see `nickname` (`useProfile.tsx:17`). Both live users have both filled and they differ. E2 collapses them into `full_name` |
+| Sign-in | **email + password + OTP + Sign in with Apple** (`useSignIn` / `useSignUp` / `useAppleSignIn`), verified on a device 2026-09-14. Google is deferred, maybe never |
+| Names | **one column** — `nickname` was dropped 2026-09-08; `full_name` is the single display name, asked once on `(protected)/name.tsx` and defined by `lib/displayName.ts` |
 | Bundle ID | `com.piotrplotast.accountabilitybuddies` — changed and prebuilt 2026-09-02 |
 | Apple account | **active** — Apple Developer Program paid for and approved 2026-09-03 |
 
@@ -219,10 +220,17 @@ on a physical iPhone.
 
 ---
 
-## E2 — Identity: one name, Sign in with Apple, account deletion (~4–5 days)
+## E2 — Identity: one name, Sign in with Apple, account deletion — **done 2026-09-14**
 
-Scoped in full on 2026-09-08. **Three PRs, in this order: names, Apple,
-deletion.** Each merges to `main` on its own before the next opens.
+Scoped in full on 2026-09-08, shipped as three PRs in the planned order —
+names (**#33**), Apple (`197e60d`), deletion (**#34**) — each merged to `main`
+on its own before the next opened. The Apple portal and Supabase provider
+configuration went as `todo/sign-in-with-apple-setup.md` describes, with no
+surprises, and all four "done when" conditions were verified on a physical
+device on 2026-09-14.
+
+Everything from here to **Shipped** is the plan as written before the work. It
+is kept for the reasoning, not as an outstanding list.
 
 ### What this stage found wrong in its own starting assumptions
 
@@ -371,12 +379,43 @@ existing sign-out alert (`Profile.tsx:41`). Not a type-the-word-DELETE field —
 that friction is for destroying something big and shared, and this is one
 person's habit list — and not a single tap, on a screen that also has "Log out".
 
-### Done when
+### Done when — all four met, on a device, 2026-09-14
 
 Email and Apple sign-in both work on a physical device; every new account of
 either kind is asked for a name and cannot get past it; the name shows the same
 everywhere; renaming works and survives a restart; deleting an account removes
 every trace and leaves no broken group behind.
+
+### Shipped
+
+| Piece | Where |
+| --- | --- |
+| One name column | `supabase/migrations/20260908120000_drop_profiles_nickname.sql` |
+| The definition of a name | `lib/displayName.ts` — `normalizeName`, `isValidName`, `MAX_NAME_LENGTH`, `hasDisplayName` |
+| Name screen + gate | `app/(protected)/name.tsx`, `hooks/useNameGate.ts`, enforced as a guard in `(protected)/_layout.tsx` |
+| Profile write | `hooks/useUpdateProfile.ts` (hand-rolled, optimistic over `queryKeys.profile`), `app/components/profile/RenameModal.tsx` |
+| Sign in with Apple | `hooks/useAppleSignIn.ts`, `lib/appleNonce.ts`, `app/components/auth/AppleAuth.tsx`, `expo-apple-authentication` in `app.json` |
+| Account deletion | `supabase/migrations/20260909120000_delete_my_account.sql`, `hooks/useDeleteAccount.ts`, two-step alert in `Profile.tsx` |
+
+The gate landed as a **layout guard, not a redirect effect** — the plan worried
+about "two redirect effects racing", and the fix was to not add a second effect
+at all: `(protected)/_layout.tsx` wraps the name screen and the rest of the app
+in a matched pair of `Stack.Protected guard={needsName}` / `guard={!needsName}`
+blocks — the same idiom the root layout uses for the session — so the dashboard
+never mounts for a nameless user and there is no back gesture out. `useNameGate` keeps `isResolved`
+separate from `needsName` so a cold cache doesn't flash the name screen at a
+returning user, and `useDashboardData`'s join-group redirect waits on the same
+gate for the window before the profile resolves.
+
+Suite went from 27 suites / 169 tests to **38 / 241**, `tsc --noEmit` clean.
+Every piece above has tests — the gate, the profile write, the nonce, the name
+helpers, the deletion hook and the three new screens/modals. The two migrations
+got none, stated rather than skipped quietly.
+
+**What this stage hands forward.** The double-account hole below is still open
+and still accepted — revisit when there are real users, not before. And the
+credential path is now well-trodden on the Apple side: what remains for E3 is
+the **Android FCM v1 service-account JSON**, which nothing has touched yet.
 
 ---
 
@@ -401,7 +440,7 @@ Three emphases that follow from this roadmap:
 
 ---
 
-## E4 — Nudges (~3 days, needs E2 + E3)
+## E4 — Nudges (~3 days, needs E3 — **E2 landed 2026-09-14**)
 
 Phase 4 from the push plan: the `send-nudge` Edge Function (shared-group
 verification, rate limits of 3/day per person and 15/day in total, sanitization
@@ -437,11 +476,13 @@ client and the SQL have to agree on the definition — in particular on the
 
 Concrete things found in the repo, not generalities:
 
-- **A white splash in a dark app.** `app.json` has
+- **A white splash in a dark app.** Still true as of 2026-09-14: `app.json` has
   `splash.backgroundColor: "#ffffff"` and
   `adaptiveIcon.backgroundColor: "#ffffff"`, while `themeColors.background` is
   `#18181B`. Every app launch is a white flash. One line, the most visible
-  effect in the whole stage.
+  effect in the whole stage. Half of this item did land early —
+  `userInterfaceStyle` is `"dark"` (`4280d0e`), so the app no longer follows the
+  system theme; the two `#ffffff` values are what remains.
 - **The icons are still the template ones** (`assets/icon.png`,
   `adaptive-icon.png`, `splash-icon.png` — untouched since December). On top of
   that comes `notification-icon.png` (white on transparent), required by Android
@@ -450,7 +491,8 @@ Concrete things found in the repo, not generalities:
   appear under the icon. Worth splitting `name` (visible) from `slug`
   (technical).
 - ~~**The `delete_my_account` RPC** plus an entry point in the profile.~~ —
-  **moved into E2** as its own PR, on 2026-09-08. It was listed here as a
+  **moved into E2** as its own PR, on 2026-09-08, and **shipped there
+  2026-09-14** (PR #34). It was listed here as a
   consequence of third-party sign-in, which is wrong: Apple requires in-app
   deletion of any app that lets people create accounts, so email sign-up
   already triggered it. Skipping Google would never have skipped this.
@@ -459,7 +501,9 @@ Concrete things found in the repo, not generalities:
   "no connection" state on the dashboard.
 - **`.env.example`** needs extending with the variables from E2/E3 (the Google
   client IDs, `EXPO_ACCESS_TOKEN`, `DISPATCH_SECRET` on the Supabase side).
-- **Ten lint errors, eight of them new and worth reading.** The SDK 54 → 57
+- **Eleven lint errors, eight of them worth reading.** (The eleventh, added
+  since: a `prettier/prettier` missing newline in `expo-env.d.ts` — generated,
+  so `--fix` and the next `expo start` fight over it.) The SDK 54 → 57
   upgrade (PR #31, 2026-09-05) brought eslint-config-expo 56, which turns on the
   React Compiler-era hook rules. They flag patterns that pre-date the upgrade
   and were simply never checked before:
@@ -490,37 +534,33 @@ Concrete things found in the repo, not generalities:
 
 1. ~~**E0**~~ — closed, bar the device sign-off.
 2. ~~**E1**~~ — **done 2026-09-04.**
-3. **E2** — next, and fully scoped as of 2026-09-08: three PRs, names → Apple →
-   deletion. **The names PR is the part that gates E4**, not the Apple one, so
-   if the stage gets cut short it gets cut after PR 1.
-4. **E3 + E4** — the heart of the product, but the most expensive and the most
-   dependent.
+3. ~~**E2**~~ — **done 2026-09-14**, all three PRs, in the planned order.
+4. **E3 + E4** — next, and now the only thing between here and the core of the
+   product. The most expensive and the most dependent stages, and nothing else
+   is in front of them.
 5. **E5** — valuable, not critical for a first release.
 6. **E6** — spread it across all the stages instead of leaving it to the end.
 
 ## Critical path
 
 ```
-E0 (bundle ID) ──► Apple Developer ──► E3 ──┐
-     │                    │                 ├──► E4 (nudges)
-     │                    └──► E2 (Apple) ──┘
-     └──► E1 (animations/haptics) — in parallel, no blockers
+E0 (bundle ID) ──► Apple Developer ──► E3 ──────► E4 (nudges)
+     │       done          done         ▲
+     │                                  │
+     ├──► E2 (names, Apple, deletion) ──┘  done 2026-09-14
+     │
+     └──► E1 (animations/haptics) ── done 2026-09-04
 ```
 
-The left edge of this diagram is behind us. E0 closed on 2026-09-03 (bar the
-device sign-off), the Apple account is active, the APNs key is created and
-assigned, and **E1 landed on 2026-09-04** — the bottom branch is finished.
+**Only one edge of this diagram is still unwalked.** E0 closed on 2026-09-03 and
+its device sign-off on 2026-09-08; the Apple account is active and the APNs key
+created and assigned; **E1 landed 2026-09-04** and **E2 landed 2026-09-14**,
+Apple portal and Supabase provider configured and all four conditions checked on
+a device.
 
-What remains is the top of the diagram, and its order is no longer free: E2 and
-E3 can start in either order, but **E4 needs both**, and the cheapest thing that
-unblocks it is E2's first PR, not the Apple one.
-
-Note the correction, though — the old argument here was that
-`profiles.full_name` is empty for everyone, so a nudge would read "Unknown
-nudged you". That has not been true for a while: both live users have names, and
-`useGroupMembers.tsx:52` only falls back to "Unknown" for an account that never
-set one. So the names PR is not repairing today's users, it is closing the gap
-for tomorrow's — still first, still about a day, but for the right reason.
+So the branch that used to make the order a choice is gone. What is left is a
+straight line: **E3, then E4.** Nothing runs in parallel with it any more, and
+nothing but the Android credential below is waiting on anything external.
 
 Still outstanding on the credential side, and easy to forget now that iOS is
 sorted: the **Android FCM v1 service-account JSON** has to be uploaded to EAS

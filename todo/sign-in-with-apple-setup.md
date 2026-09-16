@@ -1,5 +1,15 @@
 # Sign in with Apple — one-time setup
 
+> **Done 2026-09-14.** Every section below was carried out against
+> `com.piotrplotast.accountabilitybuddies` and sign-in was verified end to end
+> on a physical device — the sheet opens, Apple returns an identity token and
+> Supabase accepts it. No step deviated from what is written here, so none of
+> the symptoms in "What a wrong value looks like" came up.
+>
+> Kept as the record of what was configured, and as the recipe if any of it
+> ever has to be walked again — a new App ID, a rotated key, or a second
+> environment. **Nothing here is outstanding.**
+
 The app code for E2 PR 2 is done and tested. None of it works until the two
 things below are configured, because the identity token Apple returns is
 rejected by Supabase unless Supabase already knows which app issued it.
