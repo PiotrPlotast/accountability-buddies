@@ -154,6 +154,8 @@ With the name gate in place this should never fall through; it is a backstop for
 
 ## Phase 2 — Schema (`supabase/migrations/<ts>_notifications.sql`)
 
+**Done 2026-09-16** — `supabase/migrations/20260916120000_notifications.sql`, pushed to the live project. Three changes to the shape below, decided before writing it: token writes go through a `SECURITY DEFINER` `register_push_token(token, device_id, platform)` RPC instead of a client upsert, because RLS cannot let a new account take over a row the old account owns; `notification_prefs` rows come from a trigger + a backfill, with **no** client insert policy (Phase 3's "upsert prefs" becomes an update of the timezone); and `notifications.sender_id`/`group_id` are `ON DELETE SET NULL` so account deletion keeps a buddy's history. `dedupe_key` is `NOT NULL`, quiet hours are both-or-neither and may wrap midnight, and `timezone` is checked against what Postgres can resolve. pg_cron and pg_net were enabled separately on 2026-09-17 (`20260917120000_enable_pg_cron_pg_net.sql`, pushed live) — nothing is scheduled yet.
+
 Four objects. Full DDL goes in the migration; shape and rationale below.
 
 **`device_push_tokens`** — one row per *device*, not a column on `profiles`. A column silently loses a token when someone signs in on a second device.
