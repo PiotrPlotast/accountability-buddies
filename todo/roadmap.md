@@ -108,8 +108,8 @@ coding rather than code signing.**
 
 The verification gate from `todo/push-notifications.md` — a real
 `ExponentPushToken` from a physical iPhone and a test push from
-https://expo.dev/notifications — is reachable as soon as token registration
-exists, and it still applies before any feature code gets written.
+https://expo.dev/notifications — **passed on 2026-09-17**, from a physical
+iPhone, before any E3 feature code was written.
 
 **The Android half is still outstanding**: an FCM v1 service-account JSON has to
 be uploaded to EAS. That is not a gate on anything today — it sits inside E3
@@ -419,7 +419,16 @@ the **Android FCM v1 service-account JSON**, which nothing has touched yet.
 
 ---
 
-## E3 — Push infrastructure (~3–4 days, needs E0)
+## E3 — Push infrastructure (~3–4 days, needs E0) — **in progress**
+
+Where it stands on 2026-09-17, on `feature/push-infrastructure`:
+
+| Phase | State |
+| --- | --- |
+| 0 — prerequisites | **done, bar secrets and Android.** Packages installed, `expo-notifications` plugin in `app.json`, pg_cron + pg_net enabled live, and the device gate passed: a real push reached a physical iPhone. `EXPO_ACCESS_TOKEN` / `DISPATCH_SECRET` wait for E4's first Edge Function; the FCM credential waits for Android |
+| 2 — schema | **done**, `20260916120000_notifications.sql`, pushed live |
+| 3 — token registration + settings screen | next |
+| 7 — receipts + token cleanup | not started |
 
 Phases 0, 2, 3 and 7 from `todo/push-notifications.md`, unchanged: dependencies
 and the config plugin, the schema migration (`device_push_tokens`,
