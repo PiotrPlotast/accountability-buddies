@@ -138,7 +138,7 @@ export default function JoinGroupScreen() {
                   value={code}
                   onChangeText={setCode}
                   autoCapitalize="characters"
-                  placeholder="A8X-992"
+                  placeholder="A1B2C3D4E5"
                   weight="bold"
                   className="text-text text-2xl text-center tracking-widest"
                 />

@@ -1,12 +1,14 @@
 import React from "react";
 import { act, render, waitFor } from "@testing-library/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
 
 import { SupabaseContextValue } from "@/context/supabase-context";
 import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
+import { queryKeys } from "@/lib/queryKeys";
 
-import { buildFakeSupabase } from "../test-utils/render";
+import { buildFakeSupabase, makeQueryClient } from "../test-utils/render";
 
 // AsyncStorage's native module is null under Jest and the provider imports it
 // for the client's auth storage — same local mock themeProvider.test.tsx uses.
@@ -22,9 +24,20 @@ jest.mock("@supabase/supabase-js", () => ({
   processLock: jest.fn(),
 }));
 
+// The persisted mirror of the cache is a module-level singleton shared with
+// `app/_layout.tsx`; the seam is the persister itself.
+jest.mock("@/lib/queryPersister", () => ({
+  asyncStoragePersister: { removeClient: jest.fn(() => Promise.resolve()) },
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { createClient } = require("@supabase/supabase-js") as {
   createClient: jest.Mock;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { asyncStoragePersister } = require("@/lib/queryPersister") as {
+  asyncStoragePersister: { removeClient: jest.Mock };
 };
 
 type FakeClient = ReturnType<typeof buildFakeSupabase> & {
@@ -36,6 +49,7 @@ type FakeClient = ReturnType<typeof buildFakeSupabase> & {
 };
 
 let client: FakeClient;
+let queryClient: QueryClient;
 
 /** The callback the provider handed to `onAuthStateChange`. */
 const authCallback = (): ((event: string, session: Session | null) => void) =>
@@ -54,13 +68,17 @@ function Consumer({ id }: { id: string }) {
   return null;
 }
 
+// The real tree mounts the provider *inside* PersistQueryClientProvider
+// (`app/_layout.tsx`), so a QueryClient is always above it.
 function renderWithConsumers(ids: string[]) {
   return render(
-    <SupabaseProvider>
-      {ids.map((id) => (
-        <Consumer key={id} id={id} />
-      ))}
-    </SupabaseProvider>,
+    <QueryClientProvider client={queryClient}>
+      <SupabaseProvider>
+        {ids.map((id) => (
+          <Consumer key={id} id={id} />
+        ))}
+      </SupabaseProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -68,6 +86,8 @@ beforeEach(() => {
   for (const key of Object.keys(seen)) delete seen[key];
   client = buildFakeSupabase() as FakeClient;
   createClient.mockReturnValue(client);
+  queryClient = makeQueryClient();
+  asyncStoragePersister.removeClient.mockClear();
 });
 
 describe("SupabaseProvider", () => {
@@ -153,6 +173,49 @@ describe("SupabaseProvider", () => {
     // only its own copy and relied on onAuthStateChange to catch the rest up.
     expect(seen.a.session).toBeNull();
     expect(seen.b.session).toBeNull();
+  });
+
+  // Signing out drops the session, but the cache it left behind is a copy of
+  // somebody's group: every member's name, their habits and a week of
+  // check-ins, sitting in AsyncStorage for the next person to hold the phone.
+  // Nothing used to clear it — not sign-out, and not `delete_my_account`, which
+  // reaches this same signOut.
+  it("empties the query cache on signOut", async () => {
+    renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    queryClient.setQueryData(queryKeys.profile("user-1"), {
+      full_name: "Alice",
+      avatar_url: null,
+    });
+    queryClient.setQueryData(queryKeys.groupMembers("group-1"), [
+      { user_id: "user-2", full_name: "Bob", goals: [] },
+    ]);
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    expect(
+      queryClient.getQueryData(queryKeys.profile("user-1")),
+    ).toBeUndefined();
+    expect(
+      queryClient.getQueryData(queryKeys.groupMembers("group-1")),
+    ).toBeUndefined();
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+  });
+
+  it("drops the persisted copy of the cache on signOut", async () => {
+    renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    // Clearing memory is not enough on its own: the persister rehydrates from
+    // AsyncStorage on the next launch.
+    expect(asyncStoragePersister.removeClient).toHaveBeenCalledTimes(1);
   });
 
   it("unsubscribes when the provider unmounts", async () => {
