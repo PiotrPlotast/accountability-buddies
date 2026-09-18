@@ -13,10 +13,9 @@ import {
   GeistMono_700Bold,
 } from "@expo-google-fonts/geist-mono";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
+import { asyncStoragePersister } from "@/lib/queryPersister";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useTheme } from "@/hooks/useTheme";
 import { SupabaseProvider } from "@/providers/supabase-provider";
@@ -36,10 +35,6 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 5, // 5 minut
     },
   },
-});
-
-const asyncStoragePersister = createAsyncStoragePersister({
-  storage: AsyncStorage,
 });
 
 export default function RootLayout() {

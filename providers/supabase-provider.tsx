@@ -3,8 +3,10 @@ import { AppState } from "react-native";
 
 import { createClient, processLock, Session } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { SupabaseContext } from "@/context/supabase-context";
+import { asyncStoragePersister } from "@/lib/queryPersister";
 
 interface SupabaseProviderProps {
   children: ReactNode;
@@ -34,6 +36,9 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   // every consumer started at `null` until its own lookup resolved.
   const [session, setSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  // Always present: the root layout mounts PersistQueryClientProvider above
+  // this one.
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     let active = true;
@@ -82,7 +87,21 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setSession(null);
-  }, [supabase]);
+    // The session goes, its cache does not — and that cache is a copy of
+    // somebody's group: every member's name, their habits, a week of
+    // check-ins, held in memory and mirrored into AsyncStorage for 24h. Both
+    // copies go here. `useDeleteAccount` signs out through this same function,
+    // where keeping a local copy of data the server has just deleted is the
+    // worse half of the problem.
+    queryClient.clear();
+    try {
+      await asyncStoragePersister.removeClient();
+    } catch {
+      // Swallowed on purpose: a storage failure must not turn a completed
+      // sign-out — or a completed account deletion — into an error the caller
+      // reports to the user.
+    }
+  }, [supabase, queryClient]);
 
   const value = useMemo(
     () => ({ supabase, session, isLoaded, signOut }),
