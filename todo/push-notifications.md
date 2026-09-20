@@ -126,6 +126,8 @@ Set Edge Function secrets (`npx supabase secrets set`): `EXPO_ACCESS_TOKEN` (fro
 
 **Verification gate**: before writing any feature code, get a real `ExponentPushToken` from a physical iPhone and send it a test push from https://expo.dev/notifications. **Do not proceed past this until it arrives.** If it does not, the problem is in the entitlement, the APNs key or the prebuild — all far easier to diagnose now than underneath four phases of feature code.
 
+**Passed 2026-09-17.** A development build (`expo prebuild --clean`, `expo run:ios --device`) with the `expo-notifications` plugin fetched a real `ExponentPushToken` on a physical iPhone, and a test push from expo.dev/notifications arrived. That confirms the `aps-environment` entitlement, the APNs key on EAS and the prebuild together. The token came from a throwaway snippet in `app/_layout.tsx` that was never committed — Phase 3's `lib/push.ts` is the real registration path. Still open in this phase: `EXPO_ACCESS_TOKEN` and `DISPATCH_SECRET` (needed from E4's first Edge Function) and the Android FCM credential.
+
 Land the simulator loop in the same sitting (`npm run push:sim`, see *Testing*), so Phase 4 has both the real path and the fast path available from the start.
 
 ---
@@ -153,6 +155,8 @@ With the name gate in place this should never fall through; it is a backstop for
 ---
 
 ## Phase 2 — Schema (`supabase/migrations/<ts>_notifications.sql`)
+
+**Done 2026-09-16** — `supabase/migrations/20260916120000_notifications.sql`, pushed to the live project. Three changes to the shape below, decided before writing it: token writes go through a `SECURITY DEFINER` `register_push_token(token, device_id, platform)` RPC instead of a client upsert, because RLS cannot let a new account take over a row the old account owns; `notification_prefs` rows come from a trigger + a backfill, with **no** client insert policy (Phase 3's "upsert prefs" becomes an update of the timezone); and `notifications.sender_id`/`group_id` are `ON DELETE SET NULL` so account deletion keeps a buddy's history. `dedupe_key` is `NOT NULL`, quiet hours are both-or-neither and may wrap midnight, and `timezone` is checked against what Postgres can resolve. pg_cron and pg_net were enabled separately on 2026-09-17 (`20260917120000_enable_pg_cron_pg_net.sql`, pushed live) — nothing is scheduled yet.
 
 Four objects. Full DDL goes in the migration; shape and rationale below.
 
