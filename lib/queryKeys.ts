@@ -5,4 +5,6 @@ export const queryKeys = {
   groupMembersAll: () => ["groupMembers"] as const,
   profile: (userId: string | undefined) => ["profile", userId] as const,
   heatmap: (userId: string | undefined) => ["heatmap", userId] as const,
+  notificationPrefs: (userId: string | undefined) =>
+    ["notificationPrefs", userId] as const,
 };

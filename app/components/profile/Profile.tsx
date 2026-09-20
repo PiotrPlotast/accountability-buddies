@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable, ScrollView, Switch, Alert } from "react-native";
+import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, type Href } from "expo-router";
 import { useSupabase } from "@/hooks/useSupabase";
@@ -10,6 +10,7 @@ import { themeColors } from "@/lib/colors";
 import Heatmap from "./Heatmap";
 import RenameModal from "./RenameModal";
 import PencilIcon from "@/app/components/ui/PencilIcon";
+import GearIcon from "@/app/components/ui/GearIcon";
 
 const AVATAR_BLURHASH =
   "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
@@ -30,9 +31,8 @@ export default function Profile() {
     myGoals,
     groupName,
     groupMemberCount,
-    signOut,
   } = useProfileData();
-  const { accent, hapticsEnabled, setHapticsEnabled } = useTheme();
+  const { accent } = useTheme();
   const { session } = useSupabase();
   const router = useRouter();
   const userId = session?.user.id;
@@ -44,26 +44,6 @@ export default function Profile() {
   // the fallback only covers the frame before the profile query resolves.
   const displayName = fullName || "You";
   const initial = displayName.charAt(0).toUpperCase();
-
-  const handleSignOut = () => {
-    Alert.alert("Sign out", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign out",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await signOut();
-          } catch (err) {
-            // JSON.stringify on an Error yields "{}" — its fields are
-            // non-enumerable. Log the value itself.
-            console.error("Sign out failed:", err);
-            Alert.alert("Sign out failed", "Please try again.");
-          }
-        },
-      },
-    ]);
-  };
 
   // Two alerts rather than one, and deliberately not a type-the-word-DELETE
   // field: that friction belongs to destroying something big and shared, and
@@ -109,16 +89,15 @@ export default function Profile() {
           Profile / You
         </Text>
         <Pressable
-          onPress={handleSignOut}
+          onPress={() => router.push("/notification-settings")}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Log out"
-          accessibilityHint="Signs you out of your account"
-          className="w-16 h-9 items-center justify-center"
+          accessibilityLabel="Settings"
+          accessibilityHint="Opens notifications, feedback and sign-out"
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          className="w-9 h-9 items-center justify-center"
         >
-          <Text className="text-text-muted" style={{ fontSize: 12 }}>
-            Log out
-          </Text>
+          <GearIcon color={themeColors.textMuted} />
         </Pressable>
       </View>
 
@@ -231,37 +210,9 @@ export default function Profile() {
         )}
       </View>
 
-      {/* Temporary home. E3 adds a "Notifications and feedback" screen and this
-          row moves onto it — one settings surface, not two. */}
-      <View className="px-5 mt-8">
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-          Feedback
-        </Text>
-        <View className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center gap-3">
-          <View className="flex-1">
-            <Text className="text-text font-mono-medium text-base">
-              Haptics
-            </Text>
-            <Text className="text-text-muted font-mono text-xs mt-1">
-              Vibration on taps, check-ins and errors.
-            </Text>
-          </View>
-          <Switch
-            value={hapticsEnabled}
-            onValueChange={setHapticsEnabled}
-            accessibilityLabel="Haptics"
-            trackColor={{ false: themeColors.surface2, true: accent.dim }}
-            thumbColor={hapticsEnabled ? accent.hex : themeColors.textDim}
-          />
-        </View>
-        <Text className="text-text-dim font-mono text-xs mt-2">
-          Stored on this device only.
-        </Text>
-      </View>
-
-      {/* Deliberately the last thing on the screen, and nowhere near the
-          "Log out" control in the header — the two read alike for a second
-          and only one of them is recoverable. */}
+      {/* Deliberately the last thing on the screen. Sign-out moved onto the
+          settings screen in E3, so the two destructive-looking controls are no
+          longer one tap apart — but this one still earns the distance. */}
       <View className="px-5 mt-8">
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
           Danger zone

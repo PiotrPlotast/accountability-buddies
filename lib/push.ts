@@ -72,6 +72,21 @@ function getProjectId(): string | undefined {
   );
 }
 
+export interface PushPermission {
+  granted: boolean;
+  canAskAgain: boolean;
+}
+
+/**
+ * The OS's current answer, without asking anything. The settings screen renders
+ * it, and re-reads it whenever the app comes back to the foreground — the only
+ * route back for someone who declined is iOS Settings, which means leaving.
+ */
+export async function getPushPermissionStatus(): Promise<PushPermission> {
+  const { granted, canAskAgain } = await Notifications.getPermissionsAsync();
+  return { granted, canAskAgain };
+}
+
 export async function registerForPushNotificationsAsync(): Promise<PushRegistration> {
   // A no-op elsewhere, but the guard documents that channels are an Android
   // concept — and Android files a notification at the channel's importance,

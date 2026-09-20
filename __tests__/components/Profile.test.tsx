@@ -11,6 +11,10 @@ import {
   makeQueryBuilder,
   makeQueryClient,
 } from "../test-utils/render";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { __router } = require("expo-router") as {
+  __router: { push: jest.Mock };
+};
 
 function setup(profile: ProfileRow) {
   const qb = makeQueryBuilder({ data: [{ id: "user-1" }], error: null });
@@ -118,7 +122,7 @@ describe("Profile danger zone", () => {
     pressAlertButton("Delete");
 
     // The second alert is the point of the two-step: one destructive tap on a
-    // screen that also carries "Log out" is too easy to hit by accident.
+    // screen this easy to reach is too easy to hit by accident.
     expect(Alert.alert).toHaveBeenCalledTimes(2);
     expect(deleteCalls(rpcImpl)).toBe(0);
   });
@@ -151,5 +155,34 @@ describe("Profile danger zone", () => {
     pressAlertButton("Cancel");
 
     expect(deleteCalls(rpcImpl)).toBe(0);
+  });
+});
+
+describe("Profile header", () => {
+  it("opens settings from the gear", () => {
+    const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
+    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+
+    fireEvent.press(getByLabelText("Settings"));
+
+    expect(__router.push).toHaveBeenCalledWith("/notification-settings");
+  });
+
+  it("no longer signs out from the header", () => {
+    // Sign-out moved onto the settings screen in E3: one settings surface, and
+    // the header's only action stops being the one you cannot undo by tapping
+    // again.
+    const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
+    const { queryByLabelText } = render(<Profile />, { wrapper: Wrapper });
+
+    expect(queryByLabelText("Log out")).toBeNull();
+  });
+
+  it("no longer carries the haptics switch", () => {
+    // It lives beside the notification switches now.
+    const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
+    const { queryByLabelText } = render(<Profile />, { wrapper: Wrapper });
+
+    expect(queryByLabelText("Haptics")).toBeNull();
   });
 });
