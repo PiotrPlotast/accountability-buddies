@@ -144,6 +144,70 @@ jest.mock("expo-apple-authentication", () => {
   };
 });
 
+// expo-notifications — no native module under Jest, and every call below has a
+// return shape the registration path branches on. `AndroidImportance`'s values
+// are the real ones (DEFAULT = 5, not 3): a wrong number is a channel filed at
+// the wrong importance, and a missing one reads as `undefined`, which Android
+// silently replaces with its own default — the same trap the expo-haptics enums
+// are filled in to avoid.
+jest.mock("expo-notifications", () => ({
+  __esModule: true,
+  getPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: "granted", granted: true, canAskAgain: false }),
+  ),
+  requestPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: "granted", granted: true, canAskAgain: false }),
+  ),
+  getExpoPushTokenAsync: jest.fn(() =>
+    Promise.resolve({ type: "expo", data: "ExponentPushToken[device]" }),
+  ),
+  setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
+  setNotificationHandler: jest.fn(),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  addNotificationResponseReceivedListener: jest.fn(() => ({
+    remove: jest.fn(),
+  })),
+  AndroidImportance: {
+    UNKNOWN: 0,
+    UNSPECIFIED: 1,
+    NONE: 2,
+    MIN: 3,
+    LOW: 4,
+    DEFAULT: 5,
+    HIGH: 6,
+    MAX: 7,
+  },
+  AndroidNotificationVisibility: {
+    UNKNOWN: 0,
+    PUBLIC: 1,
+    PRIVATE: 2,
+    SECRET: 3,
+  },
+}));
+
+// expo-device — `isDevice` is the branch deciding whether a real Expo push
+// token is obtainable at all, so it stays a plain property a test replaces.
+// `__esModule` matters here: without it babel's interop copies the namespace
+// per importer, and `jest.replaceProperty(Device, "isDevice", false)` in a test
+// would mutate a copy the module under test never reads.
+jest.mock("expo-device", () => ({
+  __esModule: true,
+  isDevice: true,
+  modelName: "iPhone 15 Pro",
+  osName: "iOS",
+}));
+
+// expo-constants — `getExpoPushTokenAsync` needs the EAS project id, which at
+// runtime comes from `app.json`'s `extra.eas.projectId`. Without it the call
+// throws and the failure reads like a credentials problem.
+jest.mock("expo-constants", () => ({
+  __esModule: true,
+  default: {
+    expoConfig: { extra: { eas: { projectId: "test-project-id" } } },
+    easConfig: { projectId: "test-project-id" },
+  },
+}));
+
 // expo-router — minimal stand-in for the bits the app uses.
 jest.mock("expo-router", () => {
   const React = require("react");

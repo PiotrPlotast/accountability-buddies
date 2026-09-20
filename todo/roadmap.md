@@ -427,7 +427,8 @@ Where it stands on 2026-09-17, on `feature/push-infrastructure`:
 | --- | --- |
 | 0 — prerequisites | **done, bar secrets and Android.** Packages installed, `expo-notifications` plugin in `app.json`, pg_cron + pg_net enabled live, and the device gate passed: a real push reached a physical iPhone. `EXPO_ACCESS_TOKEN` / `DISPATCH_SECRET` wait for E4's first Edge Function; the FCM credential waits for Android |
 | 2 — schema | **done**, `20260916120000_notifications.sql`, pushed live |
-| 3 — token registration + settings screen | next |
+| 3a — token registration | **done 2026-09-20.** `lib/push.ts`, `lib/deviceId.ts`, `usePushRegistration` mounted once in `(protected)/_layout.tsx`, the foreground handler in `app/_layout.tsx`, and the sign-out token delete in the Supabase provider. Suite 38 → 41 suites, 243 → 273 tests |
+| 3b — notification settings screen | next. `useNotificationPrefs`, `ToggleRow`, `(protected)/notification-settings.tsx`, the OS-permission row with a Settings deep link, and the haptics switch and sign-out action moving off `Profile.tsx`. Quiet hours deferred to E5 |
 | 7 — receipts + token cleanup | not started |
 
 Phases 0, 2, 3 and 7 from `todo/push-notifications.md`, unchanged: dependencies
