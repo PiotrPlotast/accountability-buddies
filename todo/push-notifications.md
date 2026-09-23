@@ -204,12 +204,14 @@ Index: `(status, created_at) where status = 'pending'` for the dispatcher drain.
 
 ## Phase 3 — Token registration and the settings screen
 
-**Registration half done 2026-09-20**, in its own PR; the settings screen is the second half and is still open. What landed: `lib/push.ts` (the only importer of `expo-notifications`), `lib/deviceId.ts`, `hooks/usePushRegistration.ts` mounted once in `(protected)/_layout.tsx`, the foreground handler at module scope in `app/_layout.tsx`, and the token delete in `signOut`. Four decisions differ from the plan below, all settled before the code was written:
+**Done 2026-09-20**, in two PRs: registration first, the settings screen second. What landed: `lib/push.ts` (the only importer of `expo-notifications`), `lib/deviceId.ts`, `hooks/usePushRegistration.ts` mounted once in `(protected)/_layout.tsx`, the foreground handler at module scope in `app/_layout.tsx`, and the token delete in `signOut`. Four decisions differ from the plan below, all settled before the code was written:
 
 - **Permission is asked outright on first protected mount**, not provisionally. `allowProvisional` delivers quietly to Notification Centre, and a nudge nobody sees is the one thing this feature cannot be.
 - **`canAskAgain` replaces the `PermissionStatus` comparison.** `expo-notifications` does not re-export `PermissionStatus`, and `canAskAgain` is exactly the condition anyway — it covers both "never asked" and "denied, and iOS will not ask twice".
 - **`signOut` lives in `providers/supabase-provider.tsx`**, not `hooks/useSupabase.ts` as written below — that moved when the provider took over the session. The delete goes there, before `auth.signOut()`, and is swallowed on failure: nobody is held in a session they asked to leave because the cleanup was offline.
 - **`p_device_id` is a per-install UUID** in AsyncStorage (`lib/deviceId.ts`), not a hardware id — the only value that survives a token rotation.
+
+The screen itself: `app/(protected)/notification-settings.tsx` (modal, registered in `(protected)/_layout.tsx`), `hooks/useNotificationPrefs.ts`, `hooks/usePushPermission.ts`, `app/components/settings/ToggleRow.tsx` and `app/components/ui/GearIcon.tsx`. Three switches over the three columns, a permission row with `Linking.openSettings()` when iOS is blocking, the haptics switch moved off `Profile.tsx`, and sign-out moved off the Profile header — whose corner is now a gear opening this screen. The switches stay usable while permission is denied, because the row is per account and governs the person's other devices too.
 
 **Quiet hours are deferred to E5.** The columns and their constraints exist, but nothing reads them until the reminder cron, and E5 brings `@react-native-community/datetimepicker` for `goals.reminder_time` anyway. One picker, built once, when something honours it.
 

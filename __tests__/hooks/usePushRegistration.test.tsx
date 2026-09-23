@@ -163,3 +163,71 @@ describe("usePushRegistration", () => {
     expect(Alert.alert).not.toHaveBeenCalled();
   });
 });
+
+// E5's reminder cron evaluates `now() at time zone timezone` for every row, so
+// a row left at the `UTC` default fires people's reminders at the wrong hour.
+// Nothing else in the app ever writes this column.
+describe("usePushRegistration — the timezone", () => {
+  function withSharedBuilder() {
+    const qb = makeQueryBuilder({ error: null });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
+    return { qb, supabase };
+  }
+
+  it("writes this device's timezone onto the prefs row", async () => {
+    const { qb, supabase } = withSharedBuilder();
+    renderWithUser("user-1", supabase);
+
+    await waitFor(() => expect(qb.update).toHaveBeenCalled());
+    expect(supabase.from as unknown as jest.Mock).toHaveBeenCalledWith(
+      "notification_prefs",
+    );
+    expect(qb.update).toHaveBeenCalledWith({
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    expect(qb.eq).toHaveBeenCalledWith("user_id", "user-1");
+  });
+
+  it("writes it even when notifications were declined", async () => {
+    // The row still has to be right: reminders can be switched on later, and
+    // the person's other devices read the same row.
+    registerForPushNotificationsAsync.mockResolvedValue({
+      token: null,
+      status: "denied",
+    });
+    const { qb, supabase } = withSharedBuilder();
+    renderWithUser("user-1", supabase);
+
+    await waitFor(() => expect(qb.update).toHaveBeenCalled());
+  });
+
+  it("updates rather than inserting", async () => {
+    // The row comes from a trigger on auth.users; there is no client INSERT
+    // policy for the client to fall back on.
+    const { qb, supabase } = withSharedBuilder();
+    renderWithUser("user-1", supabase);
+
+    await waitFor(() => expect(qb.update).toHaveBeenCalled());
+    expect(qb.upsert).not.toHaveBeenCalled();
+    expect(qb.insert).not.toHaveBeenCalled();
+  });
+
+  it("stays silent when the timezone write fails", async () => {
+    const qb = makeQueryBuilder({ error: { message: "network down" } });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
+    renderWithUser("user-1", supabase);
+
+    await waitFor(() => expect(qb.update).toHaveBeenCalled());
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing without a session", async () => {
+    const { qb, supabase } = withSharedBuilder();
+    renderWithUser(null, supabase);
+
+    await waitFor(() =>
+      expect(registerForPushNotificationsAsync).not.toHaveBeenCalled(),
+    );
+    expect(qb.update).not.toHaveBeenCalled();
+  });
+});

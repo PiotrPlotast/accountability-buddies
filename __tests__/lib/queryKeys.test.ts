@@ -29,4 +29,13 @@ describe("queryKeys", () => {
   it("profile includes the user id", () => {
     expect(queryKeys.profile("u-9")).toEqual(["profile", "u-9"]);
   });
+
+  it("notificationPrefs includes the user id", () => {
+    // Built through the helper rather than written inline at the call site,
+    // unlike the `heatmap` precedent.
+    expect(queryKeys.notificationPrefs("u-9")).toEqual([
+      "notificationPrefs",
+      "u-9",
+    ]);
+  });
 });

@@ -48,6 +48,10 @@ export default function ProtectedLayout() {
             name="group-settings"
             options={{ headerShown: false, presentation: "modal" }}
           />
+          <Stack.Screen
+            name="notification-settings"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
         </Stack.Protected>
       </Stack>
     </GestureHandlerRootView>

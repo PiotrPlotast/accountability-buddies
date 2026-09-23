@@ -72,6 +72,21 @@ function getProjectId(): string | undefined {
   );
 }
 
+export interface PushPermission {
+  granted: boolean;
+  canAskAgain: boolean;
+}
+
+/**
+ * The OS's current answer, without asking anything. The settings screen renders
+ * it, and re-reads it whenever the app comes back to the foreground — the only
+ * route back for someone who declined is iOS Settings, which means leaving.
+ */
+export async function getPushPermissionStatus(): Promise<PushPermission> {
+  const { granted, canAskAgain } = await Notifications.getPermissionsAsync();
+  return { granted, canAskAgain };
+}
+
 export async function registerForPushNotificationsAsync(): Promise<PushRegistration> {
   // A no-op elsewhere, but the guard documents that channels are an Android
   // concept — and Android files a notification at the channel's importance,
@@ -113,7 +128,14 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
     });
     registeredToken = data;
     return { token: data, status: "granted" };
-  } catch {
+  } catch (err) {
+    // Named, not swallowed. This is the only place the reason is ever visible:
+    // `registerAndStorePushToken` returns early on the falsy token without
+    // logging, and the settings screen shows nothing because permission
+    // genuinely is granted — so on a device a missing `aps-environment`
+    // entitlement, an APNs key not assigned to this bundle id and an
+    // unresolvable projectId otherwise produce the identical silent outcome.
+    console.warn("Expo push token request failed:", err);
     return { token: null, status: "error" };
   }
 }
