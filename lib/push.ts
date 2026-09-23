@@ -128,7 +128,14 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
     });
     registeredToken = data;
     return { token: data, status: "granted" };
-  } catch {
+  } catch (err) {
+    // Named, not swallowed. This is the only place the reason is ever visible:
+    // `registerAndStorePushToken` returns early on the falsy token without
+    // logging, and the settings screen shows nothing because permission
+    // genuinely is granted — so on a device a missing `aps-environment`
+    // entitlement, an APNs key not assigned to this bundle id and an
+    // unresolvable projectId otherwise produce the identical silent outcome.
+    console.warn("Expo push token request failed:", err);
     return { token: null, status: "error" };
   }
 }

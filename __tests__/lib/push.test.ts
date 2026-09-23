@@ -33,6 +33,7 @@ beforeEach(() => {
   requestPermissions.mockResolvedValue(GRANTED);
   getExpoToken.mockResolvedValue({ type: "expo", data: DEVICE_TOKEN });
   setChannel.mockResolvedValue(undefined);
+  jest.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 // `jest.replaceProperty` is undone by restoreAllMocks, not clearAllMocks —
@@ -102,6 +103,24 @@ describe("registerForPushNotificationsAsync — the token", () => {
       token: null,
       status: "error",
     });
+  });
+
+  it("names the failure instead of swallowing it", async () => {
+    // This is the only place the reason is ever visible. The status alone is
+    // not diagnosable: on a device a missing `aps-environment` entitlement, an
+    // APNs key not assigned to this bundle id and an unresolvable projectId all
+    // produce the identical silent outcome — `registerAndStorePushToken`
+    // returns early on the falsy token, and the settings screen shows nothing
+    // because permission genuinely is granted.
+    const thrown = new Error("no valid aps-environment entitlement string");
+    getExpoToken.mockRejectedValue(thrown);
+
+    await registerForPushNotificationsAsync();
+
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("push token"),
+      thrown,
+    );
   });
 
   it("remembers the token so sign-out can delete its row", async () => {
