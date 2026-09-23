@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useNameGate } from "@/hooks/useNameGate";
+import { usePushRegistration } from "@/hooks/usePushRegistration";
 import { themeColors } from "@/lib/colors";
 
 export default function ProtectedLayout() {
@@ -10,6 +11,12 @@ export default function ProtectedLayout() {
   // the app is not mounted, so `useDashboardData`'s join-group effect has
   // nothing to race and there is no back gesture out of the name screen.
   const { needsName } = useNameGate();
+
+  // The single mount point for push registration: this layout renders only
+  // behind the session guard, and mounting the hook twice would register the
+  // same device twice. It runs for a nameless user too — the name gate below
+  // swaps out the screens, not this layout.
+  usePushRegistration();
 
   return (
     <GestureHandlerRootView

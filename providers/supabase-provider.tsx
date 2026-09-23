@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { SupabaseContext } from "@/context/supabase-context";
+import { forgetRegisteredPushToken, getRegisteredPushToken } from "@/lib/push";
 import { asyncStoragePersister } from "@/lib/queryPersister";
 
 interface SupabaseProviderProps {
@@ -85,6 +86,26 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   // only cleared the caller's own copy and the rest of the tree caught up via
   // `onAuthStateChange`.
   const signOut = useCallback(async () => {
+    // Before `auth.signOut()`, while the JWT that authorises the delete is
+    // still valid. A signed-out phone that keeps its `device_push_tokens` row
+    // keeps receiving the previous account's nudges — on the lock screen of
+    // whoever is holding it. By token and not by user, so the person's other
+    // phones stay registered.
+    const pushToken = getRegisteredPushToken();
+    if (pushToken) {
+      try {
+        await supabase
+          .from("device_push_tokens")
+          .delete()
+          .eq("expo_push_token", pushToken);
+      } catch {
+        // Offline, or an expired JWT. Nobody gets held in a session they have
+        // asked to leave over this: `register_push_token` reassigns the
+        // orphaned row the next time anyone signs in on this device.
+      }
+      forgetRegisteredPushToken();
+    }
+
     await supabase.auth.signOut();
     setSession(null);
     // The session goes, its cache does not — and that cache is a copy of

@@ -8,7 +8,11 @@ import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
 import { queryKeys } from "@/lib/queryKeys";
 
-import { buildFakeSupabase, makeQueryClient } from "../test-utils/render";
+import {
+  buildFakeSupabase,
+  makeQueryBuilder,
+  makeQueryClient,
+} from "../test-utils/render";
 
 // AsyncStorage's native module is null under Jest and the provider imports it
 // for the client's auth storage — same local mock themeProvider.test.tsx uses.
@@ -30,6 +34,13 @@ jest.mock("@/lib/queryPersister", () => ({
   asyncStoragePersister: { removeClient: jest.fn(() => Promise.resolve()) },
 }));
 
+// This device's push token is remembered in `lib/push` module scope; the
+// provider only reads it, so that module is the seam.
+jest.mock("@/lib/push", () => ({
+  getRegisteredPushToken: jest.fn(() => null),
+  forgetRegisteredPushToken: jest.fn(),
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { createClient } = require("@supabase/supabase-js") as {
   createClient: jest.Mock;
@@ -39,6 +50,12 @@ const { createClient } = require("@supabase/supabase-js") as {
 const { asyncStoragePersister } = require("@/lib/queryPersister") as {
   asyncStoragePersister: { removeClient: jest.Mock };
 };
+
+const { getRegisteredPushToken, forgetRegisteredPushToken } =
+  require("@/lib/push") as {
+    getRegisteredPushToken: jest.Mock;
+    forgetRegisteredPushToken: jest.Mock;
+  };
 
 type FakeClient = ReturnType<typeof buildFakeSupabase> & {
   auth: {
@@ -225,5 +242,100 @@ describe("SupabaseProvider", () => {
     view.unmount();
 
     expect(unsubscribeSpy()).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A signed-out phone that keeps its row in `device_push_tokens` keeps receiving
+// the previous account's nudges — on the lock screen of whoever is holding it.
+// The row has to go while the JWT that authorises the delete is still valid,
+// which means before `auth.signOut()`, not after.
+describe("SupabaseProvider — push token cleanup on sign-out", () => {
+  const TOKEN = "ExponentPushToken[device]";
+  let tokenQuery: ReturnType<typeof makeQueryBuilder>;
+
+  beforeEach(() => {
+    tokenQuery = makeQueryBuilder({ error: null });
+    client = buildFakeSupabase({
+      fromImpl: jest.fn(() => tokenQuery),
+    }) as FakeClient;
+    createClient.mockReturnValue(client);
+    getRegisteredPushToken.mockReturnValue(TOKEN);
+    forgetRegisteredPushToken.mockClear();
+  });
+
+  it("deletes this device's row before dropping the session", async () => {
+    renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    expect(client.from).toHaveBeenCalledWith("device_push_tokens");
+    expect(tokenQuery.delete).toHaveBeenCalled();
+    // By token, not by user: deleting every row for this user would silence
+    // their other phones too.
+    expect(tokenQuery.eq).toHaveBeenCalledWith("expo_push_token", TOKEN);
+    expect(
+      (client.from as unknown as jest.Mock).mock.invocationCallOrder[0],
+    ).toBeLessThan(client.auth.signOut.mock.invocationCallOrder[0]);
+  });
+
+  it("forgets the token once its row is gone", async () => {
+    renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    expect(forgetRegisteredPushToken).toHaveBeenCalled();
+  });
+
+  it("touches nothing when this device never registered", async () => {
+    getRegisteredPushToken.mockReturnValue(null);
+    renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    expect(client.from).not.toHaveBeenCalled();
+    expect(client.auth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("signs out anyway when the delete rejects", async () => {
+    // Offline, or on an expired JWT. A user who has committed to leaving must
+    // not be held in the session by a failed cleanup — the orphaned row is
+    // reassigned by `register_push_token` the next time anyone signs in here.
+    client.from = jest.fn(() => {
+      throw new Error("offline");
+    }) as unknown as typeof client.from;
+    renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await expect(seen.a.signOut()).resolves.toBeUndefined();
+    });
+
+    expect(client.auth.signOut).toHaveBeenCalledTimes(1);
+    expect(seen.a.session).toBeNull();
+  });
+
+  it("signs out anyway when the delete comes back with an error", async () => {
+    tokenQuery = makeQueryBuilder({ error: { message: "permission denied" } });
+    renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    expect(client.auth.signOut).toHaveBeenCalledTimes(1);
+    expect(seen.a.session).toBeNull();
+    // And the cache still goes: the reason sign-out clears it has nothing to do
+    // with push.
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });
 });

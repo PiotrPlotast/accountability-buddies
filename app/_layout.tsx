@@ -15,6 +15,7 @@ import {
 
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
+import { configureNotificationHandler } from "@/lib/push";
 import { asyncStoragePersister } from "@/lib/queryPersister";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useTheme } from "@/hooks/useTheme";
@@ -27,6 +28,11 @@ SplashScreen.setOptions({
 });
 
 SplashScreen.preventAutoHideAsync();
+
+// Module scope, like the splash calls above: without a handler iOS suppresses
+// foreground notifications entirely, and a push sent while the app is open
+// looks like it was never delivered.
+configureNotificationHandler();
 
 const queryClient = new QueryClient({
   defaultOptions: {

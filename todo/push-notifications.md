@@ -204,6 +204,18 @@ Index: `(status, created_at) where status = 'pending'` for the dispatcher drain.
 
 ## Phase 3 — Token registration and the settings screen
 
+**Registration half done 2026-09-20**, in its own PR; the settings screen is the second half and is still open. What landed: `lib/push.ts` (the only importer of `expo-notifications`), `lib/deviceId.ts`, `hooks/usePushRegistration.ts` mounted once in `(protected)/_layout.tsx`, the foreground handler at module scope in `app/_layout.tsx`, and the token delete in `signOut`. Four decisions differ from the plan below, all settled before the code was written:
+
+- **Permission is asked outright on first protected mount**, not provisionally. `allowProvisional` delivers quietly to Notification Centre, and a nudge nobody sees is the one thing this feature cannot be.
+- **`canAskAgain` replaces the `PermissionStatus` comparison.** `expo-notifications` does not re-export `PermissionStatus`, and `canAskAgain` is exactly the condition anyway — it covers both "never asked" and "denied, and iOS will not ask twice".
+- **`signOut` lives in `providers/supabase-provider.tsx`**, not `hooks/useSupabase.ts` as written below — that moved when the provider took over the session. The delete goes there, before `auth.signOut()`, and is swallowed on failure: nobody is held in a session they asked to leave because the cleanup was offline.
+- **`p_device_id` is a per-install UUID** in AsyncStorage (`lib/deviceId.ts`), not a hardware id — the only value that survives a token rotation.
+
+**Quiet hours are deferred to E5.** The columns and their constraints exist, but nothing reads them until the reminder cron, and E5 brings `@react-native-community/datetimepicker` for `goals.reminder_time` anyway. One picker, built once, when something honours it.
+
+Also worth knowing when the screen half starts: **there is already a `Switch`** — the haptics row in `Profile.tsx` — with an established `trackColor`/`thumbColor` convention, so `ToggleRow` is an extraction rather than a new pattern; and **`notification_prefs` rows come from a trigger with no client INSERT policy**, so the hook updates a row that is always there rather than upserting one.
+
+
 **`lib/push.ts`** (new) — `registerForPushNotificationsAsync()`: bail if `!Device.isDevice`; `getPermissionsAsync` → `requestPermissionsAsync` if undetermined; `Notifications.setNotificationChannelAsync("default", …)` guarded by `Platform.OS === "android"` (it is a no-op elsewhere, but the guard documents intent); `getExpoPushTokenAsync({ projectId })`. Returns `{ token, status }` so callers can distinguish "denied" from "failed".
 
 Two iOS specifics:
