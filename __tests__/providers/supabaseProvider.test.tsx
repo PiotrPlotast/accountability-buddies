@@ -192,6 +192,21 @@ describe("SupabaseProvider", () => {
     expect(seen.b.session).toBeNull();
   });
 
+  // supabase-js defaults to `scope: 'global'`, which revokes every session the
+  // account holds. The other phones then drop out on their next refresh without
+  // ever running this signOut, so their `device_push_tokens` rows survive and
+  // keep receiving this account's pushes while signed out.
+  it("signs out this device only, not the account's other sessions", async () => {
+    renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
   // Signing out drops the session, but the cache it left behind is a copy of
   // somebody's group: every member's name, their habits and a week of
   // check-ins, sitting in AsyncStorage for the next person to hold the phone.
