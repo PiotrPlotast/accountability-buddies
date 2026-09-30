@@ -106,7 +106,11 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
       forgetRegisteredPushToken();
     }
 
-    await supabase.auth.signOut();
+    // Local, not supabase-js's default `global`: a global sign-out revokes the
+    // account's other phones too, and they drop out on their next refresh
+    // without passing through here — so their token rows survive and keep
+    // receiving this account's pushes while signed out.
+    await supabase.auth.signOut({ scope: "local" });
     setSession(null);
     // The session goes, its cache does not — and that cache is a copy of
     // somebody's group: every member's name, their habits, a week of
