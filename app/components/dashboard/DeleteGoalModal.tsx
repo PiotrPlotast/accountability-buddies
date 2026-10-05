@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useActiveGroup } from "@/hooks/useActiveGroup";
 
 type Props = {
   goal: Goal | null;
@@ -18,7 +18,7 @@ type Props = {
 };
 
 export default function DeleteGoalModal({ goal, isVisible, onClose }: Props) {
-  const { activeGroupId } = useDashboardData();
+  const { activeGroupId } = useActiveGroup();
   const { deleteGoal } = useDashboardActions(activeGroupId);
   const [deleting, setDeleting] = useState(false);
 

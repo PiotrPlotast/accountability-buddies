@@ -18,7 +18,7 @@ import Reanimated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
 import { useOnValueChange } from "@/hooks/useOnValueChange";
@@ -261,7 +261,7 @@ export default function GoalList({
   onEdit,
   onDelete,
 }: Props) {
-  const { members, loading, userId, activeGroupId } = useDashboardData();
+  const { members, loading, userId, activeGroupId } = useActiveGroup();
   const { toggleGoal } = useDashboardActions(activeGroupId);
   const { accent } = useTheme();
 

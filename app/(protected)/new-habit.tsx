@@ -10,7 +10,7 @@ import {
 import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
 import { DEFAULT_ICON } from "@/lib/habitIcons";
@@ -21,7 +21,7 @@ import DayPicker from "@/app/components/habits/DayPicker";
 export default function NewHabitScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { activeGroupId } = useDashboardData();
+  const { activeGroupId } = useActiveGroup();
   const { addGoal } = useDashboardActions(activeGroupId);
   const { accent } = useTheme();
 

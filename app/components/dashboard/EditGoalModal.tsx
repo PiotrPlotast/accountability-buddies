@@ -12,7 +12,7 @@ import {
 import AppTextInput from "@/app/components/ui/AppTextInput";
 import { Goal } from "@/types/dashboardTypes";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useTheme } from "@/hooks/useTheme";
 import { ALL_DAYS } from "@/lib/repeatDays";
 import { themeColors } from "@/lib/colors";
@@ -26,7 +26,7 @@ type Props = {
 };
 
 export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
-  const { activeGroupId } = useDashboardData();
+  const { activeGroupId } = useActiveGroup();
   const { editGoal } = useDashboardActions(activeGroupId);
   const { accent } = useTheme();
 

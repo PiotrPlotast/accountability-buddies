@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from "react-native";
 import { useRouter, type Href } from "expo-router";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useTheme } from "@/hooks/useTheme";
 import { useDayCompleteSignal } from "@/lib/dayCompleteSignal";
 import ProgressRing from "./ProgressRing";
@@ -15,7 +15,7 @@ export default function DashboardHeader({
   todayGoals,
   onOpenHabitManager,
 }: Props) {
-  const { groupName, groupIcon, streak, members } = useDashboardData();
+  const { groupName, groupIcon, streak, members } = useActiveGroup();
   const { accent } = useTheme();
   const router = useRouter();
   // Emitted by the tap that finishes the day, never derived from `progress`

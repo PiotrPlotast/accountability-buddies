@@ -100,7 +100,7 @@ Mutation hooks (`useAddGoal`, `useToggleGoal`, `useEditGoal`, `useDeleteGoal`) a
 
 ### Composition hooks
 
-Screens consume `useDashboardData`, `useDashboardActions`, and `useDashboardStatus` rather than wiring the raw query/mutation hooks directly. `useDashboardActions` no-ops when `activeGroupId` is null, so callers don't need to guard.
+Screens consume `useActiveGroup` (the pure group/members read), `useDashboardData` (the dashboard's refresh + join-group redirect on top of it, used by `Dashboard` only), and `useDashboardActions` rather than wiring the raw query/mutation hooks directly. `useDashboardActions` no-ops when `activeGroupId` is null, so callers don't need to guard.
 
 ## Backend
 

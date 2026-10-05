@@ -1,46 +1,29 @@
 import { useSupabase } from "@/hooks/useSupabase";
 import { useProfile } from "@/hooks/useProfile";
-import { useGroupStats } from "@/hooks/useGroupStats";
-import { useGroupMembers } from "@/hooks/useGroupMembers";
-import { Goal } from "@/types/dashboardTypes";
+import { useActiveGroup } from "@/hooks/useActiveGroup";
 
 export function useProfileData() {
   const { session, signOut } = useSupabase();
-  const userId = session?.user.id;
 
   const profile = useProfile();
-  const groupStats = useGroupStats();
-  const groupMembers = useGroupMembers({
-    groupId: groupStats.data?.group_id || null,
-  });
-
-  const myGoals: Goal[] =
-    groupMembers.data?.find((m) => m.user_id === userId)?.goals || [];
-
-  const isLoading =
-    profile.isLoading || groupStats.isLoading || groupMembers.isLoading;
-  const isError = profile.isError || groupStats.isError || groupMembers.isError;
+  const group = useActiveGroup();
 
   const refetch = async () => {
-    await Promise.all([
-      profile.refetch(),
-      groupStats.refetch(),
-      groupMembers.refetch(),
-    ]);
+    await Promise.all([profile.refetch(), group.refetch()]);
   };
 
   return {
-    userId,
+    userId: group.userId,
     fullName: profile.data?.full_name ?? null,
     avatarUrl: profile.data?.avatar_url ?? null,
     email: session?.user.email ?? null,
     memberSince: session?.user.created_at ?? null,
-    groupStreak: groupStats.data?.current_streak ?? 0,
-    groupName: groupStats.data?.name ?? null,
-    groupMemberCount: groupMembers.data?.length ?? 0,
-    myGoals,
-    isLoading,
-    isError,
+    groupStreak: group.streak,
+    groupName: group.groupName,
+    groupMemberCount: group.members.length,
+    myGoals: group.myGoals,
+    isLoading: profile.isLoading || group.loading,
+    isError: profile.isError || group.isError,
     refetch,
     signOut,
   };
