@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useUpdateGroup } from "@/hooks/useUpdateGroup";
 import { useTheme } from "@/hooks/useTheme";
 import { GROUP_ICON_CHOICES } from "@/lib/habitIcons";
@@ -22,8 +22,7 @@ import { themeColors } from "@/lib/colors";
 export default function GroupSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { activeGroupId, groupName, groupIcon, inviteCode } =
-    useDashboardData();
+  const { activeGroupId, groupName, groupIcon, inviteCode } = useActiveGroup();
   const { accent, palette, accentId, setAccent } = useTheme();
   const updateGroup = useUpdateGroup();
 
