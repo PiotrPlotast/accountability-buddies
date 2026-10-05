@@ -1,6 +1,7 @@
 import { act, waitFor } from "@testing-library/react-native";
 
 import { useDashboardActions } from "@/hooks/useDashboardActions";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, Member } from "@/types/dashboardTypes";
 
@@ -26,7 +27,10 @@ function seed(
   queryClient: ReturnType<typeof makeQueryClient>,
   members: Member[],
 ) {
-  queryClient.setQueryData(queryKeys.groupMembers("group-1"), members);
+  queryClient.setQueryData(
+    queryKeys.groupMembers("group-1", getTodayLocalDate()),
+    members,
+  );
 }
 
 describe("useDashboardActions", () => {
@@ -98,7 +102,7 @@ describe("useDashboardActions", () => {
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Member[]>(
-        queryKeys.groupMembers("group-1"),
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
       );
       expect(cached?.[0].goals[0].title).toBe("Walk");
     });
@@ -125,7 +129,7 @@ describe("useDashboardActions", () => {
 
     expect(editQB.update).toHaveBeenCalledWith({ title: "Walk" });
     const cached = queryClient.getQueryData<Member[]>(
-      queryKeys.groupMembers("group-1"),
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
     );
     expect(cached?.[0].goals[0].icon).toBe("🏃");
   });
@@ -160,7 +164,7 @@ describe("useDashboardActions", () => {
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Member[]>(
-        queryKeys.groupMembers("group-1"),
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
       );
       expect(cached?.[0].goals[0]).toMatchObject({
         title: "Walk",

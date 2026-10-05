@@ -35,6 +35,7 @@ interface Options<TVars, TData> {
 // be removed on rollback, not left behind in a cache that outlives the app.
 type RollbackContext = {
   previousMembers: Member[] | undefined;
+  membersKey: readonly unknown[];
   heatmap?: {
     key: readonly unknown[];
     previous: Record<string, number> | undefined;
@@ -56,11 +57,17 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
     onMutate: async (vars) => {
       if (opts.beforeOptimistic) await opts.beforeOptimistic(vars);
 
-      const key = queryKeys.groupMembers(opts.getGroupId(vars));
-      await queryClient.cancelQueries({ queryKey: key });
+      // Today's entry is the one on screen: the dashboard keys its read by
+      // the same local day. Any day's in-flight read is cancelled, so none
+      // lands on top of the patch.
+      const groupId = opts.getGroupId(vars);
+      const key = queryKeys.groupMembers(groupId, getTodayLocalDate());
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.groupMembersOfGroup(groupId),
+      });
       const previousMembers = queryClient.getQueryData<Member[]>(key);
       let heatmap: RollbackContext["heatmap"];
-      if (!userId) return { previousMembers };
+      if (!userId) return { previousMembers, membersKey: key };
 
       const patch = opts.getPatch(vars);
       queryClient.setQueryData<Member[]>(key, (old) => {
@@ -91,13 +98,14 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
         });
       }
 
-      return { previousMembers, heatmap };
+      return { previousMembers, membersKey: key, heatmap };
     },
 
-    onError: (error, vars, context) => {
-      const key = queryKeys.groupMembers(opts.getGroupId(vars));
+    onError: (error, _vars, context) => {
+      // The key the patch went to, not today's: a rollback after midnight
+      // belongs to the day the tap was made on.
       if (context?.previousMembers !== undefined) {
-        queryClient.setQueryData(key, context.previousMembers);
+        queryClient.setQueryData(context.membersKey, context.previousMembers);
       }
       if (context?.heatmap) {
         const { key: heatmapKey, previous } = context.heatmap;
@@ -119,7 +127,7 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
 
     onSettled: (_data, _error, vars) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.groupMembers(opts.getGroupId(vars)),
+        queryKey: queryKeys.groupMembersOfGroup(opts.getGroupId(vars)),
       });
       if (opts.invalidateStatsOnSettle) {
         queryClient.invalidateQueries({ queryKey: queryKeys.groupStatsAll() });

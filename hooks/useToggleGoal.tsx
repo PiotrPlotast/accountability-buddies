@@ -19,7 +19,7 @@ export function useToggleGoal() {
   // (lib/haptics.ts). Odświeżenie cache'u samo z siebie nic tu nie uruchomi.
   const closesOutTheDay = (goal: Goal): boolean => {
     const members = queryClient.getQueryData<Member[]>(
-      queryKeys.groupMembers(goal.group_id),
+      queryKeys.groupMembers(goal.group_id, getTodayLocalDate()),
     );
     const mine = members?.find((m) => m.user_id === userId)?.goals;
     // Nothing cached yet — a cold start. Fall back to the ordinary tick rather

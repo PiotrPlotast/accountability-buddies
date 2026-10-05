@@ -1,6 +1,7 @@
 import { act, waitFor } from "@testing-library/react-native";
 
 import { useActiveGroup } from "@/hooks/useActiveGroup";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { GroupResult, Member } from "@/types/dashboardTypes";
 
@@ -45,7 +46,10 @@ const MEMBERS: Member[] = [
 function buildWithGroup(rpcImpl?: jest.Mock) {
   const queryClient = makeQueryClient();
   queryClient.setQueryData(queryKeys.groupStats("user-1"), GROUP);
-  queryClient.setQueryData(queryKeys.groupMembers("g1"), MEMBERS);
+  queryClient.setQueryData(
+    queryKeys.groupMembers("g1", getTodayLocalDate()),
+    MEMBERS,
+  );
   return buildWrapper({
     supabase: buildFakeSupabase({ rpcImpl }),
     queryClient,

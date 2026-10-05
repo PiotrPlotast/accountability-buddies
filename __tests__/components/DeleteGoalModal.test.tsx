@@ -1,6 +1,7 @@
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 
 import DeleteGoalModal from "@/app/components/dashboard/DeleteGoalModal";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 
@@ -35,7 +36,10 @@ function seed(queryClient: ReturnType<typeof makeQueryClient>) {
   const members: Member[] = [
     { user_id: "user-1", full_name: "Me", goals: [goal] },
   ];
-  queryClient.setQueryData(queryKeys.groupMembers("group-1"), members);
+  queryClient.setQueryData(
+    queryKeys.groupMembers("group-1", getTodayLocalDate()),
+    members,
+  );
 }
 
 describe("DeleteGoalModal", () => {

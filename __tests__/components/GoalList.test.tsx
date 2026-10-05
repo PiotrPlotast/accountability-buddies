@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react-native";
 
 import GoalList from "@/app/components/dashboard/GoalList";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { GroupResult, Member } from "@/types/dashboardTypes";
 
@@ -26,7 +27,10 @@ function renderList(selectedTabId: string | null, opts: { seed: boolean }) {
   const queryClient = makeQueryClient();
   if (opts.seed) {
     queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
-    queryClient.setQueryData(queryKeys.groupMembers("group-1"), members);
+    queryClient.setQueryData(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      members,
+    );
   }
   // A stats read that never settles, so the unseeded case stays loading.
   const rpcImpl = jest.fn(() => ({ maybeSingle: () => new Promise(() => {}) }));

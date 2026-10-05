@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { SupabaseContextValue } from "@/context/supabase-context";
 import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 
 import {
@@ -220,9 +221,10 @@ describe("SupabaseProvider", () => {
       full_name: "Alice",
       avatar_url: null,
     });
-    queryClient.setQueryData(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-2", full_name: "Bob", goals: [] },
-    ]);
+    queryClient.setQueryData(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-2", full_name: "Bob", goals: [] }],
+    );
 
     await act(async () => {
       await seen.a.signOut();
@@ -232,7 +234,9 @@ describe("SupabaseProvider", () => {
       queryClient.getQueryData(queryKeys.profile("user-1")),
     ).toBeUndefined();
     expect(
-      queryClient.getQueryData(queryKeys.groupMembers("group-1")),
+      queryClient.getQueryData(
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      ),
     ).toBeUndefined();
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });

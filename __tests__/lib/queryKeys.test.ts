@@ -9,16 +9,33 @@ describe("queryKeys", () => {
     expect(queryKeys.groupStats(undefined)).toEqual(["groupStats", undefined]);
   });
 
-  it("groupMembers includes the group id", () => {
-    expect(queryKeys.groupMembers("group-1")).toEqual([
+  // The day is part of the key because "completed today" is an answer about
+  // one day: keyed by group alone, yesterday's ticks outlived midnight.
+  it("groupMembers includes the group id and the local day", () => {
+    expect(queryKeys.groupMembers("group-1", "2026-10-05")).toEqual([
       "groupMembers",
       "group-1",
+      "2026-10-05",
     ]);
   });
 
   it("groupMembers with null group keeps the slot", () => {
     // Mutations rely on this exact key shape — see CLAUDE.md.
-    expect(queryKeys.groupMembers(null)).toEqual(["groupMembers", null]);
+    expect(queryKeys.groupMembers(null, "2026-10-05")).toEqual([
+      "groupMembers",
+      null,
+      "2026-10-05",
+    ]);
+  });
+
+  it("groupMembersOfGroup is the prefix of every day's key for that group", () => {
+    expect(queryKeys.groupMembersOfGroup("group-1")).toEqual([
+      "groupMembers",
+      "group-1",
+    ]);
+    expect(queryKeys.groupMembers("group-1", "2026-10-05")).toEqual(
+      expect.arrayContaining([...queryKeys.groupMembersOfGroup("group-1")]),
+    );
   });
 
   it("aggregate keys are prefix-only", () => {
