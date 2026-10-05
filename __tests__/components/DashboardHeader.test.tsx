@@ -1,6 +1,7 @@
 import { render, fireEvent } from "@testing-library/react-native";
 
 import DashboardHeader from "@/app/components/dashboard/DashboardHeader";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 
@@ -41,7 +42,10 @@ function renderHeader(overrides?: {
   if (overrides?.seedStats !== false) {
     queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
   }
-  queryClient.setQueryData(queryKeys.groupMembers("group-1"), members);
+  queryClient.setQueryData(
+    queryKeys.groupMembers("group-1", getTodayLocalDate()),
+    members,
+  );
   const { Wrapper } = buildWrapper({ queryClient });
 
   return render(
@@ -98,7 +102,10 @@ describe("DashboardHeader", () => {
         ...stats,
         current_streak: 1,
       });
-      queryClient.setQueryData(queryKeys.groupMembers("group-1"), members);
+      queryClient.setQueryData(
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
+        members,
+      );
       const { Wrapper } = buildWrapper({ queryClient });
 
       const { findByLabelText } = render(

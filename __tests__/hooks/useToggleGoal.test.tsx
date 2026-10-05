@@ -33,9 +33,10 @@ describe("useToggleGoal", () => {
     const supabase = buildFakeSupabase({ fromImpl });
 
     const queryClient = makeQueryClient();
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] }],
+    );
 
     const { Wrapper } = buildWrapper({ supabase, queryClient });
     const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
@@ -51,7 +52,7 @@ describe("useToggleGoal", () => {
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Member[]>(
-        queryKeys.groupMembers("group-1"),
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
       );
       expect(cached?.[0].goals[0].completed_today).toBe(true);
     });
@@ -62,9 +63,10 @@ describe("useToggleGoal", () => {
     const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => errorQB) });
 
     const queryClient = makeQueryClient();
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] }],
+    );
     const { Wrapper } = buildWrapper({ supabase, queryClient });
 
     const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
@@ -77,7 +79,7 @@ describe("useToggleGoal", () => {
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Member[]>(
-        queryKeys.groupMembers("group-1"),
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
       );
       expect(cached?.[0].goals[0].completed_today).toBe(false);
     });
@@ -88,9 +90,10 @@ describe("useToggleGoal", () => {
     const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => errorQB) });
 
     const queryClient = makeQueryClient();
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] }],
+    );
     // Deliberately no seeded heatmap: the optimistic patch invents one, so
     // rollback has to drop it rather than leave a fabricated count behind.
     const { Wrapper } = buildWrapper({ supabase, queryClient });
@@ -113,9 +116,10 @@ describe("useToggleGoal", () => {
     const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => errorQB) });
 
     const queryClient = makeQueryClient();
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] }],
+    );
     const today = getTodayLocalDate();
     queryClient.setQueryData(["heatmap", "user-1"], { [today]: 2 });
     const { Wrapper } = buildWrapper({ supabase, queryClient });
@@ -142,9 +146,10 @@ describe("useToggleGoal", () => {
 
     const queryClient = makeQueryClient();
     const completed = { ...baseGoal, completed_today: true };
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [completed] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [completed] }],
+    );
     const { Wrapper } = buildWrapper({ supabase, queryClient });
 
     const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
@@ -156,6 +161,46 @@ describe("useToggleGoal", () => {
     expect(deleteQB.delete).toHaveBeenCalled();
     expect(deleteQB.eq).toHaveBeenCalledWith("goal_id", "g-1");
   });
+
+  // The cache is keyed by day, so a tick just after midnight belongs in the
+  // new day's entry — the one the dashboard is now showing.
+  it("patches the current day's entry and leaves yesterday's alone", async () => {
+    jest.useFakeTimers({ now: new Date(2026, 9, 6, 0, 0, 5) });
+    try {
+      const qb = makeQueryBuilder({ error: null });
+      const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
+      const queryClient = makeQueryClient();
+      const yesterdayKey = queryKeys.groupMembers("group-1", "2026-10-05");
+      const todayKey = queryKeys.groupMembers("group-1", "2026-10-06");
+      queryClient.setQueryData<Member[]>(yesterdayKey, [
+        { user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] },
+      ]);
+      queryClient.setQueryData<Member[]>(todayKey, [
+        { user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] },
+      ]);
+      const { Wrapper } = buildWrapper({ supabase, queryClient });
+      const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
+
+      await act(async () => {
+        await utils.result.current.value.mutateAsync({ ...baseGoal });
+      });
+
+      expect(qb.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ date: "2026-10-06" }),
+      );
+      expect(
+        queryClient.getQueryData<Member[]>(todayKey)?.[0].goals[0]
+          .completed_today,
+      ).toBe(true);
+      expect(
+        queryClient.getQueryData<Member[]>(yesterdayKey)?.[0].goals[0]
+          .completed_today,
+      ).toBe(false);
+      expect(queryClient.getQueryState(todayKey)?.isInvalidated).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
 
 // The haptic is chosen from the tap, never from what comes back over the wire —
@@ -165,16 +210,19 @@ describe("useToggleGoal haptics", () => {
     queryClient: ReturnType<typeof makeQueryClient>,
     goals: Goal[],
   ) =>
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals },
-      // A second member whose day is nowhere near done: the celebration is
-      // about *my* habits, not the group's.
-      {
-        user_id: "user-2",
-        full_name: "Ann",
-        goals: [{ ...baseGoal, id: "other", user_id: "user-2" }],
-      },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [
+        { user_id: "user-1", full_name: "Me", goals },
+        // A second member whose day is nowhere near done: the celebration is
+        // about *my* habits, not the group's.
+        {
+          user_id: "user-2",
+          full_name: "Ann",
+          goals: [{ ...baseGoal, id: "other", user_id: "user-2" }],
+        },
+      ],
+    );
 
   const run = async (goals: Goal[], toggled: Goal) => {
     const qb = makeQueryBuilder({ error: null });

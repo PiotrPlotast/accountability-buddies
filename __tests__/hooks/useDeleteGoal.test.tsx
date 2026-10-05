@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 
 import * as haptics from "@/lib/haptics";
 import { useDeleteGoal } from "@/hooks/useDeleteGoal";
+import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, Member } from "@/types/dashboardTypes";
 
@@ -37,9 +38,10 @@ describe("useDeleteGoal", () => {
     const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => deleteQB) });
 
     const queryClient = makeQueryClient();
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [goal] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [goal] }],
+    );
     const { Wrapper } = buildWrapper({ supabase, queryClient });
 
     const utils = await renderHookWithSession(() => useDeleteGoal(), Wrapper);
@@ -53,7 +55,7 @@ describe("useDeleteGoal", () => {
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Member[]>(
-        queryKeys.groupMembers("group-1"),
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
       );
       expect(cached?.[0].goals).toHaveLength(0);
     });
@@ -64,9 +66,10 @@ describe("useDeleteGoal", () => {
     const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => deleteQB) });
 
     const queryClient = makeQueryClient();
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [goal] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [goal] }],
+    );
     const { Wrapper } = buildWrapper({ supabase, queryClient });
 
     const utils = await renderHookWithSession(() => useDeleteGoal(), Wrapper);
@@ -82,7 +85,7 @@ describe("useDeleteGoal", () => {
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Member[]>(
-        queryKeys.groupMembers("group-1"),
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
       );
       expect(cached?.[0].goals).toHaveLength(1);
     });
@@ -110,9 +113,10 @@ describe("useDeleteGoal haptics", () => {
     const deleteQB = makeQueryBuilder({ data: { id: "g-1" }, error: null });
     const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => deleteQB) });
     const queryClient = makeQueryClient();
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [goal] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [goal] }],
+    );
     const { Wrapper } = buildWrapper({ supabase, queryClient });
     const utils = await renderHookWithSession(() => useDeleteGoal(), Wrapper);
 
@@ -133,9 +137,10 @@ describe("useDeleteGoal haptics", () => {
     const failQB = makeQueryBuilder({ data: null, error: { message: "nope" } });
     const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => failQB) });
     const queryClient = makeQueryClient();
-    queryClient.setQueryData<Member[]>(queryKeys.groupMembers("group-1"), [
-      { user_id: "user-1", full_name: "Me", goals: [goal] },
-    ]);
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [goal] }],
+    );
     const { Wrapper } = buildWrapper({ supabase, queryClient });
     const utils = await renderHookWithSession(() => useDeleteGoal(), Wrapper);
 
