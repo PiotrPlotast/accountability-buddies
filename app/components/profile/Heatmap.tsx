@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
 import { useHeatmapData } from "@/hooks/useHeatmapData";
+import { useTodayLocalDate } from "@/hooks/useTodayLocalDate";
 import { getRecentLocalDates } from "@/lib/date";
 
 const WEEKS = 12;
@@ -20,8 +21,11 @@ export default function Heatmap({ userId }: Props) {
   const { data: heatmapDict = {}, isLoading } = useHeatmapData(userId);
 
   // Dates for the whole grid, oldest first — ta sama kolejność co week strip.
-  // Liczone raz zamiast 84 razy przy każdym renderze.
-  const dates = useMemo(() => getRecentLocalDates(TOTAL_CELLS), []);
+  // Przeliczane tylko gdy zmieni się dzień: zakładka Profile zostaje
+  // zamontowana przez północ, więc pusta tablica zależności zostawiała
+  // siatkę na wczorajszym oknie, a dzisiejszy check-in poza nią.
+  const today = useTodayLocalDate();
+  const dates = useMemo(() => getRecentLocalDates(TOTAL_CELLS, today), [today]);
 
   // A screen reader stepping through 84 unlabelled cells is useless, so the
   // grid is announced as a single summary instead. `activeDays` counts the

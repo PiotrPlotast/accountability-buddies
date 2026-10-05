@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
 
 import Heatmap from "@/app/components/profile/Heatmap";
 import { getRecentLocalDates } from "@/lib/date";
@@ -88,6 +88,44 @@ describe("Heatmap", () => {
           `Activity over the last ${WEEKS} weeks: 0 check-ins across 0 of ${TOTAL_CELLS} days.`,
         ),
       ).toBeTruthy();
+    });
+  });
+
+  describe("after midnight", () => {
+    afterEach(() => jest.useRealTimers());
+
+    const summary = (total: number, days: number) =>
+      `Activity over the last ${WEEKS} weeks: ${total} check-ins across ${days} of ${TOTAL_CELLS} days.`;
+
+    // The Profile tab stays mounted, so the grid has to move on its own:
+    // a check-in made after midnight is stored under the new date.
+    it("moves the window forward when the day changes while mounted", () => {
+      jest.useFakeTimers({ now: new Date(2026, 9, 5, 23, 59, 0) });
+      mockUseHeatmapData.mockReturnValue({
+        data: { "2026-10-06": 3 },
+        isLoading: false,
+      });
+
+      const { getByLabelText } = render(<Heatmap userId="user-1" />);
+      expect(getByLabelText(summary(0, 0))).toBeTruthy();
+
+      act(() => jest.advanceTimersByTime(60_000));
+      expect(getByLabelText(summary(3, 1))).toBeTruthy();
+    });
+
+    it("drops the oldest day once the window moves", () => {
+      jest.useFakeTimers({ now: new Date(2026, 9, 5, 23, 59, 0) });
+      const oldest = getRecentLocalDates(TOTAL_CELLS)[0];
+      mockUseHeatmapData.mockReturnValue({
+        data: { [oldest]: 2 },
+        isLoading: false,
+      });
+
+      const { getByLabelText } = render(<Heatmap userId="user-1" />);
+      expect(getByLabelText(summary(2, 1))).toBeTruthy();
+
+      act(() => jest.advanceTimersByTime(60_000));
+      expect(getByLabelText(summary(0, 0))).toBeTruthy();
     });
   });
 });
