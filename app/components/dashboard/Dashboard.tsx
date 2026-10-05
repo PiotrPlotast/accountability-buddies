@@ -11,6 +11,7 @@ import AddGoalInput from "./AddGoalInput";
 import GoalList from "./GoalList";
 import { Goal } from "@/types/dashboardTypes";
 import { filterGoalsForToday } from "@/lib/repeatDays";
+import { resolveViewedMemberId } from "@/lib/viewedMember";
 import HabitManagerModal from "./HabitsManagerModal";
 
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
@@ -27,13 +28,12 @@ export default function Dashboard() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(
     null,
   );
-  useEffect(() => {
-    if (members.length > 0 && !selectedTabId) {
-      setSelectedTabId(userId || members[0].user_id);
-    }
-  }, [members, userId, selectedTabId]);
-  const isViewingMe = selectedTabId === userId;
-  const currentMember = members.find((m) => m.user_id === selectedTabId);
+  // `selectedTabId` is only what was tapped; the tab on screen is resolved
+  // against the current members, so a buddy leaving the group drops the view
+  // back to you instead of pointing at nobody.
+  const viewedId = resolveViewedMemberId(members, selectedTabId, userId);
+  const isViewingMe = viewedId === userId;
+  const currentMember = members.find((m) => m.user_id === viewedId);
 
   const todayGoals = useMemo(
     () => filterGoalsForToday(currentMember?.goals ?? []),
@@ -86,7 +86,7 @@ export default function Dashboard() {
         />
         <MemberTabs
           members={members}
-          selectedTabId={selectedTabId || ""}
+          selectedTabId={viewedId || ""}
           onSelect={setSelectedTabId}
           userId={userId}
         />
@@ -95,7 +95,7 @@ export default function Dashboard() {
 
           {/* GoalList renders its own empty state — don't add a second one. */}
           <GoalList
-            selectedTabId={selectedTabId}
+            selectedTabId={viewedId}
             goals={todayGoals}
             onEdit={setEditingGoal}
             onDelete={setDeletingGoal}

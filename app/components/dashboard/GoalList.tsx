@@ -261,7 +261,7 @@ export default function GoalList({
   onEdit,
   onDelete,
 }: Props) {
-  const { members, loading, userId, activeGroupId } = useActiveGroup();
+  const { loading, userId, activeGroupId } = useActiveGroup();
   const { toggleGoal } = useDashboardActions(activeGroupId);
   const { accent } = useTheme();
 
@@ -290,13 +290,14 @@ export default function GoalList({
     return () => cancelAnimation(pulse);
   }, [reduceMotion, pulse]);
 
-  const currentMember = members.find((m) => m.user_id === selectedTabId);
   const isViewingMe = selectedTabId === userId;
-  const isLoading = loading || (members.length > 0 && !currentMember);
 
-  if (isLoading) {
+  // Only a real load. A selected member missing from a loaded list used to
+  // count too, and pinned the skeleton for good once that member left;
+  // Dashboard now resolves the tab against the current members instead.
+  if (loading) {
     return (
-      <View style={{ gap: 12 }}>
+      <View testID="goal-list-skeleton" style={{ gap: 12 }}>
         {[1, 2, 3].map((i) => (
           <View
             key={i}
