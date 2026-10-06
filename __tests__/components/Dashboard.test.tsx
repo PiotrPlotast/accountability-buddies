@@ -5,6 +5,7 @@ import Dashboard from "@/app/components/dashboard/Dashboard";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
+import * as haptics from "@/lib/haptics";
 
 import {
   buildFakeSupabase,
@@ -155,5 +156,71 @@ describe("Dashboard across midnight", () => {
 
     expect(queryByText("Mondays only")).toBeNull();
     expect(getByText("Every day")).toBeTruthy();
+  });
+});
+
+describe("Dashboard nudges", () => {
+  beforeEach(() => {
+    jest.spyOn(haptics, "celebrate").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it("offers no nudge on your own tab", () => {
+    const { queryByText } = renderDashboard();
+    expect(queryByText(/^Nudge /)).toBeNull();
+  });
+
+  it("shows a nudge button on a buddy's tab, where your add-habit button sits", () => {
+    const { getByLabelText, getByText, queryByText } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    expect(getByText("Nudge Buddy")).toBeTruthy();
+    expect(queryByText("Add a new habit")).toBeNull();
+  });
+
+  it("opens an empty nudge box from the button", () => {
+    const { getByLabelText, getByText, queryByLabelText } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    expect(queryByLabelText("Nudge message")).toBeNull();
+
+    fireEvent.press(getByText("Nudge Buddy"));
+    expect(getByLabelText("Nudge message").props.value).toBe("");
+  });
+
+  it("opens the box prefilled with the habit from a swipe", () => {
+    const { getByLabelText, UNSAFE_getByProps } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+
+    const swipeable = UNSAFE_getByProps({ friction: 2 });
+    const action = render(
+      swipeable.props.renderRightActions({ value: 0 }, { value: 0 }),
+    );
+    act(() => {
+      fireEvent.press(action.getByText("Nudge"));
+    });
+
+    expect(getByLabelText("Nudge message").props.value).toBe(
+      "Buddy, what about your buddy habit?",
+    );
+  });
+
+  it("confirms under the button after a send, for a few seconds", async () => {
+    jest.useFakeTimers();
+    const { getByLabelText, getByText, queryByText } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    fireEvent.press(getByText("Nudge Buddy"));
+
+    await act(async () => {
+      fireEvent.press(getByText("Send"));
+    });
+
+    await waitFor(() => expect(getByText("Nudge sent to Buddy")).toBeTruthy());
+
+    await act(async () => {
+      jest.advanceTimersByTime(3_000);
+    });
+    expect(queryByText("Nudge sent to Buddy")).toBeNull();
   });
 });

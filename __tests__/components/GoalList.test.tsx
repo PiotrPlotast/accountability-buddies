@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react-native";
+import React from "react";
+import { fireEvent, render } from "@testing-library/react-native";
 
 import GoalList from "@/app/components/dashboard/GoalList";
 import { getTodayLocalDate } from "@/lib/date";
@@ -67,5 +68,91 @@ describe("GoalList skeleton", () => {
     const { queryByTestId, getByText } = renderList("user-1", { seed: true });
     expect(queryByTestId("goal-list-skeleton")).toBeNull();
     expect(getByText(/No habits for today/)).toBeTruthy();
+  });
+});
+
+describe("GoalList swipe actions", () => {
+  const buddyGoal = {
+    id: "g-2",
+    title: "Run",
+    user_id: "user-2",
+    group_id: "group-1",
+    completed_today: false,
+    icon: null,
+    repeat_days: [],
+  };
+
+  function renderWithGoal(
+    selectedTabId: string,
+    handlers: { onNudge?: jest.Mock; onDelete?: jest.Mock },
+  ) {
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
+    queryClient.setQueryData(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      members,
+    );
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase(),
+      queryClient,
+    });
+    const utils = render(
+      <GoalList
+        selectedTabId={selectedTabId}
+        goals={[{ ...buddyGoal, user_id: selectedTabId }]}
+        onEdit={jest.fn()}
+        onDelete={handlers.onDelete ?? jest.fn()}
+        onNudge={handlers.onNudge}
+      />,
+      { wrapper: Wrapper },
+    );
+    const swipeable = utils.UNSAFE_getByProps({ friction: 2 });
+    return { ...utils, swipeable };
+  }
+
+  // The swipe reveals what the right-hand action renders; render it directly
+  // rather than simulating the gesture.
+  const renderAction = (fn: unknown, close: jest.Mock = jest.fn()) =>
+    render(
+      (fn as (p: unknown, d: unknown, m: unknown) => React.ReactElement)(
+        { value: 0 },
+        { value: 0 },
+        { close },
+      ),
+    );
+
+  it("offers a nudge for a buddy's habit, carrying that habit", () => {
+    const onNudge = jest.fn();
+    const { swipeable } = renderWithGoal("user-2", { onNudge });
+    expect(swipeable.props.renderLeftActions).toBeUndefined();
+
+    const action = renderAction(swipeable.props.renderRightActions);
+    fireEvent.press(action.getByText("Nudge"));
+    expect(onNudge).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "g-2", title: "Run" }),
+    );
+  });
+
+  // The row stays where it is under the nudge box, so it shouldn't sit there
+  // swiped open once the box closes.
+  it("closes the swiped row as it opens the nudge", () => {
+    const close = jest.fn();
+    const { swipeable } = renderWithGoal("user-2", { onNudge: jest.fn() });
+
+    const action = renderAction(swipeable.props.renderRightActions, close);
+    fireEvent.press(action.getByText("Nudge"));
+    expect(close).toHaveBeenCalled();
+  });
+
+  it("keeps delete, not nudge, on your own habits", () => {
+    const onNudge = jest.fn();
+    const onDelete = jest.fn();
+    const { swipeable } = renderWithGoal("user-1", { onNudge, onDelete });
+
+    const action = renderAction(swipeable.props.renderRightActions);
+    expect(action.queryByText("Nudge")).toBeNull();
+    fireEvent.press(action.getByText("Delete"));
+    expect(onDelete).toHaveBeenCalled();
+    expect(onNudge).not.toHaveBeenCalled();
   });
 });

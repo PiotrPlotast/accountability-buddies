@@ -56,12 +56,15 @@ interface FakeSupabaseOpts {
   userId?: string;
   fromImpl?: jest.Mock;
   rpcImpl?: jest.Mock;
+  // `supabase.functions.invoke` — the Edge Function calls (send-nudge).
+  functionsImpl?: jest.Mock;
 }
 
 export function buildFakeSupabase({
   userId = "user-1",
   fromImpl,
   rpcImpl,
+  functionsImpl,
 }: FakeSupabaseOpts = {}) {
   const subscription = { unsubscribe: jest.fn() };
   const session = userId
@@ -95,6 +98,16 @@ export function buildFakeSupabase({
     from: fromImpl ?? jest.fn(() => makeQueryBuilder({ error: null })),
     rpc:
       rpcImpl ?? jest.fn(() => makeQueryBuilder({ data: null, error: null })),
+    functions: {
+      invoke:
+        functionsImpl ??
+        jest.fn(() =>
+          Promise.resolve({
+            data: { success: true, message: "Nudge sent" },
+            error: null,
+          }),
+        ),
+    },
   };
   return supabase as unknown as SupabaseClient;
 }
