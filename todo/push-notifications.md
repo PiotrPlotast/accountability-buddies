@@ -327,7 +327,7 @@ Enqueued by DB triggers as pure SQL inserts (no `pg_net`), delivered by the same
 
 ## Phase 7 — Receipts and token hygiene
 
-The step everyone skips, and then sends vanish silently. A second cron job (every 30 min) POSTs stored `ticket_id`s to `https://exp.host/--/api/v2/push/getReceipts`, records errors on `notifications`, and **deletes `device_push_tokens` rows whose receipt returns `DeviceNotRegistered`** — the standard signal that an app was uninstalled. Without this, dead tokens accumulate forever and Expo eventually rate-limits you.
+The step everyone skips, and then sends vanish silently. A second cron job (every 30 min) POSTs the stored ticket ids — `push_tickets.ticket_id`, one row per device since E4 step 1 replaced `notifications.ticket_id` — to `https://exp.host/--/api/v2/push/getReceipts`, records errors on `notifications`, and **deletes `device_push_tokens` rows whose receipt returns `DeviceNotRegistered`** — the standard signal that an app was uninstalled. Without this, dead tokens accumulate forever and Expo eventually rate-limits you.
 
 Use the fictional-token harness to test this: it returns exactly `DeviceNotRegistered`, which is otherwise only reachable by uninstalling the app and waiting. **Distinguish it from `InvalidCredentials`**, which means the APNs key is misconfigured rather than a device going away — treating the two alike would delete every live token the first time a key expires. That is the failure mode this phase exists to prevent, so do not collapse the branches.
 

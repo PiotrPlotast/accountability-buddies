@@ -15,5 +15,8 @@
     "expo-env.d.ts",
     "nativewind-env.d.ts"
   ],
-  
+  // Edge Functions run on Deno (`npm:` imports, the `Deno` global, `.ts`
+  // import paths); `deno check` is their type-checker, not this one. Their
+  // plain helpers are still checked through the tests that import them.
+  "exclude": ["node_modules", "supabase/functions"]
 }

@@ -457,6 +457,8 @@ verification, rate limits of 3/day per person and 15/day in total, sanitization
 to 140 characters, `dedupe_key`), `hooks/useSendNudge.ts`, `NudgeButton` plus
 the swipe action plus `NudgeModal`, and routing from a notification tap.
 
+**Step 1 landed 2026-10-06 — server only.** `supabase/migrations/20261006120000_send_nudge.sql` (`enqueue_nudge`, `push_tickets`, `record_push_tickets`; `notifications.ticket_id` dropped in favour of a ticket per device) and `supabase/functions/send-nudge/`. Decisions taken: the rules live in SQL and are tested in `supabase/tests/send_nudge.sql`; the limits are a rolling 24 hours, not the calendar day; an empty message is allowed and gets a default line; quiet hours are ignored until E5; a recipient with no registered phone still counts as sent for the sender. Still to do: `useSendNudge` + `NudgeButton` + `NudgeModal` (step 2), and routing from a notification tap (step 3).
+
 This is the **core of the product** — the rest of push is scaffolding around it.
 If the time budget runs out, this is the stage that has to land, and E5 can
 wait.

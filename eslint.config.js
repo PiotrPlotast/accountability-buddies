@@ -14,4 +14,10 @@ module.exports = defineConfig([
     // `testPathIgnorePatterns` in package.json — keep the two lists in step.
     ignores: ["dist/*", ".claude/worktrees/**", "coverage/**"],
   },
+  {
+    // Edge Functions run on Deno, which resolves `npm:` specifiers and `.ts`
+    // paths that Node's resolver does not know. Everything else still applies.
+    files: ["supabase/functions/**"],
+    rules: { "import/no-unresolved": "off" },
+  },
 ]);
