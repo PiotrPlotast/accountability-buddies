@@ -13,8 +13,23 @@ import { Goal } from "@/types/dashboardTypes";
 import { filterGoalsForToday } from "@/lib/repeatDays";
 import { resolveViewedMemberId } from "@/lib/viewedMember";
 import HabitManagerModal from "./HabitsManagerModal";
+import NudgeButton from "./NudgeButton";
+import NudgeModal from "./NudgeModal";
+import { firstName, habitNudgeMessage } from "@/lib/nudge";
 
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
+
+// `key` remounts the modal for every nudge, so its message starts from this
+// prefill without an effect copying it into state.
+type NudgeTarget = {
+  userId: string;
+  name: string;
+  message: string;
+  key: number;
+};
+
+// How long "Nudge sent to …" stays under the button.
+const SENT_NOTICE_MS = 3000;
 
 export default function Dashboard() {
   const { userId, refreshing, members, fetchData } = useDashboardData();
@@ -34,6 +49,28 @@ export default function Dashboard() {
   const viewedId = resolveViewedMemberId(members, selectedTabId, userId);
   const isViewingMe = viewedId === userId;
   const currentMember = members.find((m) => m.user_id === viewedId);
+
+  const [nudgeTarget, setNudgeTarget] = useState<NudgeTarget | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const buddyName = firstName(currentMember?.full_name ?? "");
+
+  const openNudge = (message: string) => {
+    if (!viewedId || isViewingMe) return;
+    setNudgeTarget({
+      userId: viewedId,
+      name: buddyName,
+      message,
+      key: Date.now(),
+    });
+  };
+
+  // The confirmation clears itself; the timer is the only thing this effect
+  // does, so it sets no state synchronously.
+  useEffect(() => {
+    if (!sentTo) return;
+    const timer = setTimeout(() => setSentTo(null), SENT_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [sentTo]);
 
   const todayGoals = useMemo(
     () => filterGoalsForToday(currentMember?.goals ?? []),
@@ -91,7 +128,15 @@ export default function Dashboard() {
           userId={userId}
         />
         <View className="px-5 mt-3">
-          {isViewingMe && <AddGoalInput />}
+          {isViewingMe ? (
+            <AddGoalInput />
+          ) : (
+            <NudgeButton
+              name={buddyName}
+              onPress={() => openNudge("")}
+              sent={sentTo === viewedId}
+            />
+          )}
 
           {/* GoalList renders its own empty state — don't add a second one. */}
           <GoalList
@@ -99,6 +144,9 @@ export default function Dashboard() {
             goals={todayGoals}
             onEdit={setEditingGoal}
             onDelete={setDeletingGoal}
+            onNudge={(goal) =>
+              openNudge(habitNudgeMessage(buddyName, goal.title))
+            }
           />
         </View>
       </ScrollView>
@@ -113,6 +161,16 @@ export default function Dashboard() {
         isVisible={!!deletingGoal}
         onClose={() => setDeletingGoal(null)}
       />
+      {nudgeTarget ? (
+        <NudgeModal
+          key={nudgeTarget.key}
+          recipient={{ userId: nudgeTarget.userId, name: nudgeTarget.name }}
+          initialMessage={nudgeTarget.message}
+          isVisible
+          onClose={() => setNudgeTarget(null)}
+          onSent={() => setSentTo(nudgeTarget.userId)}
+        />
+      ) : null}
       <HabitManagerModal
         isVisible={isHabitManagerVisible}
         onClose={() => setIsHabitManagerVisible(false)}

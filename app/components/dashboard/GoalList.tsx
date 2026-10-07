@@ -49,6 +49,9 @@ type Props = {
   goals: Goal[];
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
+  // A buddy's tab only: the swipe that your own rows use for delete opens a
+  // nudge about that habit instead.
+  onNudge?: (goal: Goal) => void;
 };
 
 type ActionProps = {
@@ -71,6 +74,42 @@ function RightActionComponent({ drag, goal, onAction }: ActionProps) {
         <Text style={{ fontSize: 18 }}>🗑️</Text>
         <Text className="text-text font-mono-medium uppercase text-[10px] tracking-widest mt-1">
           Delete
+        </Text>
+      </Pressable>
+    </Reanimated.View>
+  );
+}
+
+// Same slot and motion as delete, on the rows where delete can't apply. The
+// accent rather than a warning colour: this is encouragement, not a hazard.
+function NudgeActionComponent({
+  drag,
+  goal,
+  onAction,
+  close,
+}: ActionProps & { close?: () => void }) {
+  const { accent } = useTheme();
+  const styleAnimation = useAnimatedStyle(() => ({
+    transform: [{ translateX: drag.value + ACTION_WIDTH + ACTION_GAP }],
+  }));
+  return (
+    <Reanimated.View style={styleAnimation}>
+      <Pressable
+        onPress={() => {
+          // The row stays under the nudge box; don't leave it swiped open.
+          close?.();
+          onAction(goal);
+        }}
+        style={{
+          width: ACTION_WIDTH,
+          marginLeft: ACTION_GAP,
+          backgroundColor: accent.hex,
+        }}
+        className="px-4 py-4 rounded-tile items-center justify-center"
+      >
+        <Text style={{ fontSize: 18 }}>👋</Text>
+        <Text className="text-bg font-mono-medium uppercase text-[10px] tracking-widest mt-1">
+          Nudge
         </Text>
       </Pressable>
     </Reanimated.View>
@@ -260,6 +299,7 @@ export default function GoalList({
   goals,
   onEdit,
   onDelete,
+  onNudge,
 }: Props) {
   const { loading, userId, activeGroupId } = useActiveGroup();
   const { toggleGoal } = useDashboardActions(activeGroupId);
@@ -352,7 +392,16 @@ export default function GoalList({
                         onAction={onDelete}
                       />
                     )
-                  : undefined
+                  : onNudge
+                    ? (prog, drag, methods) => (
+                        <NudgeActionComponent
+                          drag={drag}
+                          goal={goal}
+                          onAction={onNudge}
+                          close={methods?.close}
+                        />
+                      )
+                    : undefined
               }
               renderLeftActions={
                 isViewingMe
