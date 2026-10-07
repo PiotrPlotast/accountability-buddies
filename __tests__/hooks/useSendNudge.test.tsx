@@ -69,7 +69,7 @@ describe("useSendNudge", () => {
     const utils = await renderSendNudge(
       answer({
         success: false,
-        message: "You've already nudged Ada 3 times in the last 24 hours",
+        message: "You've already nudged Ada 10 times in the last 24 hours",
       }),
     );
 
@@ -80,13 +80,13 @@ describe("useSendNudge", () => {
           message: "",
         }),
       ).rejects.toThrow(
-        "You've already nudged Ada 3 times in the last 24 hours",
+        "You've already nudged Ada 10 times in the last 24 hours",
       );
     });
 
     expect(Alert.alert).toHaveBeenCalledWith(
       "Nudge not sent",
-      "You've already nudged Ada 3 times in the last 24 hours",
+      "You've already nudged Ada 10 times in the last 24 hours",
     );
     expect(errorHaptic).toHaveBeenCalledTimes(1);
     expect(celebrate).not.toHaveBeenCalled();

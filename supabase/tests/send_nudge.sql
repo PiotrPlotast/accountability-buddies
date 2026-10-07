@@ -157,25 +157,30 @@ begin
   end if;
 end $$;
 
--- 6. Three nudges per buddy in a rolling 24 hours; one from 25 hours ago is spent.
+-- 6. Ten nudges per buddy in a rolling 24 hours; one from 25 hours ago is spent.
+--    The refusal uses a second sender, so the 15-a-day total can't be what
+--    stops it.
 do $$
 declare g uuid := pg_temp.mk_group(); ada uuid := pg_temp.mk_user('Ada'); bo uuid := pg_temp.mk_user('Bo');
-        cy uuid := pg_temp.mk_user('Cy'); res json;
+        cy uuid := pg_temp.mk_user('Cy'); di uuid := pg_temp.mk_user('Di'); res json;
 begin
-  perform pg_temp.join(g, ada); perform pg_temp.join(g, bo); perform pg_temp.join(g, cy);
+  perform pg_temp.join(g, ada); perform pg_temp.join(g, bo);
+  perform pg_temp.join(g, cy); perform pg_temp.join(g, di);
   perform pg_temp.seed_nudge(ada, bo, 25);
-  perform pg_temp.seed_nudge(ada, bo, 23);
-  perform pg_temp.seed_nudge(ada, bo, 2);
+  for i in 1..9 loop
+    perform pg_temp.seed_nudge(ada, bo, i);
+  end loop;
   perform pg_temp.as_user(ada);
-  res := public.enqueue_nudge(bo, 'third');
+  res := public.enqueue_nudge(bo, 'tenth');
   if (res->>'success')::boolean is not true then
-    raise exception 'per buddy: the third in 24h should go through, got %', res;
+    raise exception 'per buddy: the tenth in 24h should go through, got %', res;
   end if;
-  perform pg_temp.seed_nudge(ada, cy, 1);
-  perform pg_temp.seed_nudge(ada, cy, 1);
-  perform pg_temp.seed_nudge(ada, cy, 1);
-  perform pg_temp.expect_fail(public.enqueue_nudge(cy, 'fourth'),
-    'You''ve already nudged Cy 3 times in the last 24 hours', 'per buddy limit');
+  for i in 1..10 loop
+    perform pg_temp.seed_nudge(di, cy, 1);
+  end loop;
+  perform pg_temp.as_user(di);
+  perform pg_temp.expect_fail(public.enqueue_nudge(cy, 'eleventh'),
+    'You''ve already nudged Cy 10 times in the last 24 hours', 'per buddy limit');
   if pg_temp.nudges_to(cy) is distinct from 0 then raise exception 'per buddy limit: a row was written'; end if;
 end $$;
 

@@ -453,7 +453,7 @@ Three emphases that follow from this roadmap:
 ## E4 — Nudges (~3 days, needs E3 — **E2 landed 2026-09-14**)
 
 Phase 4 from the push plan: the `send-nudge` Edge Function (shared-group
-verification, rate limits of 3/day per person and 15/day in total, sanitization
+verification, rate limits of 10/day per person (raised from 3 on 2026-10-07) and 15/day in total, sanitization
 to 140 characters, `dedupe_key`), `hooks/useSendNudge.ts`, `NudgeButton` plus
 the swipe action plus `NudgeModal`, and routing from a notification tap.
 
