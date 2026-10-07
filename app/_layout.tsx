@@ -17,6 +17,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 
 import { configureNotificationHandler } from "@/lib/push";
 import { asyncStoragePersister } from "@/lib/queryPersister";
+import { useForgetTapsWhileSignedOut } from "@/hooks/useNotificationTaps";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useTheme } from "@/hooks/useTheme";
 import { SupabaseProvider } from "@/providers/supabase-provider";
@@ -77,6 +78,7 @@ function RootNavigator() {
   // first painted frame is already the user's colour rather than the default.
   const { hydrated } = useTheme();
   const isAppReady = isLoaded && !isRestoring && hydrated;
+  useForgetTapsWhileSignedOut();
   useEffect(() => {
     if (isAppReady) {
       setTimeout(() => {

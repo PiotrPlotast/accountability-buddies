@@ -139,3 +139,54 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
     return { token: null, status: "error" };
   }
 }
+
+/**
+ * A tapped notification, cut down to what routing needs: the OS's id for it
+ * (so a tap is handled once) and the `data` the server attached.
+ */
+export interface NotificationTap {
+  id: string;
+  data: Record<string, unknown>;
+}
+
+function toTap(
+  response: Notifications.NotificationResponse | null | undefined,
+): NotificationTap | null {
+  const request = response?.notification?.request;
+  if (!request) return null;
+  return { id: request.identifier, data: request.content?.data ?? {} };
+}
+
+/**
+ * The tap that launched the app, if one did. It survives until it is cleared,
+ * across sign-in and a JS reload alike — which is why whoever handles it
+ * clears it straight after.
+ */
+export function getLastNotificationTap(): NotificationTap | null {
+  try {
+    return toTap(Notifications.getLastNotificationResponse());
+  } catch {
+    return null;
+  }
+}
+
+export function clearLastNotificationTap(): void {
+  try {
+    Notifications.clearLastNotificationResponse();
+  } catch {
+    // Nothing to clear is the same outcome as clearing it.
+  }
+}
+
+/** Taps made while the app is running, in the foreground or the background. */
+export function onNotificationTap(
+  listener: (tap: NotificationTap) => void,
+): () => void {
+  const subscription = Notifications.addNotificationResponseReceivedListener(
+    (response) => {
+      const tap = toTap(response);
+      if (tap) listener(tap);
+    },
+  );
+  return () => subscription.remove();
+}

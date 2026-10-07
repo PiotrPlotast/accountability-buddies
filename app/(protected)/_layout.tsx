@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useNameGate } from "@/hooks/useNameGate";
+import { useNotificationTaps } from "@/hooks/useNotificationTaps";
 import { usePushRegistration } from "@/hooks/usePushRegistration";
 import { themeColors } from "@/lib/colors";
 
@@ -17,6 +18,9 @@ export default function ProtectedLayout() {
   // same device twice. It runs for a nameless user too — the name gate below
   // swaps out the screens, not this layout.
   usePushRegistration();
+
+  // Likewise the one place a tapped notification is routed from.
+  useNotificationTaps();
 
   return (
     <GestureHandlerRootView

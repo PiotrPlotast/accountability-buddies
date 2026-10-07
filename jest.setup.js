@@ -167,6 +167,8 @@ jest.mock("expo-notifications", () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
+  getLastNotificationResponse: jest.fn(() => null),
+  clearLastNotificationResponse: jest.fn(),
   AndroidImportance: {
     UNKNOWN: 0,
     UNSPECIFIED: 1,
