@@ -254,7 +254,7 @@ Reuse `group-settings.tsx`'s header bar (`‹` back + centered title) and its `t
 **`supabase/functions/send-nudge/index.ts`** — verifies the JWT, then with the service role:
 1. sender and recipient share a group (`group_members`) — otherwise 403
 2. recipient's `nudges_enabled` is true
-3. rate limit from `notifications`: ≤ 10 per sender→recipient per rolling 24 hours (3 until 2026-10-07), ≤ 15 total per sender per day
+3. rate limit from `notifications`: ≤ 10 per sender→recipient per rolling 24 hours (3 until 2026-10-07) and at least 30 minutes apart, ≤ 15 total per sender per day
 4. sanitize the body — trim, collapse newlines, cap at **140 chars** server-side (the client cap is UX, not enforcement)
 5. insert into `notifications` with `dedupe_key = 'nudge:<sender>:<recipient>:<epoch-minute>'`, which also swallows double-taps
 6. POST to `https://exp.host/--/api/v2/push/send` (batches of 100, `Authorization: Bearer $EXPO_ACCESS_TOKEN`), record ticket ids, mark `sent`

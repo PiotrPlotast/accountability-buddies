@@ -51,6 +51,16 @@ create function pg_temp.seed_nudge(p_from uuid, p_to uuid, p_hours_ago int)
      now() - make_interval(hours => p_hours_ago))
 $$;
 
+-- The same, `p_minutes_ago` back, for the 30-minute wait between nudges.
+create function pg_temp.seed_nudge_minutes(p_from uuid, p_to uuid, p_minutes_ago int)
+  returns void language sql as $$
+  insert into public.notifications
+    (recipient_id, sender_id, type, title, body, dedupe_key, created_at)
+  values
+    (p_to, p_from, 'nudge', 't', 'b', 'seed:' || gen_random_uuid(),
+     now() - make_interval(mins => p_minutes_ago))
+$$;
+
 create function pg_temp.nudges_to(p_user uuid)
   returns int language sql as $$
   select count(*)::int from public.notifications
@@ -182,6 +192,32 @@ begin
   perform pg_temp.expect_fail(public.enqueue_nudge(cy, 'eleventh'),
     'You''ve already nudged Cy 10 times in the last 24 hours', 'per buddy limit');
   if pg_temp.nudges_to(cy) is distinct from 0 then raise exception 'per buddy limit: a row was written'; end if;
+end $$;
+
+-- 6b. Thirty minutes between nudges to the same buddy. The refusal says how
+--     long is left, rounded up; another buddy is not held up; and a nudge
+--     31 minutes ago no longer blocks.
+do $$
+declare g uuid := pg_temp.mk_group(); ada uuid := pg_temp.mk_user('Ada'); bo uuid := pg_temp.mk_user('Bo');
+        cy uuid := pg_temp.mk_user('Cy'); di uuid := pg_temp.mk_user('Di'); res json;
+begin
+  perform pg_temp.join(g, ada); perform pg_temp.join(g, bo);
+  perform pg_temp.join(g, cy); perform pg_temp.join(g, di);
+  perform pg_temp.seed_nudge_minutes(ada, bo, 25);
+  perform pg_temp.seed_nudge_minutes(ada, di, 29);
+  perform pg_temp.seed_nudge_minutes(ada, cy, 31);
+  perform pg_temp.as_user(ada);
+  perform pg_temp.expect_fail(public.enqueue_nudge(bo, 'again'),
+    'You can nudge Bo again in 5 minutes', 'cooldown');
+  perform pg_temp.expect_fail(public.enqueue_nudge(di, 'again'),
+    'You can nudge Di again in 1 minute', 'cooldown, singular');
+  if pg_temp.nudges_to(bo) + pg_temp.nudges_to(di) is distinct from 0 then
+    raise exception 'cooldown: a row was written';
+  end if;
+  res := public.enqueue_nudge(cy, 'after the wait');
+  if (res->>'success')::boolean is not true then
+    raise exception 'cooldown: 31 minutes later should go through, got %', res;
+  end if;
 end $$;
 
 -- 7. Fifteen nudges in total in a rolling 24 hours, whoever they went to.
