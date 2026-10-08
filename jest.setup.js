@@ -78,6 +78,43 @@ jest.mock("expo-clipboard", () => ({
   getStringAsync: jest.fn(() => Promise.resolve("")),
 }));
 
+// AsyncStorage's native module is null under Jest, and `IconPicker` reads this
+// phone's recent emoji from it on mount, so every screen that renders a habit
+// or group form needs it. The library's own in-memory mock.
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
+);
+
+// rn-emoji-keyboard — the real sheet is a long virtualised list in a Modal.
+// Tests only need its two outcomes, a choice and a dismissal, as two labelled
+// buttons while it is open. The real sheet calls `onClose` after
+// `onEmojiSelected`, so the stand-in does too.
+jest.mock("rn-emoji-keyboard", () => {
+  const { Pressable, View } = require("react-native");
+  const React = require("react");
+  return {
+    __esModule: true,
+    default: ({ open, onEmojiSelected, onClose }) =>
+      open
+        ? React.createElement(
+            View,
+            null,
+            React.createElement(Pressable, {
+              accessibilityLabel: "sheet: pick unicorn",
+              onPress: () => {
+                onEmojiSelected({ emoji: "🦄" });
+                onClose();
+              },
+            }),
+            React.createElement(Pressable, {
+              accessibilityLabel: "sheet: close",
+              onPress: onClose,
+            }),
+          )
+        : null,
+  };
+});
+
 // expo-crypto — deterministic, so a test can prove which of the two nonce
 // values reached which side of the handshake. The digest is a readable stand-in
 // for a real SHA-256, not a reimplementation: what matters is that it differs
