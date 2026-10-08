@@ -473,6 +473,8 @@ notification. The full version is separate scope — do not bolt it onto E4.
 
 ## E5 — Reminders and social events (~3–4 days, needs E3)
 
+**Reminders landed 2026-10-08** (Phase 5): `20261008140000_habit_reminders.sql` (`enqueue_due_reminders`, `is_quiet_time`, `dispatchable_notifications`, the 5-minute `dispatch-notifications` cron job), `supabase/functions/dispatch-notifications/`, `TimePicker` in both habit forms, the time in the habit manager, and quiet hours on the notification settings screen. Decisions: one optional time per habit, off by default; only if not yet ticked; a missed window is skipped, never sent late; quiet hours skip rather than delay; "Time for Run 🏃" / "You haven't ticked it off yet today." Social events (Phase 6) are the next PR.
+
 Phases 5 and 6 from the push plan: `goals.reminder_time` threaded through five
 files, `TimePicker`, a server-side `enqueue_due_reminders()` on `pg_cron`, the
 dispatcher, and triggers on `logs` and `group_members`.

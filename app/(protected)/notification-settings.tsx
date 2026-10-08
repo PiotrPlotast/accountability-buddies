@@ -11,12 +11,18 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ToggleRow from "@/app/components/settings/ToggleRow";
+import TimePicker from "@/app/components/habits/TimePicker";
 import { useNotificationPrefs } from "@/hooks/useNotificationPrefs";
 import { usePushPermission } from "@/hooks/usePushPermission";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useTheme } from "@/hooks/useTheme";
 import { themeColors } from "@/lib/colors";
 import { tapLight } from "@/lib/haptics";
+import {
+  DEFAULT_QUIET_END,
+  DEFAULT_QUIET_START,
+  toHHMM,
+} from "@/lib/reminderTime";
 import type { NotificationPrefs } from "@/hooks/useNotificationPrefs";
 
 /**
@@ -39,6 +45,20 @@ export default function NotificationSettingsScreen() {
     // Confirms the touch, not the write — the haptics rule about never
     // vibrating in response to server data.
     tapLight();
+    setPref(patch);
+  };
+
+  const quietStart = toHHMM(prefs?.quiet_start);
+  const quietEnd = toHHMM(prefs?.quiet_end);
+  const quietOn = !!quietStart && !!quietEnd;
+
+  // The table rejects equal start and end (empty or 24h, depending on who
+  // reads it), so the picker refuses that pick instead of letting the write
+  // fail into an Alert.
+  const changeQuiet = (patch: { quiet_start?: string; quiet_end?: string }) => {
+    const start = patch.quiet_start ?? quietStart;
+    const end = patch.quiet_end ?? quietEnd;
+    if (start === end) return;
     setPref(patch);
   };
 
@@ -137,6 +157,43 @@ export default function NotificationSettingsScreen() {
         <Text className="text-text-dim font-mono text-xs mt-2">
           Applies to every device you sign in on.
         </Text>
+
+        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
+          Quiet hours
+        </Text>
+        <View className="gap-3">
+          <ToggleRow
+            label="Quiet hours"
+            description="Reminders that fall in this window are skipped."
+            value={quietOn}
+            onValueChange={(on) =>
+              change(
+                on
+                  ? {
+                      quiet_start: DEFAULT_QUIET_START,
+                      quiet_end: DEFAULT_QUIET_END,
+                    }
+                  : { quiet_start: null, quiet_end: null },
+              )
+            }
+          />
+          {quietOn ? (
+            <>
+              <TimePicker
+                label="From"
+                value={quietStart}
+                onChange={(t) => t && changeQuiet({ quiet_start: t })}
+                allowOff={false}
+              />
+              <TimePicker
+                label="To"
+                value={quietEnd}
+                onChange={(t) => t && changeQuiet({ quiet_end: t })}
+                allowOff={false}
+              />
+            </>
+          ) : null}
+        </View>
 
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
           Feedback

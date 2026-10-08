@@ -418,3 +418,8 @@ enabled = true
 # and the function checks the secret itself.
 [functions.check-receipts]
 verify_jwt = false
+
+# Called every 5 minutes by the `dispatch-notifications` pg_cron job with the
+# same shared secret as check-receipts.
+[functions.dispatch-notifications]
+verify_jwt = false

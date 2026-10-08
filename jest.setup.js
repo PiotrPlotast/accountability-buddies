@@ -26,6 +26,15 @@ jest.mock("react-native-reanimated", () => ({
   },
 }));
 
+// The native time picker renders nothing under Jest; tests find it by type and
+// call its `onChange` the way the OS would.
+jest.mock("@react-native-community/datetimepicker", () => ({
+  __esModule: true,
+  default: function DateTimePicker() {
+    return null;
+  },
+}));
+
 // Replace useTheme with a static accent. The real ThemeProvider hydrates from
 // AsyncStorage on mount, which every themed component would otherwise have to
 // wait on; tests care about behaviour, not which accent is selected.

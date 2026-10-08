@@ -200,4 +200,110 @@ describe("useDashboardActions", () => {
       repeat_days: [0, 1, 2, 3, 4, 5, 6],
     });
   });
+
+  describe("reminder time", () => {
+    function setup(goals: Goal[] = [{ ...goal }]) {
+      const qb = makeQueryBuilder({
+        data: { ...goal, id: "real-id" },
+        error: null,
+      });
+      const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
+      const queryClient = makeQueryClient();
+      seed(queryClient, [{ user_id: "user-1", full_name: "Me", goals }]);
+      const { Wrapper } = buildWrapper({ supabase, queryClient });
+      const cached = () =>
+        queryClient.getQueryData<Member[]>(
+          queryKeys.groupMembers("group-1", getTodayLocalDate()),
+        )?.[0].goals;
+      return { qb, Wrapper, cached };
+    }
+
+    it("addGoal saves the reminder time and shows it on the optimistic row", async () => {
+      const { qb, Wrapper, cached } = setup([]);
+      // Hold the insert so the optimistic row is what the cache shows.
+      qb.single.mockReturnValueOnce(new Promise(() => {}));
+      const utils = await renderHookWithSession(
+        () => useDashboardActions("group-1"),
+        Wrapper,
+      );
+
+      act(() => {
+        void utils.result.current.value.addGoal("Run", {
+          reminderTime: "08:30",
+        });
+      });
+
+      await waitFor(() =>
+        expect(qb.insert).toHaveBeenCalledWith(
+          expect.objectContaining({ reminder_time: "08:30" }),
+        ),
+      );
+      expect(cached()?.[0].reminder_time).toBe("08:30");
+    });
+
+    it("addGoal without a reminder leaves the column out", async () => {
+      const { qb, Wrapper } = setup([]);
+      const utils = await renderHookWithSession(
+        () => useDashboardActions("group-1"),
+        Wrapper,
+      );
+
+      await act(async () => {
+        await utils.result.current.value.addGoal("Run");
+      });
+
+      expect(qb.insert.mock.calls[0][0]).not.toHaveProperty("reminder_time");
+    });
+
+    it("editGoal sets and clears the reminder time", async () => {
+      const { qb, Wrapper, cached } = setup([
+        { ...goal, reminder_time: "07:00" },
+      ]);
+      const utils = await renderHookWithSession(
+        () => useDashboardActions("group-1"),
+        Wrapper,
+      );
+
+      await act(async () => {
+        await utils.result.current.value.editGoal("g-1", {
+          title: "Run",
+          reminderTime: "08:15",
+        });
+      });
+      expect(qb.update).toHaveBeenLastCalledWith({
+        title: "Run",
+        reminder_time: "08:15",
+      });
+      await waitFor(() => expect(cached()?.[0].reminder_time).toBe("08:15"));
+
+      await act(async () => {
+        await utils.result.current.value.editGoal("g-1", {
+          title: "Run",
+          reminderTime: null,
+        });
+      });
+      expect(qb.update).toHaveBeenLastCalledWith({
+        title: "Run",
+        reminder_time: null,
+      });
+      await waitFor(() => expect(cached()?.[0].reminder_time).toBeNull());
+    });
+
+    it("editGoal leaves the reminder alone when it isn't passed", async () => {
+      const { qb, Wrapper, cached } = setup([
+        { ...goal, reminder_time: "07:00" },
+      ]);
+      const utils = await renderHookWithSession(
+        () => useDashboardActions("group-1"),
+        Wrapper,
+      );
+
+      await act(async () => {
+        await utils.result.current.value.editGoal("g-1", { title: "Walk" });
+      });
+
+      expect(qb.update).toHaveBeenCalledWith({ title: "Walk" });
+      expect(cached()?.[0].reminder_time).toBe("07:00");
+    });
+  });
 });
