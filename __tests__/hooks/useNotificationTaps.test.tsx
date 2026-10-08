@@ -30,7 +30,6 @@ jest.mock("@/lib/push", () => ({
 jest.mock("@/hooks/useNameGate", () => ({ useNameGate: jest.fn() }));
 jest.mock("@/hooks/useActiveGroup", () => ({ useActiveGroup: jest.fn() }));
 
-/* eslint-disable @typescript-eslint/no-require-imports */
 const push = require("@/lib/push") as {
   getLastNotificationTap: jest.Mock;
   clearLastNotificationTap: jest.Mock;
@@ -45,7 +44,6 @@ const { useActiveGroup } = require("@/hooks/useActiveGroup") as {
 const { __router: router } = require("expo-router") as {
   __router: { navigate: jest.Mock };
 };
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 // Every test gets its own ids: which taps were handled is module state, kept
 // for the life of the JS runtime on purpose.
@@ -238,7 +236,17 @@ describe("useNotificationTaps", () => {
     expect(from).toHaveBeenCalledWith("notifications");
   });
 
-  it("just opens the app for a notification that isn't a nudge", () => {
+  it("opens your own tab for a habit reminder, like a nudge", () => {
+    push.getLastNotificationTap.mockReturnValue(
+      nudgeTap({ type: "reminder", goal_id: "goal-1", group_id: "group-1" }),
+    );
+    renderWith(<Taps />);
+
+    expect(router.navigate).toHaveBeenCalledWith("/");
+    expect(showMyTab).toHaveBeenCalledTimes(1);
+  });
+
+  it("just opens the app for a notification that isn't a nudge or a reminder", () => {
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "buddy_done" }),
     );

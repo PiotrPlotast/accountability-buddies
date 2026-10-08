@@ -12,12 +12,15 @@ import {
   onNotificationTap,
 } from "@/lib/push";
 
+// Both ask you to do your habits, which only your own tab can.
+const OWN_TAB_TYPES = new Set<unknown>(["nudge", "reminder"]);
+
 /**
  * Routes a tapped notification. Mounted once, in `app/(protected)/_layout.tsx`,
  * so it only ever runs signed in.
  *
- * A nudge opens the dashboard on your own tab: it asks you to do your habits,
- * and the sender and their message are already on the notification. Every tap
+ * A nudge or a habit reminder opens the dashboard on your own tab: both ask
+ * you to do your habits, and what they say is already on the notification. Every tap
  * marks its row read. A user still owed a name or a group stays where the
  * gates put them — finishing either lands on the dashboard anyway. Any other
  * type just opens the app.
@@ -54,7 +57,7 @@ export function useNotificationTaps(): void {
         );
     }
 
-    if (tap.data.type !== "nudge" || needsName || hasNoGroup) return;
+    if (!OWN_TAB_TYPES.has(tap.data.type) || needsName || hasNoGroup) return;
     router.navigate("/");
     emitShowMyTab();
   }, [tap, isResolved, needsName, groupLoading, hasNoGroup, router, supabase]);
