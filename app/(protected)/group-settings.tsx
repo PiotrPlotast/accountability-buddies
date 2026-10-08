@@ -16,7 +16,7 @@ import * as Clipboard from "expo-clipboard";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useUpdateGroup } from "@/hooks/useUpdateGroup";
 import { useTheme } from "@/hooks/useTheme";
-import { GROUP_ICON_CHOICES } from "@/lib/habitIcons";
+import IconPicker from "@/app/components/habits/IconPicker";
 import { themeColors } from "@/lib/colors";
 
 export default function GroupSettingsScreen() {
@@ -121,23 +121,7 @@ export default function GroupSettingsScreen() {
             Pick an emoji that represents your crew.
           </Text>
         </View>
-        <View className="flex-row flex-wrap gap-3">
-          {GROUP_ICON_CHOICES.map((emoji) => {
-            const selected = icon === emoji;
-            return (
-              <Pressable
-                key={emoji}
-                onPress={() => setIcon(emoji)}
-                className={`w-14 h-14 rounded-tile items-center justify-center ${
-                  selected ? "" : "bg-surface border border-border"
-                }`}
-                style={selected ? { backgroundColor: accent.hex } : undefined}
-              >
-                <Text style={{ fontSize: 24 }}>{emoji}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <IconPicker kind="group" value={icon} onChange={setIcon} />
 
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
           Invite code

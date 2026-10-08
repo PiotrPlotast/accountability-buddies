@@ -1,8 +1,43 @@
-import { render, fireEvent } from "@testing-library/react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  render,
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react-native";
 
 import * as haptics from "@/lib/haptics";
 import DayPicker from "@/app/components/habits/DayPicker";
 import IconPicker from "@/app/components/habits/IconPicker";
+import { GROUP_ICON_CHOICES, ICON_CHOICES } from "@/lib/habitIcons";
+
+// AsyncStorage and the emoji sheet are mocked in jest.setup.js; the sheet is
+// two buttons, "sheet: pick unicorn" (🦄) and "sheet: close".
+const getItem = AsyncStorage.getItem as jest.Mock;
+const setItem = AsyncStorage.setItem as jest.Mock;
+
+beforeEach(() => {
+  getItem.mockClear();
+  getItem.mockResolvedValue(null);
+  setItem.mockClear();
+  setItem.mockResolvedValue(undefined);
+});
+
+// The stored row loads after mount; settle it so it lands inside act().
+async function renderPicker(ui: React.ReactElement) {
+  const result = render(ui);
+  await act(async () => {});
+  return result;
+}
+
+// The order the icon tiles are drawn in, "+" excluded.
+function tileOrder() {
+  return screen
+    .getAllByRole("button")
+    .map((b) => b.props.accessibilityLabel as string)
+    .filter((l) => l !== "More emoji" && !l.startsWith("sheet:"));
+}
 
 // NativeWind is disabled under Jest (see babel.config.js), so `className`
 // arrives as a plain string prop. That makes it the only way to assert an
@@ -19,8 +54,8 @@ describe("habit pickers", () => {
     expect(unselected).toContain("border-border");
   });
 
-  it("gives unselected icons a background and border", () => {
-    const { getByLabelText } = render(
+  it("gives unselected icons a background and border", async () => {
+    const { getByLabelText } = await renderPicker(
       <IconPicker value="🧘" onChange={() => {}} />,
     );
     const unselected = getByLabelText("📚").props.className;
@@ -107,11 +142,108 @@ describe("habit picker haptics", () => {
     expect(tap).not.toHaveBeenCalled();
   });
 
-  it("taps when an icon is picked", () => {
-    const { getByLabelText } = render(
+  it("taps when an icon is picked", async () => {
+    const { getByLabelText } = await renderPicker(
       <IconPicker value="🧘" onChange={() => {}} />,
     );
     fireEvent.press(getByLabelText("📚"));
     expect(tap).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("icon picker: any emoji", () => {
+  it("shows the eight default habit icons and a more-emoji tile", async () => {
+    await renderPicker(<IconPicker value="🧘" onChange={() => {}} />);
+    expect(tileOrder()).toEqual(ICON_CHOICES);
+    expect(screen.getByLabelText("More emoji")).toBeTruthy();
+  });
+
+  it("selects an emoji from the full picker", async () => {
+    const onChange = jest.fn();
+    await renderPicker(<IconPicker value="🧘" onChange={onChange} />);
+
+    fireEvent.press(screen.getByLabelText("More emoji"));
+    fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
+
+    expect(onChange).toHaveBeenCalledWith("🦄");
+    expect(screen.queryByLabelText("sheet: close")).toBeNull();
+  });
+
+  it("puts a picked emoji at the front of the row, dropping the oldest", async () => {
+    const { rerender } = await renderPicker(
+      <IconPicker value="🧘" onChange={() => {}} />,
+    );
+
+    fireEvent.press(screen.getByLabelText("More emoji"));
+    fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
+    rerender(<IconPicker value="🦄" onChange={() => {}} />);
+
+    const expected = ["🦄", ...ICON_CHOICES.slice(0, -1)];
+    expect(tileOrder()).toEqual(expected);
+    expect(screen.getByLabelText("🦄").props.accessibilityState).toEqual({
+      selected: true,
+    });
+    await waitFor(() =>
+      expect(JSON.parse(setItem.mock.calls.at(-1)[1])).toEqual(expected),
+    );
+  });
+
+  it("changes nothing when the picker is closed without a choice", async () => {
+    const onChange = jest.fn();
+    await renderPicker(<IconPicker value="🧘" onChange={onChange} />);
+
+    fireEvent.press(screen.getByLabelText("More emoji"));
+    fireEvent.press(screen.getByLabelText("sheet: close"));
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("sheet: close")).toBeNull();
+    expect(tileOrder()).toEqual(ICON_CHOICES);
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("shows the recents this phone stored", async () => {
+    const stored = ["🦄", "🐙", "🧘"];
+    getItem.mockResolvedValue(JSON.stringify(stored));
+    await renderPicker(<IconPicker value="🧘" onChange={() => {}} />);
+
+    await waitFor(() => expect(tileOrder()).toEqual(stored));
+  });
+
+  // Edited on another phone, or dropped off this one's recents: the habit's
+  // current icon still has to be visible and selected.
+  it("shows a selected icon that isn't in the row at the front", async () => {
+    await renderPicker(<IconPicker value="🐙" onChange={() => {}} />);
+
+    expect(tileOrder()).toEqual(["🐙", ...ICON_CHOICES]);
+    expect(screen.getByLabelText("🐙").props.accessibilityState).toEqual({
+      selected: true,
+    });
+  });
+
+  it("selects a quick pick without reordering the row or saving", async () => {
+    const onChange = jest.fn();
+    await renderPicker(<IconPicker value="🧘" onChange={onChange} />);
+
+    fireEvent.press(screen.getByLabelText("💤"));
+
+    expect(onChange).toHaveBeenCalledWith("💤");
+    expect(tileOrder()).toEqual(ICON_CHOICES);
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("uses the group set, under its own key, for group icons", async () => {
+    await renderPicker(
+      <IconPicker kind="group" value="👥" onChange={() => {}} />,
+    );
+    expect(tileOrder()).toEqual(GROUP_ICON_CHOICES);
+
+    fireEvent.press(screen.getByLabelText("More emoji"));
+    fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
+
+    await waitFor(() => expect(setItem).toHaveBeenCalled());
+    await renderPicker(<IconPicker value="🧘" onChange={() => {}} />);
+    const keys = getItem.mock.calls.map((c) => c[0]);
+    expect(new Set(keys).size).toBe(2);
+    expect(setItem.mock.calls[0][0]).toBe(keys[0]);
   });
 });
