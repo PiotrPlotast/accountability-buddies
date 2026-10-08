@@ -154,4 +154,54 @@ describe("EditGoalModal", () => {
     expect(getByDisplayValue("Run")).toBeTruthy();
     expect(getByLabelText("Tue").props.accessibilityState.selected).toBe(false);
   });
+
+  describe("reminder", () => {
+    it("shows the habit's reminder as on", () => {
+      const { getByLabelText } = setup({ ...goal, reminder_time: "08:30" });
+      expect(getByLabelText("Reminder").props.value).toBe(true);
+    });
+
+    it("shows a habit without one as off", () => {
+      const { getByLabelText } = setup();
+      expect(getByLabelText("Reminder").props.value).toBe(false);
+    });
+
+    it("saves a newly switched-on reminder", async () => {
+      const { getByLabelText, getByText, updateQB } = setup();
+
+      fireEvent(getByLabelText("Reminder"), "valueChange", true);
+      fireEvent.press(getByText("Save"));
+
+      await waitFor(() =>
+        expect(updateQB.update).toHaveBeenCalledWith(
+          expect.objectContaining({ reminder_time: "09:00" }),
+        ),
+      );
+    });
+
+    it("saves a switched-off reminder as null", async () => {
+      const { getByLabelText, getByText, updateQB } = setup({
+        ...goal,
+        reminder_time: "08:30",
+      });
+
+      fireEvent(getByLabelText("Reminder"), "valueChange", false);
+      fireEvent.press(getByText("Save"));
+
+      await waitFor(() =>
+        expect(updateQB.update).toHaveBeenCalledWith(
+          expect.objectContaining({ reminder_time: null }),
+        ),
+      );
+    });
+
+    it("counts a reminder change as unsaved, so a backdrop tap won't drop it", () => {
+      const { getByLabelText, queryByLabelText } = setup();
+      expect(queryByLabelText("Close")).toBeTruthy();
+
+      fireEvent(getByLabelText("Reminder"), "valueChange", true);
+
+      expect(queryByLabelText("Close")).toBeNull();
+    });
+  });
 });

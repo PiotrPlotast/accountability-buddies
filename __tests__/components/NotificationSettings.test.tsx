@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor } from "@testing-library/react-native";
 
 import NotificationSettingsScreen from "@/app/(protected)/notification-settings";
 import { queryKeys } from "@/lib/queryKeys";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import {
   buildFakeSupabase,
@@ -50,12 +51,13 @@ function setup(
     granted: true,
     canAskAgain: false,
   },
+  stored: typeof STORED | Record<string, unknown> = STORED,
 ) {
   usePushPermission.mockReturnValue(permission);
-  const qb = makeQueryBuilder({ data: STORED, error: null });
+  const qb = makeQueryBuilder({ data: stored, error: null });
   const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
   const queryClient = makeQueryClient();
-  queryClient.setQueryData(queryKeys.notificationPrefs("user-1"), STORED);
+  queryClient.setQueryData(queryKeys.notificationPrefs("user-1"), stored);
   const { Wrapper } = buildWrapper({ supabase, queryClient });
   return { qb, supabase, Wrapper };
 }
@@ -219,5 +221,75 @@ describe("Notification settings — feedback and account", () => {
     pressAlertButton("Cancel");
 
     expect(supabase.auth.signOut).not.toHaveBeenCalled();
+  });
+});
+
+describe("Notification settings — quiet hours", () => {
+  const at = (h: number, m: number) => new Date(2026, 9, 8, h, m);
+  const QUIET = { ...STORED, quiet_start: "22:00:00", quiet_end: "07:00:00" };
+  const renderScreen = (stored: Record<string, unknown> = STORED) => {
+    const { qb, Wrapper } = setup(undefined, stored);
+    return {
+      qb,
+      ...render(<NotificationSettingsScreen />, { wrapper: Wrapper }),
+    };
+  };
+
+  it("is off, with no times, when none are stored", () => {
+    const { getByLabelText, queryByText } = renderScreen();
+    expect(getByLabelText("Quiet hours").props.value).toBe(false);
+    expect(queryByText("From")).toBeNull();
+  });
+
+  it("switching it on stores 22:00 to 07:00", async () => {
+    const { getByLabelText, qb } = renderScreen();
+
+    fireEvent(getByLabelText("Quiet hours"), "valueChange", true);
+
+    await waitFor(() =>
+      expect(qb.update).toHaveBeenCalledWith({
+        quiet_start: "22:00",
+        quiet_end: "07:00",
+      }),
+    );
+  });
+
+  it("switching it off clears both times", async () => {
+    const { getByLabelText, qb } = renderScreen(QUIET);
+    expect(getByLabelText("Quiet hours").props.value).toBe(true);
+
+    fireEvent(getByLabelText("Quiet hours"), "valueChange", false);
+
+    await waitFor(() =>
+      expect(qb.update).toHaveBeenCalledWith({
+        quiet_start: null,
+        quiet_end: null,
+      }),
+    );
+  });
+
+  it("writes a new start or end time", async () => {
+    const { getByText, UNSAFE_getAllByType, qb } = renderScreen(QUIET);
+    expect(getByText("From")).toBeTruthy();
+    const [from, to] = UNSAFE_getAllByType(DateTimePicker);
+
+    from.props.onChange({ type: "set" }, at(21, 30));
+    await waitFor(() =>
+      expect(qb.update).toHaveBeenCalledWith({ quiet_start: "21:30" }),
+    );
+
+    to.props.onChange({ type: "set" }, at(6, 0));
+    await waitFor(() =>
+      expect(qb.update).toHaveBeenCalledWith({ quiet_end: "06:00" }),
+    );
+  });
+
+  it("refuses a start equal to the end, which the database rejects", () => {
+    const { UNSAFE_getAllByType, qb } = renderScreen(QUIET);
+    const [from] = UNSAFE_getAllByType(DateTimePicker);
+
+    from.props.onChange({ type: "set" }, at(7, 0));
+
+    expect(qb.update).not.toHaveBeenCalled();
   });
 });

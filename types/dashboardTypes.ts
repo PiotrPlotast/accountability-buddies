@@ -10,6 +10,9 @@ export type Goal = {
   group_id: string;
   icon: string | null;
   repeat_days: number[];
+  // `"HH:MM"` in the owner's timezone, or null for no reminder. Optional so
+  // cached entries written before reminders existed still parse.
+  reminder_time?: string | null;
 };
 
 // Raw Supabase row from `goals` query with nested `logs` relation
@@ -20,6 +23,8 @@ export type GoalRow = {
   group_id: string;
   icon: string | null;
   repeat_days: number[];
+  // `"HH:MM:SS"` as Postgres returns a `time`.
+  reminder_time?: string | null;
   logs: { id: string; date: string }[];
 };
 
