@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { View, Text, Pressable, type ViewStyle } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
@@ -341,6 +341,15 @@ function GoalListContent({
 
   const isViewingMe = selectedTabId === userId;
 
+  // A swipe begins as a touch on the row, and the row's press still fires when
+  // the finger lifts, so swiping to edit or delete also ticked the habit. A
+  // drag that starts during the touch marks it; the next touch clears the mark.
+  // One flag for the list is enough: only one row is under the finger at a time.
+  const swipedDuringTouch = useRef(false);
+  const markSwiped = () => {
+    swipedDuringTouch.current = true;
+  };
+
   // Only a real load. A selected member missing from a loaded list used to
   // count too, and pinned the skeleton for good once that member left;
   // Dashboard now resolves the tab against the current members instead.
@@ -420,13 +429,21 @@ function GoalListContent({
                     )
                   : undefined
               }
+              onSwipeableOpenStartDrag={markSwiped}
+              onSwipeableCloseStartDrag={markSwiped}
               overshootRight={false}
               overshootLeft={false}
               friction={2}
             >
               <Pressable
                 disabled={!isViewingMe}
-                onPress={() => toggleGoal(goal)}
+                onPressIn={() => {
+                  swipedDuringTouch.current = false;
+                }}
+                onPress={() => {
+                  if (swipedDuringTouch.current) return;
+                  toggleGoal(goal);
+                }}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: done, disabled: !isViewingMe }}
                 accessibilityLabel={goal.title}
