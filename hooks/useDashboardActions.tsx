@@ -16,7 +16,11 @@ export function useDashboardActions(activeGroupId: string | null) {
 
   const addGoal = async (
     title: string,
-    opts?: { icon?: string | null; repeatDays?: number[] },
+    opts?: {
+      icon?: string | null;
+      repeatDays?: number[];
+      reminderTime?: string | null;
+    },
   ) => {
     if (!activeGroupId) return;
     await addMutation.mutateAsync({
@@ -24,6 +28,7 @@ export function useDashboardActions(activeGroupId: string | null) {
       groupId: activeGroupId,
       icon: opts?.icon ?? null,
       repeatDays: opts?.repeatDays,
+      reminderTime: opts?.reminderTime,
     });
   };
 
@@ -34,7 +39,12 @@ export function useDashboardActions(activeGroupId: string | null) {
 
   const editGoal = async (
     goalId: string,
-    updates: { title: string; icon?: string | null; repeatDays?: number[] },
+    updates: {
+      title: string;
+      icon?: string | null;
+      repeatDays?: number[];
+      reminderTime?: string | null;
+    },
   ) => {
     if (!activeGroupId) return;
     await editMutation.mutateAsync({
@@ -43,6 +53,7 @@ export function useDashboardActions(activeGroupId: string | null) {
       groupId: activeGroupId,
       icon: updates.icon,
       repeatDays: updates.repeatDays,
+      reminderTime: updates.reminderTime,
     });
   };
 

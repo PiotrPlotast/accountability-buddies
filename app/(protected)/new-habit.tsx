@@ -17,6 +17,8 @@ import { DEFAULT_ICON } from "@/lib/habitIcons";
 import { themeColors } from "@/lib/colors";
 import IconPicker from "@/app/components/habits/IconPicker";
 import DayPicker from "@/app/components/habits/DayPicker";
+import TimePicker from "@/app/components/habits/TimePicker";
+import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
 
 export default function NewHabitScreen() {
   const insets = useSafeAreaInsets();
@@ -28,6 +30,7 @@ export default function NewHabitScreen() {
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState<string | null>(DEFAULT_ICON);
   const [repeatDays, setRepeatDays] = useState<number[]>([0, 1, 2, 3, 4]);
+  const [reminderTime, setReminderTime] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const canSave = title.trim().length > 0 && !submitting;
@@ -36,7 +39,7 @@ export default function NewHabitScreen() {
     if (!canSave) return;
     setSubmitting(true);
     try {
-      await addGoal(title, { icon, repeatDays });
+      await addGoal(title, { icon, repeatDays, reminderTime });
       router.back();
     } catch {
       // useOptimisticGoalMutation already surfaced an Alert and rolled the
@@ -88,6 +91,19 @@ export default function NewHabitScreen() {
           Repeat
         </Text>
         <DayPicker value={repeatDays} onChange={setRepeatDays} />
+
+        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
+          Remind me
+        </Text>
+        <TimePicker
+          label="Reminder"
+          value={reminderTime}
+          onChange={setReminderTime}
+          defaultTime={DEFAULT_REMINDER_TIME}
+        />
+        <Text className="text-text-dim font-mono text-xs mt-2">
+          Only if you haven&apos;t ticked it off yet.
+        </Text>
       </ScrollView>
 
       <View

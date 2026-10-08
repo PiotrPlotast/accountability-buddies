@@ -1,6 +1,7 @@
 import { render, fireEvent } from "@testing-library/react-native";
 
 import HabitManagerModal from "@/app/components/dashboard/HabitsManagerModal";
+import { formatReminderTime } from "@/lib/reminderTime";
 import { Goal } from "@/types/dashboardTypes";
 
 import { buildWrapper } from "../test-utils/render";
@@ -67,6 +68,15 @@ describe("HabitManagerModal", () => {
   it("renders the habit's repeat days on the stored Monday=0 scale", () => {
     const { getByText } = renderModal();
     expect(getByText("Mon, Wed, Fri")).toBeTruthy();
+  });
+
+  it("adds the reminder time after the repeat days", () => {
+    const { getByText } = renderModal({
+      goals: [{ ...goal, reminder_time: "08:00" }],
+    });
+    expect(
+      getByText(`Mon, Wed, Fri · ${formatReminderTime("08:00")}`),
+    ).toBeTruthy();
   });
 
   it("hides the edit and delete actions when viewing someone else", () => {

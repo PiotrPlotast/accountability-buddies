@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { View, ScrollView, RefreshControl, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -16,6 +16,7 @@ import HabitManagerModal from "./HabitsManagerModal";
 import NudgeButton from "./NudgeButton";
 import NudgeModal from "./NudgeModal";
 import { firstName, habitNudgeMessage } from "@/lib/nudge";
+import { onShowMyTab } from "@/lib/notificationTaps";
 
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
 
@@ -46,6 +47,8 @@ export default function Dashboard() {
   // `selectedTabId` is only what was tapped; the tab on screen is resolved
   // against the current members, so a buddy leaving the group drops the view
   // back to you instead of pointing at nobody.
+  // A tapped nudge brings you back to your own tab (`useNotificationTaps`).
+  useEffect(() => onShowMyTab(() => setSelectedTabId(null)), []);
   const viewedId = resolveViewedMemberId(members, selectedTabId, userId);
   const isViewingMe = viewedId === userId;
   const currentMember = members.find((m) => m.user_id === viewedId);
@@ -81,24 +84,24 @@ export default function Dashboard() {
   // while it is still dismissing drops the new modal on iOS, so a request from
   // the manager is queued, the sheet is closed, and the queued modal opens once
   // the sheet is actually gone.
-  const requestFromManager = (type: PendingAction["type"], goal: Goal) => {
-    setPendingAction({ type, goal });
-    setIsHabitManagerVisible(false);
+  const openAction = ({ type, goal }: PendingAction) => {
+    if (type === "edit") setEditingGoal(goal);
+    else setDeletingGoal(goal);
   };
 
-  const openPendingAction = useCallback(() => {
-    if (!pendingAction) return;
-    if (pendingAction.type === "edit") setEditingGoal(pendingAction.goal);
-    else setDeletingGoal(pendingAction.goal);
-    setPendingAction(null);
-  }, [pendingAction]);
-
   // `Modal.onDismiss` is iOS-only. Elsewhere the sheet is gone as soon as it
-  // stops rendering, so flush as soon as visibility flips off.
-  useEffect(() => {
-    if (Platform.OS === "ios") return;
-    if (!isHabitManagerVisible && pendingAction) openPendingAction();
-  }, [isHabitManagerVisible, pendingAction, openPendingAction]);
+  // stops rendering, so the request opens in the same update that closes it.
+  const requestFromManager = (type: PendingAction["type"], goal: Goal) => {
+    setIsHabitManagerVisible(false);
+    if (Platform.OS === "ios") setPendingAction({ type, goal });
+    else openAction({ type, goal });
+  };
+
+  const openPendingAction = () => {
+    if (!pendingAction) return;
+    openAction(pendingAction);
+    setPendingAction(null);
+  };
 
   if (!userId) return <View className="flex-1 bg-bg" />;
 

@@ -429,7 +429,7 @@ Where it stands on 2026-09-17, on `feature/push-infrastructure`:
 | 2 — schema | **done**, `20260916120000_notifications.sql`, pushed live |
 | 3a — token registration | **done 2026-09-20.** `lib/push.ts`, `lib/deviceId.ts`, `usePushRegistration` mounted once in `(protected)/_layout.tsx`, the foreground handler in `app/_layout.tsx`, and the sign-out token delete in the Supabase provider. Suite 38 → 41 suites, 243 → 273 tests |
 | 3b — notification settings screen | **done 2026-09-20.** `useNotificationPrefs` (update, never upsert), `usePushPermission` (re-reads on foreground, registers on the transition into granted), `ToggleRow`, `GearIcon`, `(protected)/notification-settings.tsx`; the haptics switch and sign-out moved off `Profile.tsx`, whose header is now a gear. `notification_prefs.timezone` is written once per launch from `usePushRegistration`. Quiet hours deferred to E5. Suite 41 → 45 suites, 273 → 308 tests |
-| 7 — receipts + token cleanup | not started |
+| 7 — receipts + token cleanup | **done 2026-10-08.** `20261008120000_push_receipts.sql` (`pending_push_receipts`, `record_push_receipts`, the hourly `check-push-receipts` cron job) and `supabase/functions/check-receipts/`. Hourly; only `DeviceNotRegistered` deletes a token (at send time too); a nudge whose every device failed flips to `failed`; unanswered tickets expire after 24 hours |
 
 Phases 0, 2, 3 and 7 from `todo/push-notifications.md`, unchanged: dependencies
 and the config plugin, the schema migration (`device_push_tokens`,
@@ -457,7 +457,7 @@ verification, rate limits of 10/day per person (raised from 3 on 2026-10-07) wit
 to 140 characters, `dedupe_key`), `hooks/useSendNudge.ts`, `NudgeButton` plus
 the swipe action plus `NudgeModal`, and routing from a notification tap.
 
-**Step 1 landed 2026-10-06 — server only.** `supabase/migrations/20261006120000_send_nudge.sql` (`enqueue_nudge`, `push_tickets`, `record_push_tickets`; `notifications.ticket_id` dropped in favour of a ticket per device) and `supabase/functions/send-nudge/`. Decisions taken: the rules live in SQL and are tested in `supabase/tests/send_nudge.sql`; the limits are a rolling 24 hours, not the calendar day; an empty message is allowed and gets a default line; quiet hours are ignored until E5; a recipient with no registered phone still counts as sent for the sender. **Step 2 landed 2026-10-06 — the nudge UI.** `NudgeButton` on a buddy's tab, a swipe on their habits that prefills "Ada, what about your run?", and `NudgeModal` (140-character cap with a counter, four presets, empty allowed). The sender sees "Nudge sent to Ada" for three seconds and feels `celebrate()` once the server confirms; a refusal is an `Alert` with the server's reason and the box stays open. Still to do: routing from a notification tap (step 3).
+**Step 1 landed 2026-10-06 — server only.** `supabase/migrations/20261006120000_send_nudge.sql` (`enqueue_nudge`, `push_tickets`, `record_push_tickets`; `notifications.ticket_id` dropped in favour of a ticket per device) and `supabase/functions/send-nudge/`. Decisions taken: the rules live in SQL and are tested in `supabase/tests/send_nudge.sql`; the limits are a rolling 24 hours, not the calendar day; an empty message is allowed and gets a default line; quiet hours are ignored until E5; a recipient with no registered phone still counts as sent for the sender. **Step 2 landed 2026-10-06 — the nudge UI.** `NudgeButton` on a buddy's tab, a swipe on their habits that prefills "Ada, what about your run?", and `NudgeModal` (140-character cap with a counter, four presets, empty allowed). The sender sees "Nudge sent to Ada" for three seconds and feels `celebrate()` once the server confirms; a refusal is an `Alert` with the server's reason and the box stays open. **Step 3 landed 2026-10-07 — routing a tap.** `hooks/useNotificationTaps.ts`: a tapped nudge opens the dashboard on your own tab and marks the notification read; a tap is routed once; a user still owed a name or a group stays on that screen; other types just open the app; a tap while signed out is dropped. Known gap, not fixed here: signing out offline fails to delete the token silently, so that phone keeps receiving pushes until someone signs in on it again.
 
 This is the **core of the product** — the rest of push is scaffolding around it.
 If the time budget runs out, this is the stage that has to land, and E5 can
@@ -472,6 +472,8 @@ notification. The full version is separate scope — do not bolt it onto E4.
 ---
 
 ## E5 — Reminders and social events (~3–4 days, needs E3)
+
+**Reminders landed 2026-10-08** (Phase 5): `20261008140000_habit_reminders.sql` (`enqueue_due_reminders`, `is_quiet_time`, `dispatchable_notifications`, the 5-minute `dispatch-notifications` cron job), `supabase/functions/dispatch-notifications/`, `TimePicker` in both habit forms, the time in the habit manager, and quiet hours on the notification settings screen. Decisions: one optional time per habit, off by default; only if not yet ticked; a missed window is skipped, never sent late; quiet hours skip rather than delay; "Time for Run 🏃" / "You haven't ticked it off yet today." Social events (Phase 6) are the next PR.
 
 Phases 5 and 6 from the push plan: `goals.reminder_time` threaded through five
 files, `TimePicker`, a server-side `enqueue_due_reminders()` on `pg_cron`, the
@@ -513,6 +515,7 @@ Concrete things found in the repo, not generalities:
   "no connection" state on the dashboard.
 - **`.env.example`** needs extending with the variables from E2/E3 (the Google
   client IDs, `EXPO_ACCESS_TOKEN`, `DISPATCH_SECRET` on the Supabase side).
+- **Done 2026-10-08: `npm run lint` is clean.** The six `set-state-in-effect` sites now seed during render, store only the user's edits, open directly off iOS, or use Reanimated's `LayoutAnimationConfig skipEntering`, each pinned by tests first. What follows is the original write-up.
 - **Eleven lint errors, eight of them worth reading.** (The eleventh, added
   since: a `prettier/prettier` missing newline in `expo-env.d.ts` — generated,
   so `--fix` and the next `expo start` fight over it.) The SDK 54 → 57

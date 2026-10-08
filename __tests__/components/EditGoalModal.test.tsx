@@ -124,4 +124,84 @@ describe("EditGoalModal", () => {
     expect(updateQB.update).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  // Dashboard keeps the modal mounted and swaps `goal` (null while closed), so
+  // these drive it the same way.
+  it("shows a different habit's values when another one is opened", () => {
+    const { getByDisplayValue, rerender, getByLabelText } = setup();
+    const swim: Goal = { ...goal, id: "g-2", title: "Swim", repeat_days: [1] };
+
+    rerender(
+      <EditGoalModal goal={null} isVisible={false} onClose={jest.fn()} />,
+    );
+    rerender(<EditGoalModal goal={swim} isVisible onClose={jest.fn()} />);
+
+    expect(getByDisplayValue("Swim")).toBeTruthy();
+    expect(getByLabelText("Tue").props.accessibilityState.selected).toBe(true);
+    expect(getByLabelText("Mon").props.accessibilityState.selected).toBe(false);
+  });
+
+  it("reopens the same habit with its saved values, not abandoned edits", () => {
+    const { getByDisplayValue, rerender, getByLabelText } = setup();
+
+    fireEvent.changeText(getByDisplayValue("Run"), "Jog");
+    fireEvent.press(getByLabelText("Tue"));
+    rerender(
+      <EditGoalModal goal={null} isVisible={false} onClose={jest.fn()} />,
+    );
+    rerender(<EditGoalModal goal={goal} isVisible onClose={jest.fn()} />);
+
+    expect(getByDisplayValue("Run")).toBeTruthy();
+    expect(getByLabelText("Tue").props.accessibilityState.selected).toBe(false);
+  });
+
+  describe("reminder", () => {
+    it("shows the habit's reminder as on", () => {
+      const { getByLabelText } = setup({ ...goal, reminder_time: "08:30" });
+      expect(getByLabelText("Reminder").props.value).toBe(true);
+    });
+
+    it("shows a habit without one as off", () => {
+      const { getByLabelText } = setup();
+      expect(getByLabelText("Reminder").props.value).toBe(false);
+    });
+
+    it("saves a newly switched-on reminder", async () => {
+      const { getByLabelText, getByText, updateQB } = setup();
+
+      fireEvent(getByLabelText("Reminder"), "valueChange", true);
+      fireEvent.press(getByText("Save"));
+
+      await waitFor(() =>
+        expect(updateQB.update).toHaveBeenCalledWith(
+          expect.objectContaining({ reminder_time: "09:00" }),
+        ),
+      );
+    });
+
+    it("saves a switched-off reminder as null", async () => {
+      const { getByLabelText, getByText, updateQB } = setup({
+        ...goal,
+        reminder_time: "08:30",
+      });
+
+      fireEvent(getByLabelText("Reminder"), "valueChange", false);
+      fireEvent.press(getByText("Save"));
+
+      await waitFor(() =>
+        expect(updateQB.update).toHaveBeenCalledWith(
+          expect.objectContaining({ reminder_time: null }),
+        ),
+      );
+    });
+
+    it("counts a reminder change as unsaved, so a backdrop tap won't drop it", () => {
+      const { getByLabelText, queryByLabelText } = setup();
+      expect(queryByLabelText("Close")).toBeTruthy();
+
+      fireEvent(getByLabelText("Reminder"), "valueChange", true);
+
+      expect(queryByLabelText("Close")).toBeNull();
+    });
+  });
 });

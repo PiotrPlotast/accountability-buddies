@@ -5,6 +5,7 @@ import { Member } from "@/types/dashboardTypes";
 import { getRecentLocalDates } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { HISTORY_DAYS } from "@/lib/goalHistory";
+import { toHHMM } from "@/lib/reminderTime";
 
 interface UseGroupMembersProps {
   groupId: string | null;
@@ -57,7 +58,9 @@ export function useGroupMembers({ groupId }: UseGroupMembersProps) {
           .eq("group_id", groupId),
         supabase
           .from("goals")
-          .select("id,user_id,title,group_id,icon,repeat_days,logs(id,date)")
+          .select(
+            "id,user_id,title,group_id,icon,repeat_days,reminder_time,logs(id,date)",
+          )
           .eq("group_id", groupId)
           .gte("logs.date", windowStart)
           .lte("logs.date", today),
@@ -80,12 +83,13 @@ export function useGroupMembers({ groupId }: UseGroupMembersProps) {
           full_name: profile?.full_name || "Unknown",
           goals: goalRows
             .filter((g) => g.user_id === m.user_id)
-            .map(({ logs, ...g }) => {
+            .map(({ logs, reminder_time, ...g }) => {
               const completed_dates = [
                 ...new Set(logs.map((l) => l.date)),
               ].sort();
               return {
                 ...g,
+                reminder_time: toHHMM(reminder_time),
                 completed_dates,
                 completed_today: completed_dates.includes(today),
               };

@@ -83,6 +83,46 @@ describe("useGroupMembers", () => {
     });
   });
 
+  it("reads each habit's reminder time as HH:MM, or null", async () => {
+    const membersQB = makeQueryBuilder({
+      data: [{ user_id: "user-1", profiles: { full_name: "Ada" } }],
+      error: null,
+    });
+    const base = {
+      user_id: "user-1",
+      group_id: "group-1",
+      icon: null,
+      repeat_days: [0],
+      logs: [],
+    };
+    const goalsQB = makeQueryBuilder({
+      data: [
+        { ...base, id: "g-1", title: "Run", reminder_time: "08:30:00" },
+        { ...base, id: "g-2", title: "Read", reminder_time: null },
+      ],
+      error: null,
+    });
+    const supabase = buildFakeSupabase({
+      fromImpl: jest.fn((table: string) =>
+        table === "group_members" ? membersQB : goalsQB,
+      ),
+    });
+    const { Wrapper } = buildWrapper({ supabase });
+
+    const utils = await renderHookWithSession(
+      () => useGroupMembers({ groupId: "group-1" }),
+      Wrapper,
+    );
+
+    await waitFor(() => {
+      const goals = utils.result.current.value.data?.[0].goals;
+      expect(goals?.map((g) => g.reminder_time)).toEqual(["08:30", null]);
+    });
+    expect(goalsQB.select).toHaveBeenCalledWith(
+      expect.stringContaining("reminder_time"),
+    );
+  });
+
   // Regression: this used to `return []` on error, which React Query caches and
   // persists as a successful empty group — indistinguishable from "no members".
   it("surfaces an error instead of resolving to an empty member list", async () => {

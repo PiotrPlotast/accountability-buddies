@@ -8,12 +8,14 @@ interface AddGoalParams {
   groupId: string;
   icon?: string | null;
   repeatDays?: number[];
+  // `"HH:MM"`; omitted or null means no reminder.
+  reminderTime?: string | null;
 }
 
 export function useAddGoal() {
   return useOptimisticGoalMutation<AddGoalParams, Goal>({
     mutationFn: async (
-      { title, groupId, icon, repeatDays },
+      { title, groupId, icon, repeatDays, reminderTime },
       { supabase, userId },
     ) => {
       if (!title.trim() || !groupId) throw new Error("Invalid params");
@@ -27,6 +29,7 @@ export function useAddGoal() {
           icon: icon ?? null,
           repeat_days:
             repeatDays && repeatDays.length > 0 ? repeatDays : ALL_DAYS,
+          ...(reminderTime ? { reminder_time: reminderTime } : {}),
         })
         .select()
         .single();
@@ -40,7 +43,7 @@ export function useAddGoal() {
     // shares it.
     beforeOptimistic: () => tapLight(),
     getPatch:
-      ({ title, groupId, icon, repeatDays }) =>
+      ({ title, groupId, icon, repeatDays, reminderTime }) =>
       (goals, userId) => [
         ...goals,
         {
@@ -53,6 +56,7 @@ export function useAddGoal() {
           icon: icon ?? null,
           repeat_days:
             repeatDays && repeatDays.length > 0 ? repeatDays : ALL_DAYS,
+          reminder_time: reminderTime ?? null,
         },
       ],
   });

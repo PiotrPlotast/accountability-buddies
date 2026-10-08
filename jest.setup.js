@@ -16,9 +16,23 @@ jest.mock("react-native-worklets", () =>
 // ("ADD ME IF NEEDED" in its source). Components that degrade for Reduce Motion
 // would throw without it. Default to false — the ordinary path is what tests
 // assert; a test wanting the degraded path spies on this export.
+// `LayoutAnimationConfig` is another "ADD ME IF NEEDED": a pass-through keeps
+// its children rendering and its props readable from a test.
 jest.mock("react-native-reanimated", () => ({
   ...require("react-native-reanimated/mock"),
   useReducedMotion: () => false,
+  LayoutAnimationConfig: function LayoutAnimationConfig({ children }) {
+    return children;
+  },
+}));
+
+// The native time picker renders nothing under Jest; tests find it by type and
+// call its `onChange` the way the OS would.
+jest.mock("@react-native-community/datetimepicker", () => ({
+  __esModule: true,
+  default: function DateTimePicker() {
+    return null;
+  },
 }));
 
 // Replace useTheme with a static accent. The real ThemeProvider hydrates from
@@ -204,6 +218,8 @@ jest.mock("expo-notifications", () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({
     remove: jest.fn(),
   })),
+  getLastNotificationResponse: jest.fn(() => null),
+  clearLastNotificationResponse: jest.fn(),
   AndroidImportance: {
     UNKNOWN: 0,
     UNSPECIFIED: 1,
@@ -254,11 +270,15 @@ jest.mock("expo-router", () => {
     back: jest.fn(),
     navigate: jest.fn(),
   };
-  const Stack = ({ children }) =>
-    React.createElement(React.Fragment, null, children);
-  Stack.Screen = () => null;
-  Stack.Protected = ({ children }) =>
-    React.createElement(React.Fragment, null, children);
+  const Stack = function Stack({ children }) {
+    return React.createElement(React.Fragment, null, children);
+  };
+  Stack.Screen = function StackScreen() {
+    return null;
+  };
+  Stack.Protected = function StackProtected({ children }) {
+    return React.createElement(React.Fragment, null, children);
+  };
   return {
     useRouter: () => router,
     useLocalSearchParams: () => ({}),

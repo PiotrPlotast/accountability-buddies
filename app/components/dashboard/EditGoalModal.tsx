@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Modal,
   View,
@@ -18,6 +18,8 @@ import { ALL_DAYS } from "@/lib/repeatDays";
 import { themeColors } from "@/lib/colors";
 import IconPicker from "@/app/components/habits/IconPicker";
 import DayPicker from "@/app/components/habits/DayPicker";
+import TimePicker from "@/app/components/habits/TimePicker";
+import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
 
 type Props = {
   goal: Goal | null;
@@ -30,18 +32,30 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
   const { editGoal } = useDashboardActions(activeGroupId);
   const { accent } = useTheme();
 
-  const [title, setTitle] = useState("");
-  const [icon, setIcon] = useState<string | null>(null);
-  const [repeatDays, setRepeatDays] = useState<number[]>(ALL_DAYS);
+  const [title, setTitle] = useState(goal?.title ?? "");
+  const [icon, setIcon] = useState<string | null>(goal?.icon ?? null);
+  const [repeatDays, setRepeatDays] = useState<number[]>(
+    goal?.repeat_days?.length ? goal.repeat_days : ALL_DAYS,
+  );
+  const [reminderTime, setReminderTime] = useState<string | null>(
+    goal?.reminder_time ?? null,
+  );
   const [saving, setSaving] = useState(false);
 
-  // Re-seed the form whenever a different habit is opened.
-  useEffect(() => {
-    if (!goal) return;
-    setTitle(goal.title);
-    setIcon(goal.icon);
-    setRepeatDays(goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS);
-  }, [goal]);
+  // Re-seed the form whenever a habit is opened — during render, React's
+  // "adjusting state when a prop changes" pattern, not an effect. `null` (the
+  // modal closing) is remembered too, so reopening the same habit re-seeds and
+  // drops abandoned edits, while the closing modal keeps its values on screen.
+  const [seededFor, setSeededFor] = useState(goal);
+  if (goal !== seededFor) {
+    setSeededFor(goal);
+    if (goal) {
+      setTitle(goal.title);
+      setIcon(goal.icon);
+      setRepeatDays(goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS);
+      setReminderTime(goal.reminder_time ?? null);
+    }
+  }
 
   const canSave = title.trim().length > 0 && !saving;
 
@@ -50,7 +64,8 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
     (title !== goal.title ||
       icon !== goal.icon ||
       repeatDays.join() !==
-        (goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS).join());
+        (goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS).join() ||
+      reminderTime !== (goal.reminder_time ?? null));
 
   // Tapping outside closes only when there is nothing to lose. With edits in
   // flight or unsaved, a stray tap on the backdrop would silently discard
@@ -61,7 +76,7 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
     if (!goal?.id || !canSave) return;
     setSaving(true);
     try {
-      await editGoal(goal.id, { title, icon, repeatDays });
+      await editGoal(goal.id, { title, icon, repeatDays, reminderTime });
       onClose();
     } catch {
       // useOptimisticGoalMutation already surfaced an Alert and rolled the
@@ -129,6 +144,16 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
                 Repeat
               </Text>
               <DayPicker value={repeatDays} onChange={setRepeatDays} />
+
+              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
+                Remind me
+              </Text>
+              <TimePicker
+                label="Reminder"
+                value={reminderTime}
+                onChange={setReminderTime}
+                defaultTime={DEFAULT_REMINDER_TIME}
+              />
             </ScrollView>
 
             <View className="flex-row gap-3 px-6 pb-6">

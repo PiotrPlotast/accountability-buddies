@@ -2,6 +2,7 @@ import { View, Text, Modal, Pressable, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Goal } from "@/types/dashboardTypes";
 import { formatRepeatDays } from "@/lib/repeatDays";
+import { formatReminderTime } from "@/lib/reminderTime";
 import { FALLBACK_ICON } from "@/lib/habitIcons";
 
 type Props = {
@@ -75,6 +76,9 @@ export default function HabitManagerModal({
                     </Text>
                     <Text className="text-text-muted font-mono text-xs mt-1">
                       {formatRepeatDays(goal.repeat_days)}
+                      {goal.reminder_time
+                        ? ` · ${formatReminderTime(goal.reminder_time)}`
+                        : ""}
                     </Text>
                   </View>
                 </View>

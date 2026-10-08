@@ -1,11 +1,15 @@
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import Dashboard from "@/app/components/dashboard/Dashboard";
+import DeleteGoalModal from "@/app/components/dashboard/DeleteGoalModal";
+import EditGoalModal from "@/app/components/dashboard/EditGoalModal";
+import HabitManagerModal from "@/app/components/dashboard/HabitsManagerModal";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 import * as haptics from "@/lib/haptics";
+import { emitShowMyTab } from "@/lib/notificationTaps";
 
 import {
   buildFakeSupabase,
@@ -75,6 +79,18 @@ describe("Dashboard member tabs", () => {
     const { getByLabelText, getByText } = renderDashboard();
     fireEvent.press(getByLabelText(/^Buddy Pal,/));
     expect(getByText("Buddy habit")).toBeTruthy();
+  });
+
+  // A tapped nudge asks you to do your habits, which only your own tab can.
+  it("goes back to your own tab when a nudge is tapped", () => {
+    const { getByLabelText, getByText, queryByText } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    expect(getByText("Buddy habit")).toBeTruthy();
+
+    act(() => emitShowMyTab());
+
+    expect(getByText("My habit")).toBeTruthy();
+    expect(queryByText("Buddy habit")).toBeNull();
   });
 
   // The viewed member leaving used to pin the skeleton on screen for good.
@@ -222,5 +238,74 @@ describe("Dashboard nudges", () => {
       jest.advanceTimersByTime(3_000);
     });
     expect(queryByText("Nudge sent to Buddy")).toBeNull();
+  });
+});
+
+// The habit manager hands edit/delete to the dashboard, which opens them only
+// once the manager's sheet is gone: on iOS from its `onDismiss`, elsewhere as
+// soon as the manager closes.
+describe("Dashboard habit manager hand-off", () => {
+  const openFromManager = (
+    utils: ReturnType<typeof renderDashboard>,
+    label: string,
+  ) => {
+    fireEvent.press(utils.getByLabelText("Habits"));
+    fireEvent.press(utils.getByLabelText(label));
+  };
+
+  it("on iOS, waits for the manager to finish dismissing before opening edit", () => {
+    jest.replaceProperty(Platform, "OS", "ios");
+    const utils = renderDashboard();
+
+    openFromManager(utils, "Edit My habit");
+
+    expect(utils.UNSAFE_getByType(HabitManagerModal).props.isVisible).toBe(
+      false,
+    );
+    expect(utils.UNSAFE_getByType(EditGoalModal).props.isVisible).toBe(false);
+
+    act(() => utils.UNSAFE_getByType(HabitManagerModal).props.onDismiss());
+
+    const edit = utils.UNSAFE_getByType(EditGoalModal);
+    expect(edit.props.isVisible).toBe(true);
+    expect(edit.props.goal.id).toBe("My habit");
+  });
+
+  it("on Android, opens edit as the manager closes", () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    const utils = renderDashboard();
+
+    openFromManager(utils, "Edit My habit");
+
+    expect(utils.UNSAFE_getByType(HabitManagerModal).props.isVisible).toBe(
+      false,
+    );
+    const edit = utils.UNSAFE_getByType(EditGoalModal);
+    expect(edit.props.isVisible).toBe(true);
+    expect(edit.props.goal.id).toBe("My habit");
+  });
+
+  it("on Android, opens delete as the manager closes", () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    const utils = renderDashboard();
+
+    openFromManager(utils, "Delete My habit");
+
+    const del = utils.UNSAFE_getByType(DeleteGoalModal);
+    expect(del.props.isVisible).toBe(true);
+    expect(del.props.goal.id).toBe("My habit");
+    expect(utils.UNSAFE_getByType(EditGoalModal).props.isVisible).toBe(false);
+  });
+
+  it("opens nothing when the manager is closed without a request", () => {
+    jest.replaceProperty(Platform, "OS", "ios");
+    const utils = renderDashboard();
+
+    fireEvent.press(utils.getByLabelText("Habits"));
+    act(() => utils.UNSAFE_getByType(HabitManagerModal).props.onClose());
+    act(() => utils.UNSAFE_getByType(HabitManagerModal).props.onDismiss());
+
+    expect(utils.UNSAFE_getByType(EditGoalModal).props.isVisible).toBe(false);
+    expect(utils.UNSAFE_getByType(DeleteGoalModal).props.isVisible).toBe(false);
   });
 });
