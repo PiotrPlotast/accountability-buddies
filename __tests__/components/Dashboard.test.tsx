@@ -9,7 +9,7 @@ import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 import * as haptics from "@/lib/haptics";
-import { emitShowMyTab } from "@/lib/notificationTaps";
+import { emitShowTab } from "@/lib/notificationTaps";
 
 import {
   buildFakeSupabase,
@@ -87,10 +87,28 @@ describe("Dashboard member tabs", () => {
     fireEvent.press(getByLabelText(/^Buddy Pal,/));
     expect(getByText("Buddy habit")).toBeTruthy();
 
-    act(() => emitShowMyTab());
+    act(() => emitShowTab(null));
 
     expect(getByText("My habit")).toBeTruthy();
     expect(queryByText("Buddy habit")).toBeNull();
+  });
+
+  // A tapped buddy event opens the buddy it is about.
+  it("opens a buddy's tab when a notification about them is tapped", () => {
+    const { getByText, queryByText } = renderDashboard();
+
+    act(() => emitShowTab("user-2"));
+
+    expect(getByText("Buddy habit")).toBeTruthy();
+    expect(queryByText("My habit")).toBeNull();
+  });
+
+  it("stays on your tab when the buddy tapped about is not in the group", () => {
+    const { getByText } = renderDashboard();
+
+    act(() => emitShowTab("someone-else"));
+
+    expect(getByText("My habit")).toBeTruthy();
   });
 
   // The viewed member leaving used to pin the skeleton on screen for good.
