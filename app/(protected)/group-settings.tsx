@@ -1,5 +1,5 @@
 import "../../global.css";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -26,19 +26,13 @@ export default function GroupSettingsScreen() {
   const { accent, palette, accentId, setAccent } = useTheme();
   const updateGroup = useUpdateGroup();
 
-  const [name, setName] = useState(groupName ?? "");
-  const [icon, setIcon] = useState(groupIcon);
-
-  useEffect(() => {
-    setIcon(groupIcon);
-  }, [groupIcon]);
-
-  // Seed the field once the group lands; `null` just means it hasn't yet.
-  useEffect(() => {
-    if (groupName !== null) {
-      setName(groupName);
-    }
-  }, [groupName]);
+  // Only what the user changed is state; untouched, each field shows the
+  // group's current value, so it fills in once the group lands and follows a
+  // rename from elsewhere until the user types or picks.
+  const [nameDraft, setName] = useState<string | null>(null);
+  const [iconDraft, setIcon] = useState<string | null>(null);
+  const name = nameDraft ?? groupName ?? "";
+  const icon = iconDraft ?? groupIcon;
 
   const trimmedName = name.trim();
   const dirty =

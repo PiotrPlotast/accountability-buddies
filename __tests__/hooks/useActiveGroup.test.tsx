@@ -13,7 +13,6 @@ import {
   renderHookWithSession,
 } from "../test-utils/render";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const router = require("expo-router").__router as { replace: jest.Mock };
 
 const GROUP: GroupResult = {

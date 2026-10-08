@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Modal,
   View,
@@ -30,18 +30,26 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
   const { editGoal } = useDashboardActions(activeGroupId);
   const { accent } = useTheme();
 
-  const [title, setTitle] = useState("");
-  const [icon, setIcon] = useState<string | null>(null);
-  const [repeatDays, setRepeatDays] = useState<number[]>(ALL_DAYS);
+  const [title, setTitle] = useState(goal?.title ?? "");
+  const [icon, setIcon] = useState<string | null>(goal?.icon ?? null);
+  const [repeatDays, setRepeatDays] = useState<number[]>(
+    goal?.repeat_days?.length ? goal.repeat_days : ALL_DAYS,
+  );
   const [saving, setSaving] = useState(false);
 
-  // Re-seed the form whenever a different habit is opened.
-  useEffect(() => {
-    if (!goal) return;
-    setTitle(goal.title);
-    setIcon(goal.icon);
-    setRepeatDays(goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS);
-  }, [goal]);
+  // Re-seed the form whenever a habit is opened — during render, React's
+  // "adjusting state when a prop changes" pattern, not an effect. `null` (the
+  // modal closing) is remembered too, so reopening the same habit re-seeds and
+  // drops abandoned edits, while the closing modal keeps its values on screen.
+  const [seededFor, setSeededFor] = useState(goal);
+  if (goal !== seededFor) {
+    setSeededFor(goal);
+    if (goal) {
+      setTitle(goal.title);
+      setIcon(goal.icon);
+      setRepeatDays(goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS);
+    }
+  }
 
   const canSave = title.trim().length > 0 && !saving;
 

@@ -26,7 +26,6 @@ jest.mock("@/lib/deviceId", () => ({
   getDeviceId: jest.fn(() => Promise.resolve("device-id-1")),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { registerForPushNotificationsAsync } = require("@/lib/push") as {
   registerForPushNotificationsAsync: jest.Mock;
 };

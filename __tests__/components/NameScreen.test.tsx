@@ -16,7 +16,6 @@ import {
 // The mocked router instance lives on the expo-router module — see
 // jest.setup.js. `require` because it is not part of the real module's
 // type surface.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const router = require("expo-router").__router as { replace: jest.Mock };
 
 function setup(result: { data: unknown; error: { message: string } | null }) {

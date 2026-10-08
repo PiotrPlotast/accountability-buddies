@@ -81,9 +81,15 @@ describe("ThemeProvider hydration", () => {
 // step — the module is the thing every call site actually reads.
 describe("ThemeProvider haptics flag", () => {
   let ctx: ThemeContextValue | null = null;
+  // A plain function, not an assignment in the component body: reassigning an
+  // outer variable during render is what the React Compiler rules flag.
+  const capture = (value: ThemeContextValue | null) => {
+    ctx = value;
+  };
 
   function HapticsProbe() {
-    ctx = useContext(ThemeContext);
+    const value = useContext(ThemeContext);
+    capture(value);
     return (
       <Text testID="haptics">{`${ctx?.hapticsEnabled}:${ctx?.hydrated ? "ready" : "waiting"}`}</Text>
     );
