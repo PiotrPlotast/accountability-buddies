@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 
 import GoalList from "@/app/components/dashboard/GoalList";
 import { getTodayLocalDate } from "@/lib/date";
@@ -11,6 +11,7 @@ import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 import {
   buildFakeSupabase,
   buildWrapper,
+  makeQueryBuilder,
   makeQueryClient,
 } from "../test-utils/render";
 
@@ -156,6 +157,109 @@ describe("GoalList swipe actions", () => {
     fireEvent.press(action.getByText("Delete"));
     expect(onDelete).toHaveBeenCalled();
     expect(onNudge).not.toHaveBeenCalled();
+  });
+});
+
+// A swipe starts with a touch on the row, so the row's own press used to fire
+// when the finger lifted and tick (or untick) the habit being swiped to edit or
+// delete. The gesture itself can't run here; the Swipeable's drag callback is
+// called directly, between the touch going down and coming up, the order the
+// app sees them in.
+describe("GoalList swipe versus tap", () => {
+  const myGoal: Goal = {
+    id: "g-1",
+    title: "Read",
+    user_id: "user-1",
+    group_id: "group-1",
+    completed_today: false,
+    icon: null,
+    repeat_days: [],
+  };
+
+  function renderMine() {
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
+    queryClient.setQueryData(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [myGoal] }],
+    );
+    const fromImpl = jest.fn(() =>
+      makeQueryBuilder({ data: null, error: null }),
+    );
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ fromImpl }),
+      queryClient,
+    });
+    const utils = render(
+      <GoalList
+        selectedTabId="user-1"
+        goals={[myGoal]}
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+    const row = utils.getByRole("checkbox", { name: "Read" });
+    const swipeable = utils.UNSAFE_getByProps({ friction: 2 });
+    const logWrites = () =>
+      fromImpl.mock.calls.filter((call: unknown[]) => call[0] === "logs");
+    return { row, swipeable, logWrites };
+  }
+
+  // The toggle writes after awaiting a cache cancel, so let that run out.
+  const settle = () =>
+    act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+  it("ticks the habit on a plain tap", async () => {
+    const { row, logWrites } = renderMine();
+
+    fireEvent(row, "pressIn");
+    fireEvent.press(row);
+    await settle();
+
+    expect(logWrites()).toHaveLength(1);
+  });
+
+  it.each([
+    ["right, towards edit", "right"],
+    ["left, towards delete", "left"],
+  ])("does not tick the habit when swiped %s", async (_label, direction) => {
+    const { row, swipeable, logWrites } = renderMine();
+
+    fireEvent(row, "pressIn");
+    act(() => swipeable.props.onSwipeableOpenStartDrag(direction));
+    fireEvent.press(row);
+    await settle();
+
+    expect(logWrites()).toHaveLength(0);
+  });
+
+  it("does not tick the habit when dragged back closed", async () => {
+    const { row, swipeable, logWrites } = renderMine();
+
+    fireEvent(row, "pressIn");
+    act(() => swipeable.props.onSwipeableCloseStartDrag("left"));
+    fireEvent.press(row);
+    await settle();
+
+    expect(logWrites()).toHaveLength(0);
+  });
+
+  // The swipe is forgotten once the finger lifts: the next touch is a tap.
+  it("ticks the habit on a tap after a swipe", async () => {
+    const { row, swipeable, logWrites } = renderMine();
+
+    fireEvent(row, "pressIn");
+    act(() => swipeable.props.onSwipeableOpenStartDrag("right"));
+    fireEvent.press(row);
+
+    fireEvent(row, "pressIn");
+    fireEvent.press(row);
+    await settle();
+
+    expect(logWrites()).toHaveLength(1);
   });
 });
 
