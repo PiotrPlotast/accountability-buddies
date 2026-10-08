@@ -429,7 +429,7 @@ Where it stands on 2026-09-17, on `feature/push-infrastructure`:
 | 2 — schema | **done**, `20260916120000_notifications.sql`, pushed live |
 | 3a — token registration | **done 2026-09-20.** `lib/push.ts`, `lib/deviceId.ts`, `usePushRegistration` mounted once in `(protected)/_layout.tsx`, the foreground handler in `app/_layout.tsx`, and the sign-out token delete in the Supabase provider. Suite 38 → 41 suites, 243 → 273 tests |
 | 3b — notification settings screen | **done 2026-09-20.** `useNotificationPrefs` (update, never upsert), `usePushPermission` (re-reads on foreground, registers on the transition into granted), `ToggleRow`, `GearIcon`, `(protected)/notification-settings.tsx`; the haptics switch and sign-out moved off `Profile.tsx`, whose header is now a gear. `notification_prefs.timezone` is written once per launch from `usePushRegistration`. Quiet hours deferred to E5. Suite 41 → 45 suites, 273 → 308 tests |
-| 7 — receipts + token cleanup | not started |
+| 7 — receipts + token cleanup | **done 2026-10-08.** `20261008120000_push_receipts.sql` (`pending_push_receipts`, `record_push_receipts`, the hourly `check-push-receipts` cron job) and `supabase/functions/check-receipts/`. Hourly; only `DeviceNotRegistered` deletes a token (at send time too); a nudge whose every device failed flips to `failed`; unanswered tickets expire after 24 hours |
 
 Phases 0, 2, 3 and 7 from `todo/push-notifications.md`, unchanged: dependencies
 and the config plugin, the schema migration (`device_push_tokens`,
@@ -513,6 +513,7 @@ Concrete things found in the repo, not generalities:
   "no connection" state on the dashboard.
 - **`.env.example`** needs extending with the variables from E2/E3 (the Google
   client IDs, `EXPO_ACCESS_TOKEN`, `DISPATCH_SECRET` on the Supabase side).
+- **Done 2026-10-08: `npm run lint` is clean.** The six `set-state-in-effect` sites now seed during render, store only the user's edits, open directly off iOS, or use Reanimated's `LayoutAnimationConfig skipEntering`, each pinned by tests first. What follows is the original write-up.
 - **Eleven lint errors, eight of them worth reading.** (The eleventh, added
   since: a `prettier/prettier` missing newline in `expo-env.d.ts` — generated,
   so `--fix` and the next `expo start` fight over it.) The SDK 54 → 57

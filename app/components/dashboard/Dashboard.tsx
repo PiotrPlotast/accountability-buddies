@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { View, ScrollView, RefreshControl, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -84,24 +84,24 @@ export default function Dashboard() {
   // while it is still dismissing drops the new modal on iOS, so a request from
   // the manager is queued, the sheet is closed, and the queued modal opens once
   // the sheet is actually gone.
-  const requestFromManager = (type: PendingAction["type"], goal: Goal) => {
-    setPendingAction({ type, goal });
-    setIsHabitManagerVisible(false);
+  const openAction = ({ type, goal }: PendingAction) => {
+    if (type === "edit") setEditingGoal(goal);
+    else setDeletingGoal(goal);
   };
 
-  const openPendingAction = useCallback(() => {
-    if (!pendingAction) return;
-    if (pendingAction.type === "edit") setEditingGoal(pendingAction.goal);
-    else setDeletingGoal(pendingAction.goal);
-    setPendingAction(null);
-  }, [pendingAction]);
-
   // `Modal.onDismiss` is iOS-only. Elsewhere the sheet is gone as soon as it
-  // stops rendering, so flush as soon as visibility flips off.
-  useEffect(() => {
-    if (Platform.OS === "ios") return;
-    if (!isHabitManagerVisible && pendingAction) openPendingAction();
-  }, [isHabitManagerVisible, pendingAction, openPendingAction]);
+  // stops rendering, so the request opens in the same update that closes it.
+  const requestFromManager = (type: PendingAction["type"], goal: Goal) => {
+    setIsHabitManagerVisible(false);
+    if (Platform.OS === "ios") setPendingAction({ type, goal });
+    else openAction({ type, goal });
+  };
+
+  const openPendingAction = () => {
+    if (!pendingAction) return;
+    openAction(pendingAction);
+    setPendingAction(null);
+  };
 
   if (!userId) return <View className="flex-1 bg-bg" />;
 

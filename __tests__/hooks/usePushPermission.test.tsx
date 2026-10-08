@@ -17,7 +17,6 @@ jest.mock("@/hooks/usePushRegistration", () => ({
   registerAndStorePushToken: jest.fn(() => Promise.resolve()),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getPushPermissionStatus } = require("@/lib/push") as {
   getPushPermissionStatus: jest.Mock;
 };
