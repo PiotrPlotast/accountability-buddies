@@ -513,6 +513,7 @@ Concrete things found in the repo, not generalities:
   "no connection" state on the dashboard.
 - **`.env.example`** needs extending with the variables from E2/E3 (the Google
   client IDs, `EXPO_ACCESS_TOKEN`, `DISPATCH_SECRET` on the Supabase side).
+- **Done 2026-10-08: `npm run lint` is clean.** The six `set-state-in-effect` sites now seed during render, store only the user's edits, open directly off iOS, or use Reanimated's `LayoutAnimationConfig skipEntering`, each pinned by tests first. What follows is the original write-up.
 - **Eleven lint errors, eight of them worth reading.** (The eleventh, added
   since: a `prettier/prettier` missing newline in `expo-env.d.ts` — generated,
   so `--fix` and the next `expo start` fight over it.) The SDK 54 → 57

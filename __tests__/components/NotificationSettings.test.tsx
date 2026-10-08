@@ -32,7 +32,6 @@ jest.mock("@/hooks/usePushPermission", () => ({
   usePushPermission: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { usePushPermission } = require("@/hooks/usePushPermission") as {
   usePushPermission: jest.Mock;
 };

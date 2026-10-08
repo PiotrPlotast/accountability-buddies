@@ -14,7 +14,6 @@ const setItem = AsyncStorage.setItem as jest.Mock;
 function loadFresh(): typeof import("@/lib/deviceId") {
   let mod!: typeof import("@/lib/deviceId");
   jest.isolateModules(() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require("@/lib/deviceId");
   });
   return mod;

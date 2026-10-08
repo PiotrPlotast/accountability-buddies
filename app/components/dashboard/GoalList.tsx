@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { View, Text, Pressable, type ViewStyle } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
@@ -6,6 +6,7 @@ import Reanimated, {
   Easing,
   FadeIn,
   FadeOut,
+  LayoutAnimationConfig,
   LinearTransition,
   SharedValue,
   cancelAnimation,
@@ -294,7 +295,20 @@ function GoalCheckbox({ done, icon, accentHex, reduceMotion }: CheckboxProps) {
   );
 }
 
-export default function GoalList({
+// `skipEntering` keeps the first paint still: entering animations fire on
+// mount, and every row mounts when the dashboard opens. The config applies only
+// to what is there when it mounts, so it wraps the list for its whole life —
+// skeleton and empty state included — and rows that appear afterwards (an
+// optimistic insert, or the rows that land once loading ends) still fade in.
+export default function GoalList(props: Props) {
+  return (
+    <LayoutAnimationConfig skipEntering>
+      <GoalListContent {...props} />
+    </LayoutAnimationConfig>
+  );
+}
+
+function GoalListContent({
   selectedTabId,
   goals,
   onEdit,
@@ -309,11 +323,6 @@ export default function GoalList({
   // wcześniejszymi `return`ami niżej, więc żyje tutaj, a nie w `WeekStrip`.
   const reduceMotion = useReducedMotion();
   const pulse = useSharedValue(1);
-
-  // Flips after the first commit, so the initial list is simply there rather
-  // than fading itself in every time the screen mounts.
-  const [settled, setSettled] = useState(false);
-  useEffect(() => setSettled(true), []);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -372,11 +381,8 @@ export default function GoalList({
         return (
           <Reanimated.View
             key={goal.id}
-            // `settled` keeps the first paint still: entering animations fire
-            // on mount, and every row mounts when the dashboard opens or a tab
-            // switches. Only rows that appear afterwards — an optimistic
-            // insert — actually fade in.
-            entering={settled ? FadeIn.duration(180) : undefined}
+            // Skipped on first paint by the `LayoutAnimationConfig` above.
+            entering={FadeIn.duration(180)}
             exiting={FadeOut.duration(140)}
             // Movement, so Reduce Motion drops it and the rows re-stack
             // instantly. The fades above are opacity and stay either way.

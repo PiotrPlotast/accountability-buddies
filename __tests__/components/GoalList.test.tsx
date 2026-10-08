@@ -4,7 +4,9 @@ import { fireEvent, render } from "@testing-library/react-native";
 import GoalList from "@/app/components/dashboard/GoalList";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
-import { GroupResult, Member } from "@/types/dashboardTypes";
+import Reanimated, { LayoutAnimationConfig } from "react-native-reanimated";
+
+import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 
 import {
   buildFakeSupabase,
@@ -154,5 +156,91 @@ describe("GoalList swipe actions", () => {
     fireEvent.press(action.getByText("Delete"));
     expect(onDelete).toHaveBeenCalled();
     expect(onNudge).not.toHaveBeenCalled();
+  });
+});
+
+// Rows that are there when the list first mounts appear still; rows added
+// afterwards (an optimistic insert) fade in. Reanimated's own
+// `LayoutAnimationConfig skipEntering` does the first half, so the list has to
+// stay inside one for its whole life, skeleton and empty state included.
+describe("GoalList first paint", () => {
+  const habit = (id: string): Goal => ({
+    id,
+    title: id,
+    user_id: "user-1",
+    group_id: "group-1",
+    completed_today: false,
+    icon: null,
+    repeat_days: [],
+  });
+
+  function renderLive(goals: Goal[], opts: { seed: boolean }) {
+    const queryClient = makeQueryClient();
+    if (opts.seed) {
+      queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
+      queryClient.setQueryData(
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
+        members,
+      );
+    }
+    const rpcImpl = jest.fn(() => ({
+      maybeSingle: () => new Promise(() => {}),
+    }));
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ rpcImpl }),
+      queryClient,
+    });
+    const list = (g: Goal[]) => (
+      <GoalList
+        selectedTabId="user-1"
+        goals={g}
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+      />
+    );
+    const utils = render(list(goals), { wrapper: Wrapper });
+    return {
+      ...utils,
+      queryClient,
+      rerenderWith: (g: Goal[]) => utils.rerender(list(g)),
+    };
+  }
+
+  it("skips the entering fade for the rows on screen when it mounts", () => {
+    const { UNSAFE_getByType } = renderLive([habit("Run")], { seed: true });
+
+    expect(UNSAFE_getByType(LayoutAnimationConfig).props.skipEntering).toBe(
+      true,
+    );
+  });
+
+  it("gives every row an entering fade for rows added later", () => {
+    const { UNSAFE_queryAllByType, rerenderWith } = renderLive([habit("Run")], {
+      seed: true,
+    });
+
+    rerenderWith([habit("Run"), habit("Swim")]);
+
+    const rows = UNSAFE_queryAllByType(Reanimated.View).filter(
+      (view) => view.props.exiting !== undefined,
+    );
+    expect(rows).toHaveLength(2);
+    rows.forEach((row) => expect(row.props.entering).toBeDefined());
+  });
+
+  it("keeps one config mounted from the empty state to the first habit", () => {
+    const { UNSAFE_getByType, rerenderWith } = renderLive([], { seed: true });
+    const before = UNSAFE_getByType(LayoutAnimationConfig);
+
+    rerenderWith([habit("Run")]);
+
+    expect(UNSAFE_getByType(LayoutAnimationConfig)).toBe(before);
+  });
+
+  it("wraps the skeleton too, so rows that land after loading still fade in", () => {
+    const { UNSAFE_getByType, getByTestId } = renderLive([], { seed: false });
+
+    expect(getByTestId("goal-list-skeleton")).toBeTruthy();
+    expect(UNSAFE_getByType(LayoutAnimationConfig)).toBeTruthy();
   });
 });

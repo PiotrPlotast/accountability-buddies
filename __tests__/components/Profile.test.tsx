@@ -11,7 +11,6 @@ import {
   makeQueryBuilder,
   makeQueryClient,
 } from "../test-utils/render";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { __router } = require("expo-router") as {
   __router: { push: jest.Mock };
 };

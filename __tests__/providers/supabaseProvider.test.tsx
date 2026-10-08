@@ -42,12 +42,10 @@ jest.mock("@/lib/push", () => ({
   forgetRegisteredPushToken: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { createClient } = require("@supabase/supabase-js") as {
   createClient: jest.Mock;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { asyncStoragePersister } = require("@/lib/queryPersister") as {
   asyncStoragePersister: { removeClient: jest.Mock };
 };
@@ -81,8 +79,14 @@ const unsubscribeSpy = (): jest.Mock =>
 // a test can assert what the whole tree observed, not just one component.
 const seen: Record<string, SupabaseContextValue> = {};
 
+// Recording goes through a plain function: a component that writes to an
+// outer object during render is exactly what the React Compiler rules flag.
+const record = (id: string, value: SupabaseContextValue) => {
+  seen[id] = value;
+};
+
 function Consumer({ id }: { id: string }) {
-  seen[id] = useSupabase();
+  record(id, useSupabase());
   return null;
 }
 
