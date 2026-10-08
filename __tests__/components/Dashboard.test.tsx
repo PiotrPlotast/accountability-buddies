@@ -9,6 +9,7 @@ import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 import * as haptics from "@/lib/haptics";
+import { emitShowMyTab } from "@/lib/notificationTaps";
 
 import {
   buildFakeSupabase,
@@ -78,6 +79,18 @@ describe("Dashboard member tabs", () => {
     const { getByLabelText, getByText } = renderDashboard();
     fireEvent.press(getByLabelText(/^Buddy Pal,/));
     expect(getByText("Buddy habit")).toBeTruthy();
+  });
+
+  // A tapped nudge asks you to do your habits, which only your own tab can.
+  it("goes back to your own tab when a nudge is tapped", () => {
+    const { getByLabelText, getByText, queryByText } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    expect(getByText("Buddy habit")).toBeTruthy();
+
+    act(() => emitShowMyTab());
+
+    expect(getByText("My habit")).toBeTruthy();
+    expect(queryByText("Buddy habit")).toBeNull();
   });
 
   // The viewed member leaving used to pin the skeleton on screen for good.

@@ -271,7 +271,7 @@ Returns `{ success: boolean, message: string }` — matching the existing `join_
 
 **Modal sequencing**: `NudgeModal` is opened from the dashboard body, not from the pageSheet habit manager, so it does not need the `pendingAction` queue. But it is a fourth sibling in the same modal cluster — if it ever becomes reachable from `HabitsManagerModal`, extend the `PendingAction` union rather than reintroducing a `setTimeout`, per the rule in `Dashboard.tsx:43-64`.
 
-**Deep linking** — `hooks/useNotificationResponse.ts` (new), mounted in `app/(protected)/_layout.tsx`. Combine `useLastNotificationResponse()` (cold start) with `addNotificationResponseReceivedListener` (warm). Route from `data.type`. **Never navigate across the `Stack.Protected` boundary**: if a notification is tapped with no session, stash the target and replay it once `session` becomes truthy.
+**Deep linking** — landed 2026-10-07 as `hooks/useNotificationTaps.ts`, mounted in `app/(protected)/_layout.tsx`. It reads the launch tap (`getLastNotificationResponse`) and live taps (`addNotificationResponseReceivedListener`) through `lib/push.ts`. A nudge opens the dashboard on **your own** tab, not the sender's: the nudge asks you to do your habits, and the sender and message are already on the notification. Every tap marks its row read, a tap is handled once (`claimTap`) and the launch tap is cleared, and a user still owed a name or a group is left to the gates. **A tap while signed out is dropped, not replayed** (`useForgetTapsWhileSignedOut` in the root navigator): sign-out already deletes the phone's token, so only a notification left over from before sign-out can be tapped then.
 
 ---
 
@@ -376,8 +376,8 @@ Physical iPhone, dev client, real APNs key. The simulator steps are marked — r
 
 1. Sign in → confirm a `device_push_tokens` row appears with the right `user_id` and a **real** `ExponentPushToken`, not the `[SIMULATOR]` sentinel.
 2. Test push from https://expo.dev/notifications. **Do not proceed past this until it arrives.**
-3. Second account in the same group → send a nudge → it arrives with the sender's real name; tapping it opens the dashboard on the sender's tab.
-4. *(also simulator)* Routing matrix for that tap: app **foregrounded** (proves `setNotificationHandler`), **backgrounded**, **cold-started** (proves `useLastNotificationResponse()` replays it), and **signed out** — the target is stashed and replayed after sign-in, never navigating across the `Stack.Protected` boundary.
+3. Second account in the same group → send a nudge → it arrives with the sender's real name; tapping it opens the dashboard on your own tab.
+4. *(also simulator)* Routing matrix for that tap: app **foregrounded** (proves `setNotificationHandler`), **backgrounded**, **cold-started** (proves the launch tap is read), and **signed out** — the tap opens the sign-in screen and is not replayed after sign-in.
 5. Send four nudges rapidly → the fourth is rejected by the rate limit with a friendly message.
 6. Set a habit reminder two minutes out → wait for the cron tick → it arrives. Complete the habit first and repeat → **no reminder arrives.** This is the check that proves the server-side design was worth it.
 7. Call the dispatcher twice in the same window → the `dedupe_key` constraint means still exactly one send.

@@ -16,6 +16,7 @@ import HabitManagerModal from "./HabitsManagerModal";
 import NudgeButton from "./NudgeButton";
 import NudgeModal from "./NudgeModal";
 import { firstName, habitNudgeMessage } from "@/lib/nudge";
+import { onShowMyTab } from "@/lib/notificationTaps";
 
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
 
@@ -46,6 +47,8 @@ export default function Dashboard() {
   // `selectedTabId` is only what was tapped; the tab on screen is resolved
   // against the current members, so a buddy leaving the group drops the view
   // back to you instead of pointing at nobody.
+  // A tapped nudge brings you back to your own tab (`useNotificationTaps`).
+  useEffect(() => onShowMyTab(() => setSelectedTabId(null)), []);
   const viewedId = resolveViewedMemberId(members, selectedTabId, userId);
   const isViewingMe = viewedId === userId;
   const currentMember = members.find((m) => m.user_id === viewedId);

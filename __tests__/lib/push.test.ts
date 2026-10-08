@@ -4,9 +4,12 @@ import * as Notifications from "expo-notifications";
 
 import {
   SIMULATOR_PUSH_TOKEN,
+  clearLastNotificationTap,
   configureNotificationHandler,
   forgetRegisteredPushToken,
+  getLastNotificationTap,
   getRegisteredPushToken,
+  onNotificationTap,
   registerForPushNotificationsAsync,
 } from "@/lib/push";
 
@@ -207,5 +210,68 @@ describe("configureNotificationHandler", () => {
     await expect(handleNotification()).resolves.toEqual(
       expect.objectContaining({ shouldShowBanner: true }),
     );
+  });
+});
+
+describe("notification taps", () => {
+  const getLast = Notifications.getLastNotificationResponse as jest.Mock;
+  const clearLast = Notifications.clearLastNotificationResponse as jest.Mock;
+  const addListener =
+    Notifications.addNotificationResponseReceivedListener as jest.Mock;
+
+  const response = (identifier: string, data: Record<string, unknown>) => ({
+    actionIdentifier: "expo.modules.notifications.actions.DEFAULT",
+    notification: { request: { identifier, content: { data } } },
+  });
+
+  it("reads the tap that launched the app as its id and data", () => {
+    getLast.mockReturnValueOnce(
+      response("n-1", { type: "nudge", notification_id: "row-1" }),
+    );
+    expect(getLastNotificationTap()).toEqual({
+      id: "n-1",
+      data: { type: "nudge", notification_id: "row-1" },
+    });
+  });
+
+  it("reports no tap when the app was opened some other way", () => {
+    getLast.mockReturnValueOnce(null);
+    expect(getLastNotificationTap()).toBeNull();
+  });
+
+  it("reads a push with no data as empty data rather than throwing", () => {
+    getLast.mockReturnValueOnce({
+      notification: { request: { identifier: "n-2", content: {} } },
+    });
+    expect(getLastNotificationTap()).toEqual({ id: "n-2", data: {} });
+  });
+
+  it("never throws, even when the native read does", () => {
+    getLast.mockImplementationOnce(() => {
+      throw new Error("no native module");
+    });
+    clearLast.mockImplementationOnce(() => {
+      throw new Error("no native module");
+    });
+    expect(getLastNotificationTap()).toBeNull();
+    expect(() => clearLastNotificationTap()).not.toThrow();
+  });
+
+  it("clears the launch tap so a reload doesn't replay it", () => {
+    clearLastNotificationTap();
+    expect(clearLast).toHaveBeenCalledTimes(1);
+  });
+
+  it("hands each live tap to the listener, and unsubscribes", () => {
+    const remove = jest.fn();
+    addListener.mockReturnValueOnce({ remove });
+    const onTap = jest.fn();
+
+    const unsubscribe = onNotificationTap(onTap);
+    addListener.mock.calls[0][0](response("n-3", { type: "nudge" }));
+    expect(onTap).toHaveBeenCalledWith({ id: "n-3", data: { type: "nudge" } });
+
+    unsubscribe();
+    expect(remove).toHaveBeenCalledTimes(1);
   });
 });
