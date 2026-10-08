@@ -1,8 +1,10 @@
 // dispatch-notifications — E5's dispatcher. Called every 5 minutes by the
 // `dispatch-notifications` pg_cron job, never by the app. A courier: which
-// habits are due (`enqueue_due_reminders`) and which rows to push
+// habits are due (`enqueue_due_reminders`), what buddies did
+// (`enqueue_social_events`) and which rows to push
 // (`dispatchable_notifications`) are SQL, tested in
-// `supabase/tests/reminders.sql`; the delivery loop is `dispatch.ts`.
+// `supabase/tests/reminders.sql` and `supabase/tests/social_events.sql`; the
+// delivery loop is `dispatch.ts`.
 //
 //   POST {} with `Authorization: Bearer <DISPATCH_SECRET>`
 //   → { enqueued: number, sent: number, failed: number }
@@ -48,7 +50,15 @@ Deno.serve(async (req) => {
     console.error("enqueue_due_reminders failed", enqueueError);
     return json({ error: "Could not enqueue reminders" }, 500);
   }
-  const freshIds = (fresh ?? []) as string[];
+
+  const { data: social, error: socialError } = await admin.rpc(
+    "enqueue_social_events",
+  );
+  if (socialError) {
+    // Reminders are already queued; they still go out.
+    console.error("enqueue_social_events failed", socialError);
+  }
+  const freshIds = [...(fresh ?? []), ...(social ?? [])] as string[];
 
   const { data: rows, error: rowsError } = await admin.rpc(
     "dispatchable_notifications",

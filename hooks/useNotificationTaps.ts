@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useNameGate } from "@/hooks/useNameGate";
 import { useSupabase } from "@/hooks/useSupabase";
-import { claimTap, emitShowMyTab } from "@/lib/notificationTaps";
+import { claimTap, emitShowTab } from "@/lib/notificationTaps";
 import {
   NotificationTap,
   clearLastNotificationTap,
@@ -14,13 +14,30 @@ import {
 
 // Both ask you to do your habits, which only your own tab can.
 const OWN_TAB_TYPES = new Set<unknown>(["nudge", "reminder"]);
+// About a buddy, so their tab. The push names them in `buddy_id`.
+const BUDDY_TAB_TYPES = new Set<unknown>([
+  "buddy_ticked",
+  "buddy_done",
+  "member_joined",
+]);
+
+// Which tab a tap opens: `null` for your own, a member id for theirs, or
+// `undefined` for none (the app just opens).
+function tabFor(data: Record<string, unknown>): string | null | undefined {
+  if (OWN_TAB_TYPES.has(data.type)) return null;
+  if (BUDDY_TAB_TYPES.has(data.type) && typeof data.buddy_id === "string") {
+    return data.buddy_id;
+  }
+  return undefined;
+}
 
 /**
  * Routes a tapped notification. Mounted once, in `app/(protected)/_layout.tsx`,
  * so it only ever runs signed in.
  *
  * A nudge or a habit reminder opens the dashboard on your own tab: both ask
- * you to do your habits, and what they say is already on the notification. Every tap
+ * you to do your habits, and what they say is already on the notification. A
+ * buddy event (a tick, a closed day, a join) opens that buddy's tab. Every tap
  * marks its row read. A user still owed a name or a group stays where the
  * gates put them — finishing either lands on the dashboard anyway. Any other
  * type just opens the app.
@@ -57,9 +74,10 @@ export function useNotificationTaps(): void {
         );
     }
 
-    if (!OWN_TAB_TYPES.has(tap.data.type) || needsName || hasNoGroup) return;
+    const tab = tabFor(tap.data);
+    if (tab === undefined || needsName || hasNoGroup) return;
     router.navigate("/");
-    emitShowMyTab();
+    emitShowTab(tab);
   }, [tap, isResolved, needsName, groupLoading, hasNoGroup, router, supabase]);
 }
 

@@ -1,4 +1,4 @@
-import { claimTap, emitShowMyTab, onShowMyTab } from "@/lib/notificationTaps";
+import { claimTap, emitShowTab, onShowTab } from "@/lib/notificationTaps";
 
 describe("claimTap", () => {
   it("claims a tap the first time and refuses it after that", () => {
@@ -12,25 +12,25 @@ describe("claimTap", () => {
   });
 });
 
-describe("show-my-tab signal", () => {
-  it("tells every listener, and stops after unsubscribing", () => {
+describe("show-tab signal", () => {
+  it("tells every listener which tab, and stops after unsubscribing", () => {
     const first = jest.fn();
     const second = jest.fn();
-    const offFirst = onShowMyTab(first);
-    const offSecond = onShowMyTab(second);
+    const offFirst = onShowTab(first);
+    const offSecond = onShowTab(second);
 
-    emitShowMyTab();
-    expect(first).toHaveBeenCalledTimes(1);
-    expect(second).toHaveBeenCalledTimes(1);
+    emitShowTab(null);
+    expect(first).toHaveBeenCalledWith(null);
+    expect(second).toHaveBeenCalledWith(null);
 
     offFirst();
-    emitShowMyTab();
+    emitShowTab("user-2");
     expect(first).toHaveBeenCalledTimes(1);
-    expect(second).toHaveBeenCalledTimes(2);
+    expect(second).toHaveBeenLastCalledWith("user-2");
     offSecond();
   });
 
   it("does nothing with nobody listening", () => {
-    expect(() => emitShowMyTab()).not.toThrow();
+    expect(() => emitShowTab(null)).not.toThrow();
   });
 });
