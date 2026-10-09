@@ -11,13 +11,16 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ToggleRow from "@/app/components/settings/ToggleRow";
+import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import TimePicker from "@/app/components/habits/TimePicker";
 import { useNotificationPrefs } from "@/hooks/useNotificationPrefs";
+import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
 import { usePushPermission } from "@/hooks/usePushPermission";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useTheme } from "@/hooks/useTheme";
 import { themeColors } from "@/lib/colors";
 import { tapLight } from "@/lib/haptics";
+import { useIsOnline } from "@/lib/onlineStatus";
 import {
   DEFAULT_QUIET_END,
   DEFAULT_QUIET_START,
@@ -36,12 +39,17 @@ export default function NotificationSettingsScreen() {
   const permission = usePushPermission();
   const { accent, hapticsEnabled, setHapticsEnabled } = useTheme();
   const { signOut } = useSupabase();
+  // The preferences are the account's, read by the server's cron, so they
+  // don't queue offline. Haptics is this phone's and works either way.
+  const isOnline = useIsOnline();
+  const pendingChanges = usePendingGoalChanges();
 
   // `null` is "not read yet". Rendering it as blocked would warn people about
   // a permission they actually have, for the frame before the check resolves.
   const blocked = permission !== null && !permission.granted;
 
   const change = (patch: Partial<NotificationPrefs>) => {
+    if (!isOnline) return;
     // Confirms the touch, not the write — the haptics rule about never
     // vibrating in response to server data.
     tapLight();
@@ -56,6 +64,7 @@ export default function NotificationSettingsScreen() {
   // reads it), so the picker refuses that pick instead of letting the write
   // fail into an Alert.
   const changeQuiet = (patch: { quiet_start?: string; quiet_end?: string }) => {
+    if (!isOnline) return;
     const start = patch.quiet_start ?? quietStart;
     const end = patch.quiet_end ?? quietEnd;
     if (start === end) return;
@@ -63,7 +72,13 @@ export default function NotificationSettingsScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert("Log out", "Are you sure?", [
+    // Signing out clears the queue with the rest of the cache, so changes
+    // made offline that haven't synced would go with it. Still allowed.
+    const message =
+      pendingChanges > 0
+        ? `${pendingChanges} ${pendingChanges === 1 ? "change hasn't" : "changes haven't"} synced and will be lost.`
+        : "Are you sure?";
+    Alert.alert("Log out", message, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Log out",
@@ -137,26 +152,33 @@ export default function NotificationSettingsScreen() {
         <View className="gap-3">
           <ToggleRow
             label="Reminders"
+            disabled={!isOnline}
             description="Your habits, at the time you set."
             value={prefs?.reminders_enabled ?? false}
             onValueChange={(v) => change({ reminders_enabled: v })}
           />
           <ToggleRow
             label="Nudges"
+            disabled={!isOnline}
             description="When a buddy pokes you to check in."
             value={prefs?.nudges_enabled ?? false}
             onValueChange={(v) => change({ nudges_enabled: v })}
           />
           <ToggleRow
             label="Buddy activity"
+            disabled={!isOnline}
             description="When someone closes out their day or joins your group."
             value={prefs?.social_enabled ?? false}
             onValueChange={(v) => change({ social_enabled: v })}
           />
         </View>
-        <Text className="text-text-dim font-mono text-xs mt-2">
-          Applies to every device you sign in on.
-        </Text>
+        {isOnline ? (
+          <Text className="text-text-dim font-mono text-xs mt-2">
+            Applies to every device you sign in on.
+          </Text>
+        ) : (
+          <NeedsConnection className="text-left" />
+        )}
 
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
           Quiet hours
@@ -164,6 +186,7 @@ export default function NotificationSettingsScreen() {
         <View className="gap-3">
           <ToggleRow
             label="Quiet hours"
+            disabled={!isOnline}
             description="Reminders that fall in this window are skipped."
             value={quietOn}
             onValueChange={(on) =>

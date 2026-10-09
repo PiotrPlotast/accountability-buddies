@@ -26,7 +26,7 @@ export default function DeleteGoalModal({ goal, isVisible, onClose }: Props) {
     if (!goal?.id || deleting) return;
     setDeleting(true);
     try {
-      await deleteGoal(goal.id);
+      await deleteGoal(goal.id, goal.title);
       onClose();
     } catch {
       // useOptimisticGoalMutation already surfaced an Alert and rolled the

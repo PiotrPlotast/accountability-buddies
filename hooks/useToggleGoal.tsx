@@ -7,7 +7,78 @@ import { celebrate, toggleDone, toggleUndone } from "@/lib/haptics";
 import { isDayComplete } from "@/lib/isDayComplete";
 import { queryKeys } from "@/lib/queryKeys";
 import { useSupabase } from "@/hooks/useSupabase";
-import { useOptimisticGoalMutation } from "@/lib/useOptimisticGoalMutation";
+import {
+  GoalMutationSpec,
+  useOptimisticGoalMutation,
+} from "@/lib/useOptimisticGoalMutation";
+
+// The day is captured at the tap. A tick made offline at 23:59 and synced the
+// next morning belongs to the evening it was made, not the morning it arrived.
+type StoredToggle = {
+  goalId: string;
+  groupId: string;
+  title: string;
+  done: boolean;
+  date: string;
+  userId: string;
+};
+
+// The server only takes a check-in dated within a day of its own date.
+const TOO_OLD = "42501";
+
+export const toggleGoalSpec: GoalMutationSpec<Goal, StoredToggle, void> = {
+  kind: "toggle",
+  prepare: (goal, userId) => ({
+    goalId: goal.id,
+    groupId: goal.group_id,
+    title: goal.title,
+    done: !goal.completed_today,
+    date: getTodayLocalDate(),
+    userId,
+  }),
+  mutationFn: async ({ goalId, done, date, userId }, supabase) => {
+    if (done) {
+      const { error } = await supabase.from("logs").insert({
+        goal_id: goalId,
+        user_id: userId,
+        date,
+      });
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from("logs")
+        .delete()
+        .eq("goal_id", goalId)
+        .eq("user_id", userId)
+        .eq("date", date);
+      if (error) throw error;
+    }
+  },
+  getGroupId: ({ groupId }) => groupId,
+  getPatch:
+    ({ goalId, done, date }) =>
+    (goals) =>
+      goals.map((g) => {
+        if (g.id !== goalId) return g;
+        const dates = g.completed_dates ?? [];
+        return {
+          ...g,
+          completed_today: done,
+          // Keep the week strip in step with the checkmark, or it lags a
+          // network round-trip behind the row it sits inside.
+          completed_dates: done
+            ? [...new Set([...dates, date])].sort()
+            : dates.filter((d) => d !== date),
+        };
+      }),
+  describe: ({ title, done }) => `${done ? "Ticking" : "Unticking"} "${title}"`,
+  explain: (error) =>
+    (error as { code?: string } | null)?.code === TOO_OLD
+      ? "Too late to sync, a tick only counts within a day."
+      : null,
+  invalidateStatsOnSettle: true,
+  getHeatmapDelta: ({ done }) => (done ? 1 : -1),
+};
 
 export function useToggleGoal() {
   const queryClient = useQueryClient();
@@ -32,65 +103,21 @@ export function useToggleGoal() {
     return isDayComplete(projected);
   };
 
-  return useOptimisticGoalMutation<Goal, void>({
-    mutationFn: async (goal, { supabase, userId: uid }) => {
-      const today = getTodayLocalDate();
-      const isNowCompleted = !goal.completed_today;
-
-      if (isNowCompleted) {
-        const { error } = await supabase.from("logs").insert({
-          goal_id: goal.id,
-          user_id: uid,
-          date: today,
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("logs")
-          .delete()
-          .eq("goal_id", goal.id)
-          .eq("user_id", uid)
-          .eq("date", today);
-        if (error) throw error;
-      }
-    },
-    getGroupId: (goal) => goal.group_id,
-    getPatch: (goal) => (goals) => {
-      const today = getTodayLocalDate();
-      const isNowCompleted = !goal.completed_today;
-
-      return goals.map((g) => {
-        if (g.id !== goal.id) return g;
-        const dates = g.completed_dates ?? [];
-        return {
-          ...g,
-          completed_today: isNowCompleted,
-          // Keep the week strip in step with the checkmark, or it lags a
-          // network round-trip behind the row it sits inside.
-          completed_dates: isNowCompleted
-            ? [...new Set([...dates, today])].sort()
-            : dates.filter((d) => d !== today),
-        };
-      });
-    },
-    beforeOptimistic: (goal) => {
-      if (goal.completed_today) {
-        toggleUndone();
-        return;
-      }
-      // The last habit of the day gets the fanfare *instead of* the ordinary
-      // confirmation — two buzzes on top of each other would just read as one
-      // long one.
-      if (closesOutTheDay(goal)) {
-        celebrate();
-        // The ring pulses off the same transition — one decision, so the buzz
-        // and the animation can never disagree.
-        emitDayComplete();
-      } else {
-        toggleDone();
-      }
-    },
-    invalidateStatsOnSettle: true,
-    getHeatmapDelta: (goal) => (!goal.completed_today ? 1 : -1),
+  return useOptimisticGoalMutation(toggleGoalSpec, (goal) => {
+    if (goal.completed_today) {
+      toggleUndone();
+      return;
+    }
+    // The last habit of the day gets the fanfare *instead of* the ordinary
+    // confirmation — two buzzes on top of each other would just read as one
+    // long one.
+    if (closesOutTheDay(goal)) {
+      celebrate();
+      // The ring pulses off the same transition — one decision, so the buzz
+      // and the animation can never disagree.
+      emitDayComplete();
+    } else {
+      toggleDone();
+    }
   });
 }

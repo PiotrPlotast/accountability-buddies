@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSupabase } from "@/hooks/useSupabase";
 import { themeColors } from "@/lib/colors";
 import { useTheme } from "@/hooks/useTheme";
+import NeedsConnection from "@/app/components/ui/NeedsConnection";
+import { useIsOnline } from "@/lib/onlineStatus";
 
 export default function JoinGroupScreen() {
   const { supabase, session } = useSupabase();
@@ -26,9 +28,10 @@ export default function JoinGroupScreen() {
   const [groupName, setGroupName] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"JOIN" | "CREATE">("JOIN");
+  const isOnline = useIsOnline();
 
   const handleJoin = async () => {
-    if (loading) return;
+    if (loading || !isOnline) return;
     if (!code.trim()) return Alert.alert("Error", "Please enter a code");
     setLoading(true);
 
@@ -60,7 +63,7 @@ export default function JoinGroupScreen() {
   // a `create_group_and_join` RPC alongside `join_group_via_code`; until that
   // exists the best we can do is report the half-finished state honestly.
   const handleCreate = async () => {
-    if (loading) return;
+    if (loading || !isOnline) return;
     const trimmedName = groupName.trim();
     if (!trimmedName) return Alert.alert("Error", "Name your group");
 
@@ -159,9 +162,13 @@ export default function JoinGroupScreen() {
 
             <Pressable
               onPress={isJoin ? handleJoin : handleCreate}
-              disabled={loading}
+              disabled={loading || !isOnline}
+              accessibilityState={{ disabled: loading || !isOnline }}
               className="h-14 rounded-tile items-center justify-center mt-2"
-              style={{ backgroundColor: accent.hex }}
+              style={{
+                backgroundColor: accent.hex,
+                opacity: isOnline ? 1 : 0.4,
+              }}
             >
               {loading ? (
                 <ActivityIndicator color={themeColors.background} />
@@ -171,6 +178,7 @@ export default function JoinGroupScreen() {
                 </Text>
               )}
             </Pressable>
+            {!isOnline ? <NeedsConnection /> : null}
           </View>
 
           <Pressable

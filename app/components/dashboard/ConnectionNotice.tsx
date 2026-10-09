@@ -3,16 +3,22 @@ import { View, Text, Pressable } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
 
 /**
- * A read failed but the cache still has the group, so the habits stay on
- * screen and this says they may be out of date. It goes away by itself on the
- * next read that succeeds.
+ * Offline, or a read failed, but the cache still has the group, so the habits
+ * stay on screen and this says they may be out of date. It goes away by
+ * itself once the connection is back and a read succeeds. Changes you made in
+ * the meantime are counted here until they have synced.
  */
-export function OfflineBanner() {
+export function OfflineBanner({ pending = 0 }: { pending?: number }) {
   return (
     <View className="mx-5 mt-3 rounded-tile border border-border bg-surface px-4 py-3">
       <Text className="text-text-muted font-mono text-xs text-center">
         Offline. Showing your last update.
       </Text>
+      {pending > 0 ? (
+        <Text className="text-text-muted font-mono text-xs text-center mt-1">
+          {`${pending} ${pending === 1 ? "change" : "changes"} waiting to sync`}
+        </Text>
+      ) : null}
     </View>
   );
 }

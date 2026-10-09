@@ -10,10 +10,12 @@ import {
 } from "react-native";
 
 import AppTextInput from "@/app/components/ui/AppTextInput";
+import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { useTheme } from "@/hooks/useTheme";
 import { MAX_NAME_LENGTH, isValidName, normalizeName } from "@/lib/displayName";
 import { themeColors } from "@/lib/colors";
+import { useIsOnline } from "@/lib/onlineStatus";
 
 type Props = {
   currentName: string;
@@ -36,6 +38,9 @@ export default function RenameModal({
 
   const [name, setName] = useState(currentName);
   const saving = updateProfile.isPending;
+  // Your name is what your buddies see, so it waits for a connection rather
+  // than queueing.
+  const isOnline = useIsOnline();
 
   // Re-seed each time it opens, so a cancelled edit doesn't come back on the
   // next open and a rename from elsewhere is reflected. Adjusted during render
@@ -49,7 +54,7 @@ export default function RenameModal({
   }
 
   const dirty = normalizeName(name) !== normalizeName(currentName);
-  const canSave = isValidName(name) && dirty && !saving;
+  const canSave = isValidName(name) && dirty && isOnline && !saving;
 
   // Backdrop dismissal only when there's nothing to lose — matching
   // EditGoalModal, where a stray tap must not discard an edit.
@@ -152,6 +157,7 @@ export default function RenameModal({
                 )}
               </Pressable>
             </View>
+            {!isOnline ? <NeedsConnection className="mb-4 -mt-2" /> : null}
           </View>
         </Pressable>
       </KeyboardAvoidingView>

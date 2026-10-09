@@ -1,4 +1,5 @@
-import { waitFor } from "@testing-library/react-native";
+import { act, waitFor } from "@testing-library/react-native";
+import { onlineManager } from "@tanstack/react-query";
 
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { ProfileRow } from "@/types/dashboardTypes";
@@ -85,5 +86,28 @@ describe("useDashboardData group gate", () => {
       expect(utils.result.current.value.isError).toBe(true);
     });
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("useDashboardData refresh offline", () => {
+  afterEach(() => onlineManager.setOnline(true));
+
+  // Offline a refetch pauses until the connection returns, so awaiting it kept
+  // the pull-to-refresh spinner up the whole time.
+  it("returns at once instead of waiting for the connection", async () => {
+    const { Wrapper } = buildNoGroup({ full_name: "Piotr", avatar_url: null });
+    const utils = await renderHookWithSession(
+      () => useDashboardData(),
+      Wrapper,
+    );
+    onlineManager.setOnline(false);
+
+    let done = false;
+    await act(async () => {
+      await utils.result.current.value.fetchData().then(() => (done = true));
+    });
+
+    expect(done).toBe(true);
+    expect(utils.result.current.value.refreshing).toBe(false);
   });
 });

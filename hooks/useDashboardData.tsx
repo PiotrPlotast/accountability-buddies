@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { onlineManager } from "@tanstack/react-query";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useNameGate } from "@/hooks/useNameGate";
+import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
+import { useIsOnline } from "@/lib/onlineStatus";
 
 /**
  * The dashboard screen's own layer over `useActiveGroup`: the pull-to-refresh
@@ -18,8 +21,14 @@ export function useDashboardData() {
   // `isRefetching`, which also flips on background invalidation (every goal
   // toggle invalidates `groupMembers`) and would spin the control unprompted.
   const [refreshing, setRefreshing] = useState(false);
+  const isOnline = useIsOnline();
+  const pendingChanges = usePendingGoalChanges();
 
   const fetchData = useCallback(async () => {
+    // Offline a refetch pauses rather than fails, and its promise waits for
+    // the connection, so the spinner would stay until then. The banner is
+    // already saying why there is nothing new.
+    if (!onlineManager.isOnline()) return;
     setRefreshing(true);
     try {
       await refetch();
@@ -44,14 +53,16 @@ export function useDashboardData() {
     }
   }, [hasNoGroup, nameResolved, needsName, router]);
 
-  // A failed read shows the cache with a banner when there is one, and a
-  // retry screen when there is nothing to show. Every member list includes
-  // you, so an empty one means nothing was cached.
-  const offline: "banner" | "screen" | null = group.readFailed
-    ? group.members.length > 0
-      ? "banner"
-      : "screen"
-    : null;
+  // A failed read, or a phone that says it is offline, shows the cache with a
+  // banner when there is one, and a retry screen when there is nothing to
+  // show. Every member list includes you, so an empty one means nothing was
+  // cached.
+  const offline: "banner" | "screen" | null =
+    group.readFailed || !isOnline
+      ? group.members.length > 0
+        ? "banner"
+        : "screen"
+      : null;
 
-  return { ...group, refreshing, fetchData, offline };
+  return { ...group, refreshing, fetchData, offline, isOnline, pendingChanges };
 }

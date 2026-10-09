@@ -86,6 +86,14 @@ jest.mock("expo-haptics", () => ({
   selectionAsync: jest.fn(() => Promise.resolve()),
 }));
 
+// NetInfo has no native module under Jest. The library's own mock reports a
+// connected phone and records `addEventListener`, which `lib/onlineStatus.ts`
+// tests drive by hand. Tests that go offline do it through TanStack's
+// `onlineManager` and set it back online in their own `afterEach`.
+jest.mock("@react-native-community/netinfo", () =>
+  require("@react-native-community/netinfo/jest/netinfo-mock.js"),
+);
+
 // expo-clipboard
 jest.mock("expo-clipboard", () => ({
   setStringAsync: jest.fn(() => Promise.resolve()),

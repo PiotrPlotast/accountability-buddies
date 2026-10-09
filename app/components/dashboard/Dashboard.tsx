@@ -34,8 +34,15 @@ type NudgeTarget = {
 const SENT_NOTICE_MS = 3000;
 
 export default function Dashboard() {
-  const { userId, refreshing, members, fetchData, offline } =
-    useDashboardData();
+  const {
+    userId,
+    refreshing,
+    members,
+    fetchData,
+    offline,
+    isOnline,
+    pendingChanges,
+  } = useDashboardData();
   const { accent } = useTheme();
 
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
@@ -61,7 +68,7 @@ export default function Dashboard() {
   const buddyName = firstName(currentMember?.full_name ?? "");
 
   const openNudge = (message: string) => {
-    if (!viewedId || isViewingMe) return;
+    if (!viewedId || isViewingMe || !isOnline) return;
     setNudgeTarget({
       userId: viewedId,
       name: buddyName,
@@ -139,7 +146,9 @@ export default function Dashboard() {
         refreshControl={refreshControl}
         keyboardShouldPersistTaps="handled"
       >
-        {offline === "banner" ? <OfflineBanner /> : null}
+        {offline === "banner" ? (
+          <OfflineBanner pending={pendingChanges} />
+        ) : null}
         <DashboardHeader
           todayGoals={todayGoals}
           onOpenHabitManager={() => setIsHabitManagerVisible(true)}
@@ -158,6 +167,7 @@ export default function Dashboard() {
               name={buddyName}
               onPress={() => openNudge("")}
               sent={sentTo === viewedId}
+              disabled={!isOnline}
             />
           )}
 
@@ -167,8 +177,11 @@ export default function Dashboard() {
             goals={todayGoals}
             onEdit={setEditingGoal}
             onDelete={setDeletingGoal}
-            onNudge={(goal) =>
-              openNudge(habitNudgeMessage(buddyName, goal.title))
+            // A nudge needs the server, so offline the swipe isn't offered.
+            onNudge={
+              isOnline
+                ? (goal) => openNudge(habitNudgeMessage(buddyName, goal.title))
+                : undefined
             }
           />
         </View>

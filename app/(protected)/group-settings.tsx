@@ -17,7 +17,9 @@ import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useUpdateGroup } from "@/hooks/useUpdateGroup";
 import { useTheme } from "@/hooks/useTheme";
 import IconPicker from "@/app/components/habits/IconPicker";
+import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import { themeColors } from "@/lib/colors";
+import { useIsOnline } from "@/lib/onlineStatus";
 
 export default function GroupSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -25,6 +27,9 @@ export default function GroupSettingsScreen() {
   const { activeGroupId, groupName, groupIcon, inviteCode } = useActiveGroup();
   const { accent, palette, accentId, setAccent } = useTheme();
   const updateGroup = useUpdateGroup();
+  // The name and icon are the whole group's, so they don't queue offline. The
+  // accent below is this phone's and works either way.
+  const isOnline = useIsOnline();
 
   // Only what the user changed is state; untouched, each field shows the
   // group's current value, so it fills in once the group lands and follows a
@@ -37,7 +42,8 @@ export default function GroupSettingsScreen() {
   const trimmedName = name.trim();
   const dirty =
     (trimmedName.length > 0 && trimmedName !== groupName) || icon !== groupIcon;
-  const canSave = !!activeGroupId && dirty && !updateGroup.isPending;
+  const canSave =
+    !!activeGroupId && dirty && isOnline && !updateGroup.isPending;
 
   const handleSave = async () => {
     if (!canSave || !activeGroupId) return;
@@ -199,6 +205,7 @@ export default function GroupSettingsScreen() {
             </Text>
           )}
         </Pressable>
+        {!isOnline ? <NeedsConnection /> : null}
       </View>
     </View>
   );
