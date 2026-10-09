@@ -124,6 +124,26 @@ describe("useActiveGroup", () => {
     expect(v.myGoals).toEqual([]);
   });
 
+  // Offline with nothing cached, the read fails. That is "couldn't ask",
+  // never "asked and you have no group", which would send them to join-group.
+  it("is not group-less when the stats read failed", async () => {
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({
+        rpcImpl: jest.fn(() =>
+          makeQueryBuilder({ data: null, error: { message: "offline" } }),
+        ),
+      }),
+    });
+
+    const { result } = await renderHookWithSession(
+      () => useActiveGroup(),
+      Wrapper,
+    );
+
+    await waitFor(() => expect(result.current.value.isError).toBe(true));
+    expect(result.current.value.hasNoGroup).toBe(false);
+  });
+
   it("is loading, not group-less, before the stats arrive", async () => {
     // A stats read that never settles.
     const rpcImpl = jest.fn(() => ({

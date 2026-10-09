@@ -327,3 +327,153 @@ describe("Dashboard habit manager hand-off", () => {
     expect(utils.UNSAFE_getByType(DeleteGoalModal).props.isVisible).toBe(false);
   });
 });
+
+describe("Dashboard without a connection", () => {
+  const failed = () =>
+    makeQueryBuilder<unknown>({
+      data: null,
+      error: { message: "Network request failed" },
+    });
+  const ok = (data: unknown) => () => makeQueryBuilder({ data, error: null });
+
+  function seededClient() {
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData(queryKeys.profile("user-1"), {
+      full_name: "Me Myself",
+      avatar_url: null,
+    });
+    return queryClient;
+  }
+
+  it("keeps the cached habits and shows a banner when a read fails", async () => {
+    const queryClient = seededClient();
+    queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
+    queryClient.setQueryData(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [me, buddy],
+    );
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({
+        rpcImpl: jest.fn(failed),
+        fromImpl: jest.fn(failed),
+      }),
+      queryClient,
+    });
+    const { findByText, getByText, queryByText } = render(<Dashboard />, {
+      wrapper: Wrapper,
+    });
+    expect(queryByText("Offline. Showing your last update.")).toBeNull();
+
+    await act(async () => {
+      await queryClient.refetchQueries();
+    });
+
+    // The cache notifies its observers on the next tick.
+    expect(await findByText("Offline. Showing your last update.")).toBeTruthy();
+    expect(getByText("My habit")).toBeTruthy();
+    expect(queryByText("Can't reach Habit Pals")).toBeNull();
+  });
+
+  it("clears the banner once a read succeeds again", async () => {
+    const queryClient = seededClient();
+    queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
+    queryClient.setQueryData(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [me, buddy],
+    );
+    const rpcImpl = jest.fn(failed);
+    const fromImpl = jest.fn(failed);
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ rpcImpl, fromImpl }),
+      queryClient,
+    });
+    const { findByText, queryByText } = render(<Dashboard />, {
+      wrapper: Wrapper,
+    });
+    await act(async () => {
+      await queryClient.refetchQueries();
+    });
+    expect(await findByText("Offline. Showing your last update.")).toBeTruthy();
+
+    rpcImpl.mockImplementation(ok(stats));
+    fromImpl.mockImplementation(ok([]));
+    await act(async () => {
+      await queryClient.refetchQueries();
+    });
+
+    await waitFor(() =>
+      expect(queryByText("Offline. Showing your last update.")).toBeNull(),
+    );
+  });
+
+  it("shows a retry screen when nothing is cached", async () => {
+    const queryClient = seededClient();
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({
+        rpcImpl: jest.fn(failed),
+        fromImpl: jest.fn(failed),
+      }),
+      queryClient,
+    });
+    const { findByText, getByText, queryByText } = render(<Dashboard />, {
+      wrapper: Wrapper,
+    });
+
+    expect(await findByText("Can't reach Habit Pals")).toBeTruthy();
+    expect(getByText("Check your connection and try again.")).toBeTruthy();
+    expect(queryByText("Offline. Showing your last update.")).toBeNull();
+  });
+
+  it("reads the group again when Retry is pressed", async () => {
+    const queryClient = seededClient();
+    // Today's members are cached but the group they belong to is not, so
+    // there is still nothing to show until the group read succeeds.
+    queryClient.setQueryData(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [me, buddy],
+    );
+    const rpcImpl = jest.fn(failed);
+    const fromImpl = jest.fn(failed);
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ rpcImpl, fromImpl }),
+      queryClient,
+    });
+    const { findByText, findByRole, queryByText } = render(<Dashboard />, {
+      wrapper: Wrapper,
+    });
+    await findByText("Can't reach Habit Pals");
+    const callsBefore = rpcImpl.mock.calls.length;
+
+    rpcImpl.mockImplementation(ok(stats));
+    fireEvent.press(await findByRole("button", { name: "Retry" }));
+
+    expect(await findByText("My habit")).toBeTruthy();
+    expect(rpcImpl.mock.calls.length).toBeGreaterThan(callsBefore);
+    expect(queryByText("Can't reach Habit Pals")).toBeNull();
+  });
+
+  it("disables Retry and says so while it retries", async () => {
+    const queryClient = seededClient();
+    const rpcImpl = jest.fn(failed);
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ rpcImpl, fromImpl: jest.fn(failed) }),
+      queryClient,
+    });
+    const { findByText, findByRole } = render(<Dashboard />, {
+      wrapper: Wrapper,
+    });
+    await findByText("Can't reach Habit Pals");
+
+    // A read that never settles keeps the retry in flight.
+    rpcImpl.mockImplementation(
+      () =>
+        ({
+          maybeSingle: () => new Promise(() => {}),
+        }) as never,
+    );
+    fireEvent.press(await findByRole("button", { name: "Retry" }));
+
+    const button = await findByRole("button", { name: "Retrying…" });
+    expect(button.props.accessibilityState).toMatchObject({ disabled: true });
+  });
+});

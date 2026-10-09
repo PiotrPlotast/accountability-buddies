@@ -509,9 +509,13 @@ Concrete things found in the repo, not generalities:
   consequence of third-party sign-in, which is wrong: Apple requires in-app
   deletion of any app that lets people create accounts, so email sign-up
   already triggered it. Skipping Google would never have skipped this.
-- **Empty states and network errors** — today errors are an `Alert.alert` from
-  the mutation hook. Before the store, it is worth having a consistent
-  "no connection" state on the dashboard.
+- ~~**Empty states and network errors**~~ — **done 2026-10-09** ("Banner +
+  retry"): a failed read over cached data shows "Offline. Showing your last
+  update." above the habits, a failed read with nothing cached shows a "Can't
+  reach Habit Pals" screen with Retry, and a failed read no longer counts as
+  "no group" (an offline launch with an empty cache used to land on
+  join-group). Failed ticks keep their `Alert`; queuing them offline was
+  considered and left out.
 - ~~**`.env.example`** needs extending with the variables from E2/E3.~~ —
   **done 2026-10-09**: the app still needs only the two `EXPO_PUBLIC_*` values
   (Google sign-in was deferred, so there are no client IDs), and the server
