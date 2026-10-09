@@ -2,6 +2,7 @@ import { Alert } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useSupabase } from "@/hooks/useSupabase";
+import { errorMessage } from "@/lib/errorMessage";
 import { error as errorHaptic } from "@/lib/haptics";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -81,10 +82,7 @@ export function useNotificationPrefs() {
         queryClient.setQueryData(prefsKey, ctx.previous);
       }
       errorHaptic();
-      Alert.alert(
-        "Couldn't save that",
-        err instanceof Error ? err.message : "Please try again.",
-      );
+      Alert.alert("Couldn't save that", errorMessage(err));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: prefsKey });

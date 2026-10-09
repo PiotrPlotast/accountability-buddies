@@ -138,6 +138,41 @@ describe("useNotificationPrefs", () => {
     expect(Alert.alert).toHaveBeenCalled();
   });
 
+  it("asks for a connection when the write never reached the server", async () => {
+    const qb = makeQueryBuilder({ data: STORED, error: null });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
+    const { Wrapper, queryClient } = buildWrapper({ supabase });
+    queryClient.setQueryData(prefsKey, STORED);
+    const utils = await renderHookWithSession(
+      () => useNotificationPrefs(),
+      Wrapper,
+    );
+    await waitFor(() => expect(utils.result.current.value.prefs).toBeTruthy());
+
+    qb.eq.mockImplementationOnce(
+      () =>
+        Promise.resolve({
+          error: {
+            message: "TypeError: Network request failed",
+            details: "TypeError: Network request failed",
+            hint: "",
+            code: "",
+          },
+        }) as never,
+    );
+
+    await act(async () => {
+      utils.result.current.value.setPref({ reminders_enabled: false });
+    });
+
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenCalledWith(
+        "Couldn't save that",
+        "Check your connection and try again.",
+      ),
+    );
+  });
+
   it("reports a row that has not arrived as null rather than guessing", async () => {
     // Every account gets a row from the trigger, so this is the window before
     // the read resolves — not a state the screen should render defaults for.

@@ -104,6 +104,35 @@ describe("useUpdateProfile", () => {
     expect(Alert.alert).toHaveBeenCalled();
   });
 
+  it("asks for a connection when the update never reached the server", async () => {
+    const qb = makeQueryBuilder({
+      data: null,
+      error: {
+        message: "TypeError: Network request failed",
+        details: "TypeError: Network request failed",
+        hint: "",
+        code: "",
+      } as never,
+    });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
+    const { Wrapper } = buildWrapper({ supabase });
+    const utils = await renderHookWithSession(
+      () => useUpdateProfile(),
+      Wrapper,
+    );
+
+    await act(async () => {
+      await utils.result.current.value
+        .mutateAsync({ fullName: "Zofia" })
+        .catch(() => {});
+    });
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      "Couldn't save your name",
+      "Check your connection and try again.",
+    );
+  });
+
   it("fails loudly when the update matches no row", async () => {
     // `profiles` has no INSERT policy — the signup trigger owns the row. An
     // update that touches nothing means the row is missing, and silently

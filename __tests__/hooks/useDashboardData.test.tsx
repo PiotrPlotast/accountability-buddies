@@ -58,4 +58,32 @@ describe("useDashboardData group gate", () => {
     });
     expect(router.replace).not.toHaveBeenCalled();
   });
+
+  it("stays put when the group read failed", async () => {
+    const supabase = buildFakeSupabase({
+      rpcImpl: jest.fn(() =>
+        makeQueryBuilder({ data: null, error: { message: "offline" } }),
+      ),
+      fromImpl: jest.fn(() =>
+        makeQueryBuilder({
+          data: { full_name: "Piotr", avatar_url: null },
+          error: null,
+        }),
+      ),
+    });
+    const { Wrapper } = buildWrapper({
+      supabase,
+      queryClient: makeQueryClient(),
+    });
+
+    const utils = await renderHookWithSession(
+      () => useDashboardData(),
+      Wrapper,
+    );
+
+    await waitFor(() => {
+      expect(utils.result.current.value.isError).toBe(true);
+    });
+    expect(router.replace).not.toHaveBeenCalled();
+  });
 });

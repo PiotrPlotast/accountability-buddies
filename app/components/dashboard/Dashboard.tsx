@@ -17,6 +17,7 @@ import NudgeButton from "./NudgeButton";
 import NudgeModal from "./NudgeModal";
 import { firstName, habitNudgeMessage } from "@/lib/nudge";
 import { onShowTab } from "@/lib/notificationTaps";
+import { OfflineBanner, OfflineRetry } from "./ConnectionNotice";
 
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
 
@@ -33,7 +34,8 @@ type NudgeTarget = {
 const SENT_NOTICE_MS = 3000;
 
 export default function Dashboard() {
-  const { userId, refreshing, members, fetchData } = useDashboardData();
+  const { userId, refreshing, members, fetchData, offline } =
+    useDashboardData();
   const { accent } = useTheme();
 
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
@@ -106,21 +108,38 @@ export default function Dashboard() {
 
   if (!userId) return <View className="flex-1 bg-bg" />;
 
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={fetchData}
+      tintColor={accent.hex}
+      colors={[accent.hex]}
+    />
+  );
+
+  if (offline === "screen") {
+    return (
+      <View className="flex-1 w-full bg-bg">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={refreshControl}
+        >
+          <OfflineRetry onRetry={fetchData} retrying={refreshing} />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 w-full bg-bg">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={fetchData}
-            tintColor={accent.hex}
-            colors={[accent.hex]}
-          />
-        }
+        refreshControl={refreshControl}
         keyboardShouldPersistTaps="handled"
       >
+        {offline === "banner" ? <OfflineBanner /> : null}
         <DashboardHeader
           todayGoals={todayGoals}
           onOpenHabitManager={() => setIsHabitManagerVisible(true)}

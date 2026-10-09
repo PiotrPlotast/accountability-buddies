@@ -38,8 +38,16 @@ export function useActiveGroup() {
     userId,
     loading: groupStats.isLoading || groupMembers.isLoading,
     isError: groupStats.isError || groupMembers.isError,
-    // Read, and came back empty — distinct from "not read yet".
-    hasNoGroup: groupStats.isFetched && !groupStats.data,
+    // The latest answer to either read was an error. Unlike `isError` it
+    // holds through a retry: a refetch of a query that never had data puts it
+    // back to pending, so `isError` drops while the retry is in flight.
+    readFailed:
+      groupStats.errorUpdatedAt > groupStats.dataUpdatedAt ||
+      groupMembers.errorUpdatedAt > groupMembers.dataUpdatedAt,
+    // Read, and came back empty — distinct from "not read yet" and from a
+    // read that failed. Offline with nothing cached, `isFetched` is true and
+    // `data` empty too, which used to send people to join-group.
+    hasNoGroup: groupStats.isSuccess && !groupStats.data,
     activeGroupId: groupStats.data?.group_id || null,
     // `null` until the group arrives. It used to be the literal "Loading...",
     // which callers then compared against — so a group actually named

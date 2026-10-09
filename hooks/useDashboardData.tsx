@@ -44,5 +44,14 @@ export function useDashboardData() {
     }
   }, [hasNoGroup, nameResolved, needsName, router]);
 
-  return { ...group, refreshing, fetchData };
+  // A failed read shows the cache with a banner when there is one, and a
+  // retry screen when there is nothing to show. Every member list includes
+  // you, so an empty one means nothing was cached.
+  const offline: "banner" | "screen" | null = group.readFailed
+    ? group.members.length > 0
+      ? "banner"
+      : "screen"
+    : null;
+
+  return { ...group, refreshing, fetchData, offline };
 }

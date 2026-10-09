@@ -113,6 +113,21 @@ beforeEach(() => {
 });
 
 describe("SupabaseProvider", () => {
+  // The query layer owns retries. supabase-js retrying every read three times
+  // inside each of TanStack's attempts is what kept an offline refresh
+  // spinning for half a minute.
+  it("turns off supabase-js's own read retries", async () => {
+    renderWithConsumers(["a"]);
+
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    expect(createClient).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ db: { retry: false } }),
+    );
+  });
+
   // The whole point of moving session state out of `useSupabase`: it used to
   // run its own getSession + onAuthStateChange per call site, which on the
   // dashboard meant ~28 concurrent subscriptions.

@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Alert } from "react-native";
 
 import { useSupabase } from "@/hooks/useSupabase";
+import { errorMessage } from "@/lib/errorMessage";
 import { error as errorHaptic } from "@/lib/haptics";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
@@ -121,8 +122,7 @@ export function useOptimisticGoalMutation<TVars, TData = unknown>(
       // Felt before the Alert is read — one buzz for every rollback in the app,
       // because they all come through here.
       errorHaptic();
-      const message = error instanceof Error ? error.message : String(error);
-      Alert.alert("Error", message);
+      Alert.alert("Couldn't save", errorMessage(error));
     },
 
     onSettled: (_data, _error, vars) => {
