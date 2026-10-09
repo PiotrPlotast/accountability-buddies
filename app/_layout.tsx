@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { QueryClient, useIsRestoring } from "@tanstack/react-query";
+import { useIsRestoring } from "@tanstack/react-query";
+import { createAppQueryClient } from "@/lib/queryClient";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { StatusBar } from "expo-status-bar";
 import { themeColors } from "@/lib/colors";
@@ -35,14 +36,7 @@ SplashScreen.preventAutoHideAsync();
 // looks like it was never delivered.
 configureNotificationHandler();
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      gcTime: 1000 * 60 * 60 * 24, // 24 godziny
-      staleTime: 1000 * 60 * 5, // 5 minut
-    },
-  },
-});
+const queryClient = createAppQueryClient();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

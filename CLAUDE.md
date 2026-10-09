@@ -144,6 +144,7 @@ Use `__tests__/test-utils/render.tsx`: `buildFakeSupabase({ fromImpl, rpcImpl })
 
 - `@/*` aliases the repo root; prefer `@/hooks/...` over relative imports.
 - TypeScript `strict` + `noImplicitAny`; typed routes and React Compiler are enabled in `app.json`.
-- User-facing errors are `Alert.alert` (mostly from the shared mutation hook's `onError`).
+- User-facing errors are `Alert.alert` (mostly from the shared mutation hook's `onError`, titled "Couldn't save"), and the message always comes from `errorMessage(err, fallback?)` in `lib/errorMessage.ts`. A PostgREST error is a plain object, not an `Error`, so `instanceof Error`/`String(err)` printed "[object Object]" or threw the reason away; offline, supabase-js folds the fetch rejection into that same object, which `isNetworkError` recognises and `errorMessage` turns into "Check your connection and try again."
+- Retries live in one layer: `createAppQueryClient()` in `lib/queryClient.ts` sets `retry: 1`, and the provider passes `db: { retry: false }` to `createClient`. Stacked (supabase-js's 3 retries inside each of TanStack's 3), an offline pull-to-refresh spun for half a minute.
 - Some inline comments are in Polish; that's fine — match the surrounding file.
 - PRs follow `.github/PULL_REQUEST_TEMPLATE.md`; branches are named `feature/…`, `fix/…`, `refactor/…` off `main`.

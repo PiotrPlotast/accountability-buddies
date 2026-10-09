@@ -1,4 +1,5 @@
 import { act, waitFor } from "@testing-library/react-native";
+import { Alert } from "react-native";
 
 import * as haptics from "@/lib/haptics";
 import * as dayCompleteSignal from "@/lib/dayCompleteSignal";
@@ -82,6 +83,61 @@ describe("useToggleGoal", () => {
         queryKeys.groupMembers("group-1", getTodayLocalDate()),
       );
       expect(cached?.[0].goals[0].completed_today).toBe(false);
+    });
+  });
+
+  describe("the rollback alert", () => {
+    beforeEach(() => {
+      jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    });
+    afterEach(() => {
+      (Alert.alert as jest.Mock).mockRestore();
+    });
+
+    async function tickWith(error: unknown) {
+      const errorQB = makeQueryBuilder({ error } as never);
+      const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => errorQB) });
+      const queryClient = makeQueryClient();
+      queryClient.setQueryData<Member[]>(
+        queryKeys.groupMembers("group-1", getTodayLocalDate()),
+        [{ user_id: "user-1", full_name: "Me", goals: [{ ...baseGoal }] }],
+      );
+      const { Wrapper } = buildWrapper({ supabase, queryClient });
+      const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
+      await act(async () => {
+        await utils.result.current.value
+          .mutateAsync({ ...baseGoal })
+          .catch(() => {});
+      });
+    }
+
+    // Offline, supabase-js resolves with a plain object, which used to be
+    // stringified into "[object Object]".
+    it("asks for a connection when the tick never reached the server", async () => {
+      await tickWith({
+        message: "TypeError: Network request failed",
+        details: "TypeError: Network request failed",
+        hint: "",
+        code: "",
+      });
+
+      await waitFor(() =>
+        expect(Alert.alert).toHaveBeenCalledWith(
+          "Couldn't save",
+          "Check your connection and try again.",
+        ),
+      );
+    });
+
+    it("shows the server's message for any other refusal", async () => {
+      await tickWith({ message: "Goal not found", code: "P0001" });
+
+      await waitFor(() =>
+        expect(Alert.alert).toHaveBeenCalledWith(
+          "Couldn't save",
+          "Goal not found",
+        ),
+      );
     });
   });
 

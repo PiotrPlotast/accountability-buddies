@@ -2,24 +2,8 @@ import { useMutation } from "@tanstack/react-query";
 import { Alert } from "react-native";
 
 import { useSupabase } from "@/hooks/useSupabase";
+import { errorMessage } from "@/lib/errorMessage";
 import { destructive, error as errorBuzz } from "@/lib/haptics";
-
-/**
- * Pull a readable reason out of whatever the mutation threw.
- *
- * A `PostgrestError` is a plain object, not an `Error`, so an `instanceof`
- * check alone reduces every server-side failure to "Please try again." — and
- * on a screen whose only other outcome is a deleted account, the actual reason
- * is the one diagnostic the user can read back.
- */
-function messageFrom(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "object" && err !== null && "message" in err) {
-    const message = (err as { message: unknown }).message;
-    if (typeof message === "string" && message.trim()) return message;
-  }
-  return "Please try again.";
-}
 
 /**
  * Delete the signed-in user's account, then sign them out.
@@ -62,7 +46,7 @@ export function useDeleteAccount() {
     },
     onError: (err) => {
       errorBuzz();
-      Alert.alert("Couldn't delete your account", messageFrom(err));
+      Alert.alert("Couldn't delete your account", errorMessage(err));
     },
   });
 }

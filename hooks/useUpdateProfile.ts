@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 
 import { useSupabase } from "@/hooks/useSupabase";
 import { isValidName, normalizeName } from "@/lib/displayName";
+import { errorMessage } from "@/lib/errorMessage";
 import { queryKeys } from "@/lib/queryKeys";
 import { ProfileRow } from "@/types/dashboardTypes";
 
@@ -59,10 +60,7 @@ export function useUpdateProfile() {
       if (ctx?.previous !== undefined) {
         queryClient.setQueryData(profileKey, ctx.previous);
       }
-      Alert.alert(
-        "Couldn't save your name",
-        err instanceof Error ? err.message : "Please try again.",
-      );
+      Alert.alert("Couldn't save your name", errorMessage(err));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: profileKey });

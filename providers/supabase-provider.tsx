@@ -27,6 +27,10 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
           detectSessionInUrl: false,
           lock: processLock,
         },
+        // TanStack Query owns retries (`lib/queryClient.ts`). Left on, every
+        // read retried three times inside each of its attempts, and an
+        // offline refresh spun for half a minute.
+        db: { retry: false },
       }),
     [supabaseUrl, supabaseKey],
   );

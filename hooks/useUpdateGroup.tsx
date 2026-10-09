@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "react-native";
 
 import { useSupabase } from "@/hooks/useSupabase";
+import { errorMessage } from "@/lib/errorMessage";
 import { queryKeys } from "@/lib/queryKeys";
 import { GroupResult } from "@/types/dashboardTypes";
 
@@ -48,7 +49,7 @@ export function useUpdateGroup() {
       }
       Alert.alert(
         "Update failed",
-        err instanceof Error ? err.message : "Could not save group changes.",
+        errorMessage(err, "Could not save group changes."),
       );
     },
     onSettled: () => {

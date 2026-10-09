@@ -90,7 +90,7 @@ describe("useDeleteGoal", () => {
       expect(cached?.[0].goals).toHaveLength(1);
     });
     expect(Alert.alert).toHaveBeenCalledWith(
-      "Error",
+      "Couldn't save",
       expect.stringContaining("Could not delete"),
     );
   });
