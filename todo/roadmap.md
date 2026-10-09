@@ -512,8 +512,12 @@ Concrete things found in the repo, not generalities:
 - **Empty states and network errors** — today errors are an `Alert.alert` from
   the mutation hook. Before the store, it is worth having a consistent
   "no connection" state on the dashboard.
-- **`.env.example`** needs extending with the variables from E2/E3 (the Google
-  client IDs, `EXPO_ACCESS_TOKEN`, `DISPATCH_SECRET` on the Supabase side).
+- ~~**`.env.example`** needs extending with the variables from E2/E3.~~ —
+  **done 2026-10-09**: the app still needs only the two `EXPO_PUBLIC_*` values
+  (Google sign-in was deferred, so there are no client IDs), and the server
+  side has its own `supabase/functions/.env.example` (`EXPO_ACCESS_TOKEN`,
+  `DISPATCH_SECRET`, plus the two Vault secrets). The README is brought up to
+  SDK 57 and the E3–E5 backend.
 - **Done 2026-10-08: `npm run lint` is clean.** The six `set-state-in-effect` sites now seed during render, store only the user's edits, open directly off iOS, or use Reanimated's `LayoutAnimationConfig skipEntering`, each pinned by tests first. What follows is the original write-up.
 - **Eleven lint errors, eight of them worth reading.** (The eleventh, added
   since: a `prettier/prettier` missing newline in `expo-env.d.ts` — generated,
