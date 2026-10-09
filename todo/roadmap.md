@@ -548,6 +548,54 @@ Concrete things found in the repo, not generalities:
 
 ---
 
+## E7 — Cheer a friend (~2–3 days, needs E4 and E5) — **added 2026-10-09**
+
+Asked for by Piotr on 2026-10-09: when a buddy finishes a habit, you can cheer
+them back. The flow:
+
+1. You get E5's `buddy_ticked` (or `buddy_done`) push: "Ada ticked Read 20
+   pages 📚".
+2. Tapping it opens a **cheer modal** for Ada instead of only her tab.
+3. You write your own message or pick one of the default lines.
+4. Ada gets a push with your text: "Piotr cheered you: Nice one! 🔥".
+
+This is the "one-tap reaction straight from the notification" that E4 left out
+as separate scope, and nearly all of it already exists:
+
+- **Server:** a `cheer` notification type and an `enqueue_cheer(recipient,
+  message)` beside `enqueue_nudge`, so the rules live in SQL and are tested in
+  `supabase/tests/` like the nudge's: shared group, the recipient's Social
+  switch, a length cap, rate limits and a `cheer:<sender>:<recipient>:<minute>`
+  dedupe key. The send path is the nudge's (`expoPush.ts`,
+  `record_push_tickets`); either `send-nudge` grows a `type` or a twin
+  `send-cheer` function calls the new RPC.
+- **App:** `CheerModal` on the shape of `NudgeModal` (cap with a counter, a few
+  presets, the server's refusal in an `Alert`, `celebrate()` on the server's
+  confirmation), and `useSendCheer` on the shape of `useSendNudge`.
+- **Tap routing:** `useNotificationTaps` sends a `buddy_ticked` / `buddy_done`
+  tap to that buddy's tab *and* opens the cheer modal for them; a tapped
+  `cheer` opens your own tab like a nudge does. Still once per tap, still
+  waiting on the name gate and the group, still dropped while signed out.
+
+Decide before coding (the answers become the tests):
+
+- Whether a cheer can also be sent from inside the app (a button on a buddy's
+  tab next to `NudgeButton`), or only from the notification.
+- The default lines, and whether they name the habit from the push ("Nice
+  work on Read 20 pages!") — that needs the habit in the push data.
+- The limits: the nudge's numbers, looser ones, or one cheer per buddy per
+  habit per day.
+- Which switch governs receiving cheers: Social, Nudges, or a new one.
+- What happens when the tapped habit was unticked in the meantime — cheer
+  anyway, or open the tab without the modal.
+- Whether the cheered buddy gets a way to see who cheered them beyond the push
+  itself (a list, a badge) — probably later, not this stage.
+
+Two PRs, like E4: the server (migration, SQL tests, Edge Function), then the
+app (modal, hook, tap routing).
+
+---
+
 ## Order, if something has to be cut
 
 1. ~~**E0**~~ — closed, bar the device sign-off.
@@ -558,6 +606,8 @@ Concrete things found in the repo, not generalities:
    is in front of them.
 5. **E5** — valuable, not critical for a first release.
 6. **E6** — spread it across all the stages instead of leaving it to the end.
+7. **E7** — after the first release is fine; it adds to E4/E5, it doesn't
+   unblock anything.
 
 ## Critical path
 
