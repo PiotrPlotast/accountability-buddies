@@ -7,10 +7,12 @@ import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
 import { themeColors } from "@/lib/colors";
+import { useIsOnline } from "@/lib/onlineStatus";
 import Heatmap from "./Heatmap";
 import RenameModal from "./RenameModal";
 import PencilIcon from "@/app/components/ui/PencilIcon";
 import GearIcon from "@/app/components/ui/GearIcon";
+import NeedsConnection from "@/app/components/ui/NeedsConnection";
 
 const AVATAR_BLURHASH =
   "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
@@ -40,6 +42,9 @@ export default function Profile() {
   const groupsCount = groupName ? 1 : 0;
   const [renaming, setRenaming] = useState(false);
   const { mutate: deleteAccount, isPending: isDeleting } = useDeleteAccount();
+  // Deleting is the server's job and can't wait in a queue for a connection.
+  const isOnline = useIsOnline();
+  const deleteBlocked = isDeleting || !isOnline;
   // The name gate means `fullName` is set for anyone who reaches this screen;
   // the fallback only covers the frame before the profile query resolves.
   const displayName = fullName || "You";
@@ -219,14 +224,14 @@ export default function Profile() {
         </Text>
         <Pressable
           onPress={handleDeleteAccount}
-          disabled={isDeleting}
+          disabled={deleteBlocked}
           accessible
           accessibilityRole="button"
           accessibilityLabel="Delete account"
           accessibilityHint="Asks twice, then permanently deletes your account"
-          accessibilityState={{ disabled: isDeleting }}
+          accessibilityState={{ disabled: deleteBlocked }}
           style={({ pressed }) => ({
-            opacity: pressed || isDeleting ? 0.6 : 1,
+            opacity: pressed || deleteBlocked ? 0.6 : 1,
           })}
           className="bg-surface border border-danger rounded-tile px-4 py-4 flex-row items-center gap-3"
         >
@@ -244,6 +249,7 @@ export default function Profile() {
             ›
           </Text>
         </Pressable>
+        {!isOnline ? <NeedsConnection /> : null}
       </View>
 
       <RenameModal

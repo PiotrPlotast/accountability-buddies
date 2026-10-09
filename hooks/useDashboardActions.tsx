@@ -32,9 +32,10 @@ export function useDashboardActions(activeGroupId: string | null) {
     });
   };
 
-  const deleteGoal = async (goalId: string) => {
+  // `title` only names the habit if a delete made offline fails to sync.
+  const deleteGoal = async (goalId: string, title?: string) => {
     if (!activeGroupId) return;
-    await deleteMutation.mutateAsync({ goalId, groupId: activeGroupId });
+    await deleteMutation.mutateAsync({ goalId, groupId: activeGroupId, title });
   };
 
   const editGoal = async (

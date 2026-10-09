@@ -516,6 +516,15 @@ Concrete things found in the repo, not generalities:
   "no group" (an offline launch with an empty cache used to land on
   join-group). Failed ticks keep their `Alert`; queuing them offline was
   considered and left out.
+- ~~**Offline mode for your own habits**~~ — **done 2026-10-09**, Piotr's ask
+  right after the banner. Ticking, unticking, adding, editing and deleting
+  your own habits work offline and sync in order on reconnect or the next
+  launch, surviving a closed app; the banner counts "N changes waiting to
+  sync". Nudges, group settings, joining a group, your name, notification
+  preferences and account deletion are greyed out with "Needs a connection".
+  A change the server refuses on sync is undone and reported in one pop-up;
+  signing out with unsynced changes warns that they will be lost. Needs a
+  dev-client rebuild for `@react-native-community/netinfo`.
 - ~~**`.env.example`** needs extending with the variables from E2/E3.~~ —
   **done 2026-10-09**: the app still needs only the two `EXPO_PUBLIC_*` values
   (Google sign-in was deferred, so there are no client IDs), and the server

@@ -74,6 +74,9 @@ describe("useDashboardActions", () => {
 
     expect(fromImpl).toHaveBeenCalledWith("goals");
     expect(insertedQB.insert).toHaveBeenCalledWith({
+      // Made on the phone (the mocked `randomUUID`), so a change queued behind
+      // an offline create can point at it.
+      id: "00000000-0000-4000-8000-000000000000",
       title: "Run",
       user_id: "user-1",
       group_id: "group-1",

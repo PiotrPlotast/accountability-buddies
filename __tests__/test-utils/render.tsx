@@ -12,6 +12,7 @@ import {
   SupabaseContextValue,
 } from "@/context/supabase-context";
 import { useSupabase } from "@/hooks/useSupabase";
+import { registerGoalMutationDefaults } from "@/lib/goalMutationDefaults";
 
 export type QueryBuilderResult<T = unknown> = {
   data?: T;
@@ -142,6 +143,9 @@ export function buildWrapper(opts?: {
 }) {
   const queryClient = opts?.queryClient ?? makeQueryClient();
   const supabase = opts?.supabase ?? buildFakeSupabase();
+  // What `SupabaseProvider` does in the app: goal mutations are defaults on
+  // the client, so a change queued offline can be replayed after a restart.
+  registerGoalMutationDefaults(queryClient, () => supabase);
   // Stand in for SupabaseProvider by filling the context directly, already
   // settled. The real provider resolves `session`/`isLoaded` from an async
   // `getSession()`; tests have no reason to wait on that, and `useSupabase`

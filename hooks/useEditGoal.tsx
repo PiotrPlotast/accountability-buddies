@@ -1,5 +1,8 @@
 import { tapLight } from "@/lib/haptics";
-import { useOptimisticGoalMutation } from "@/lib/useOptimisticGoalMutation";
+import {
+  GoalMutationSpec,
+  useOptimisticGoalMutation,
+} from "@/lib/useOptimisticGoalMutation";
 import { ALL_DAYS } from "@/lib/repeatDays";
 
 interface EditGoalParams {
@@ -38,9 +41,13 @@ function buildEdits({
   return edits;
 }
 
-export function useEditGoal() {
-  return useOptimisticGoalMutation<EditGoalParams, void>({
-    mutationFn: async (vars, { supabase, userId }) => {
+type StoredEdit = EditGoalParams & { userId: string };
+
+export const editGoalSpec: GoalMutationSpec<EditGoalParams, StoredEdit, void> =
+  {
+    kind: "edit",
+    prepare: (vars, userId) => ({ ...vars, userId }),
+    mutationFn: async (vars, supabase) => {
       if (!vars.goalId || !vars.newTitle.trim())
         throw new Error("Invalid params");
 
@@ -48,15 +55,18 @@ export function useEditGoal() {
         .from("goals")
         .update(buildEdits(vars))
         .eq("id", vars.goalId)
-        .eq("user_id", userId);
+        .eq("user_id", vars.userId);
 
       if (error) throw error;
     },
     getGroupId: ({ groupId }) => groupId,
-    beforeOptimistic: () => tapLight(),
     getPatch: (vars) => (goals) =>
       goals.map((g) =>
         g.id === vars.goalId ? { ...g, ...buildEdits(vars) } : g,
       ),
-  });
+    describe: ({ newTitle }) => `Editing "${newTitle.trim()}"`,
+  };
+
+export function useEditGoal() {
+  return useOptimisticGoalMutation(editGoalSpec, () => tapLight());
 }

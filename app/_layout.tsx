@@ -16,6 +16,7 @@ import {
 
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
+import { startOnlineStatus } from "@/lib/onlineStatus";
 import { configureNotificationHandler } from "@/lib/push";
 import { asyncStoragePersister } from "@/lib/queryPersister";
 import { useForgetTapsWhileSignedOut } from "@/hooks/useNotificationTaps";
@@ -36,6 +37,10 @@ SplashScreen.preventAutoHideAsync();
 // looks like it was never delivered.
 configureNotificationHandler();
 
+// The phone's connection drives TanStack's online state, so habit changes made
+// offline queue at once instead of each failing first.
+startOnlineStatus();
+
 const queryClient = createAppQueryClient();
 
 export default function RootLayout() {
@@ -51,6 +56,10 @@ export default function RootLayout() {
     <PersistQueryClientProvider
       client={queryClient}
       persistOptions={{ persister: asyncStoragePersister }}
+      // Habit changes queued offline were saved with the cache. Restored, they
+      // sit paused until told to go; this sends them (or keeps them waiting,
+      // if the phone is still offline).
+      onSuccess={() => queryClient.resumePausedMutations()}
     >
       {/* Edge-to-edge is mandatory from SDK 55, so the status bar is always
           translucent over a transparent background; both props were removed. */}

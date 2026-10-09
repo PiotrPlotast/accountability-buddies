@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { SupabaseContext } from "@/context/supabase-context";
+import { registerGoalMutationDefaults } from "@/lib/goalMutationDefaults";
 import { forgetRegisteredPushToken, getRegisteredPushToken } from "@/lib/push";
 import { asyncStoragePersister } from "@/lib/queryPersister";
 
@@ -44,6 +45,14 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   // Always present: the root layout mounts PersistQueryClientProvider above
   // this one.
   const queryClient = useQueryClient();
+
+  // Goal mutations run from defaults on the client, so a change queued
+  // offline can be replayed after a restart with nothing but its key and
+  // variables. Registered during the first render: the persisted cache is
+  // restored from an effect of `PersistQueryClientProvider` above, which runs
+  // after this, and a restored change with no default fails with "No
+  // mutationFn found".
+  useState(() => registerGoalMutationDefaults(queryClient, () => supabase));
 
   useEffect(() => {
     let active = true;
