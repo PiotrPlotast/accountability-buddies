@@ -13,7 +13,7 @@ export default function Page() {
       <View className="flex-1 px-6 justify-between pb-6">
         <View className="mt-10">
           <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-4">
-            Accountability Buddies
+            Habit Pals
           </Text>
           <Text
             className="text-text font-mono-bold"
