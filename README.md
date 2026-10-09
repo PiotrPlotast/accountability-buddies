@@ -1,4 +1,4 @@
-# Accountability Buddies
+# Habit Pals
 
 A mobile app for shared habit tracking. Form a duo / small group, set daily goals, log them as you complete them, and watch your streaks (and your buddies') in real time.
 

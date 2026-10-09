@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "accountabilitybuddies",
+    "name": "Habit Pals",
     "slug": "accountabilitybuddies",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -25,7 +25,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#18181B"
       },
       "package": "com.piotrplotast.accountabilitybuddies"
     },
@@ -37,7 +37,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#18181B"
         }
       ],
       "expo-apple-authentication",

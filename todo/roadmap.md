@@ -492,20 +492,17 @@ client and the SQL have to agree on the definition — in particular on the
 
 Concrete things found in the repo, not generalities:
 
-- **A white splash in a dark app.** Still true as of 2026-09-14: `app.json` has
-  `splash.backgroundColor: "#ffffff"` and
-  `adaptiveIcon.backgroundColor: "#ffffff"`, while `themeColors.background` is
-  `#18181B`. Every app launch is a white flash. One line, the most visible
-  effect in the whole stage. Half of this item did land early —
-  `userInterfaceStyle` is `"dark"` (`4280d0e`), so the app no longer follows the
-  system theme; the two `#ffffff` values are what remains.
+- ~~**A white splash in a dark app.**~~ — **fixed 2026-10-09**: the splash and
+  the adaptive icon background are `#18181B`, the same as
+  `themeColors.background`, so launch no longer flashes white.
 - **The icons are still the template ones** (`assets/icon.png`,
   `adaptive-icon.png`, `splash-icon.png` — untouched since December). On top of
   that comes `notification-icon.png` (white on transparent), required by Android
   in E3.
-- **The app name** — `"accountabilitybuddies"` as one word, which is how it will
-  appear under the icon. Worth splitting `name` (visible) from `slug`
-  (technical).
+- ~~**The app name**~~ — **renamed to "Habit Pals" 2026-10-09** (`name` in
+  `app.json` and the welcome screen). `slug`, `scheme`, the bundle id and the
+  Android package stay `accountabilitybuddies`: push credentials, Sign in with
+  Apple and the EAS project all key off them.
 - ~~**The `delete_my_account` RPC** plus an entry point in the profile.~~ —
   **moved into E2** as its own PR, on 2026-09-08, and **shipped there
   2026-09-14** (PR #34). It was listed here as a
