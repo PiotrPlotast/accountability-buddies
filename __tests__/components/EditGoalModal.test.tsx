@@ -1,7 +1,9 @@
+import { Alert } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 
 import EditGoalModal from "@/app/components/dashboard/EditGoalModal";
 import { getTodayLocalDate } from "@/lib/date";
+import { onHabitSavedNotice } from "@/lib/habitSavedNotice";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 
@@ -42,10 +44,13 @@ function seed(queryClient: ReturnType<typeof makeQueryClient>) {
   );
 }
 
-function setup(goalOverride: Goal | null = goal) {
+function setup(
+  goalOverride: Goal | null = goal,
+  updateResult: { error: { message: string } | null } = { error: null },
+) {
   const queryClient = makeQueryClient();
   seed(queryClient);
-  const updateQB = makeQueryBuilder({ error: null });
+  const updateQB = makeQueryBuilder(updateResult);
   const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => updateQB) });
   const { Wrapper } = buildWrapper({ supabase, queryClient });
   const onClose = jest.fn();
@@ -203,5 +208,74 @@ describe("EditGoalModal", () => {
 
       expect(queryByLabelText("Close")).toBeNull();
     });
+  });
+});
+
+// `goal` repeats Mon, Wed, Fri.
+describe("EditGoalModal schedule notice", () => {
+  const MONDAY = new Date(2026, 9, 12, 12);
+  const TUESDAY = new Date(2026, 9, 13, 12);
+  let notices: jest.Mock;
+  let unsubscribe: () => void;
+
+  beforeEach(() => {
+    notices = jest.fn();
+    unsubscribe = onHabitSavedNotice(notices);
+  });
+
+  afterEach(() => {
+    unsubscribe();
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it("tells the dashboard when the edit takes today off the habit", async () => {
+    jest.useFakeTimers({ now: MONDAY });
+    const { getByLabelText, getByText, onClose } = setup();
+
+    fireEvent.press(getByLabelText("Mon"));
+    fireEvent.press(getByText("Save"));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(notices).toHaveBeenCalledWith(
+      "Run is off today. Next up Wednesday.",
+    );
+  });
+
+  it("says nothing when the habit stays due today", async () => {
+    jest.useFakeTimers({ now: MONDAY });
+    const { getByLabelText, getByText, onClose } = setup();
+
+    fireEvent.press(getByLabelText("Wed"));
+    fireEvent.press(getByText("Save"));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(notices).not.toHaveBeenCalled();
+  });
+
+  // It wasn't on today's list before the edit, so nothing disappeared.
+  it("says nothing when a habit already off today is renamed", async () => {
+    jest.useFakeTimers({ now: TUESDAY });
+    const { getByDisplayValue, getByText, onClose } = setup();
+
+    fireEvent.changeText(getByDisplayValue("Run"), "Walk");
+    fireEvent.press(getByText("Save"));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(notices).not.toHaveBeenCalled();
+  });
+
+  it("says nothing when the save fails", async () => {
+    jest.useFakeTimers({ now: MONDAY });
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const { getByLabelText, getByText } = setup(goal, {
+      error: { message: "nope" },
+    });
+
+    fireEvent.press(getByLabelText("Mon"));
+    fireEvent.press(getByText("Save"));
+
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(notices).not.toHaveBeenCalled();
   });
 });

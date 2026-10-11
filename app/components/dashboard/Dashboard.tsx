@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { View, ScrollView, RefreshControl, Platform } from "react-native";
+import { View, Text, ScrollView, RefreshControl, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useTheme } from "@/hooks/useTheme";
@@ -17,6 +17,7 @@ import NudgeButton from "./NudgeButton";
 import NudgeModal from "./NudgeModal";
 import { firstName, habitNudgeMessage } from "@/lib/nudge";
 import { onShowTab } from "@/lib/notificationTaps";
+import { onHabitSavedNotice } from "@/lib/habitSavedNotice";
 import { OfflineBanner, OfflineRetry } from "./ConnectionNotice";
 
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
@@ -30,7 +31,8 @@ type NudgeTarget = {
   key: number;
 };
 
-// How long "Nudge sent to …" stays under the button.
+// How long "Nudge sent to …" stays under the button, and "Read saved. First up
+// Monday." under the add button.
 const SENT_NOTICE_MS = 3000;
 
 export default function Dashboard() {
@@ -59,6 +61,23 @@ export default function Dashboard() {
   // A tapped notification picks the tab (`useNotificationTaps`): a nudge or a
   // reminder yours, a buddy event that buddy's.
   useEffect(() => onShowTab(setSelectedTabId), []);
+
+  // "Read saved. First up Monday." — a habit saved for other days is filtered
+  // off today's list, so without this the save looks like it did nothing. An
+  // object, not the string, so a second save restarts the timer below even
+  // with the same words.
+  const [savedNotice, setSavedNotice] = useState<{ message: string } | null>(
+    null,
+  );
+  useEffect(
+    () => onHabitSavedNotice((message) => setSavedNotice({ message })),
+    [],
+  );
+  useEffect(() => {
+    if (!savedNotice) return;
+    const timer = setTimeout(() => setSavedNotice(null), SENT_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [savedNotice]);
   const viewedId = resolveViewedMemberId(members, selectedTabId, userId);
   const isViewingMe = viewedId === userId;
   const currentMember = members.find((m) => m.user_id === viewedId);
@@ -161,7 +180,14 @@ export default function Dashboard() {
         />
         <View className="px-5 mt-3">
           {isViewingMe ? (
-            <AddGoalInput />
+            <>
+              <AddGoalInput />
+              {savedNotice ? (
+                <Text className="text-text-muted font-mono text-xs text-center -mt-1 mb-3">
+                  {savedNotice.message}
+                </Text>
+              ) : null}
+            </>
           ) : (
             <NudgeButton
               name={buddyName}

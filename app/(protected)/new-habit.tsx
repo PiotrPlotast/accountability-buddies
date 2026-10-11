@@ -19,6 +19,8 @@ import IconPicker from "@/app/components/habits/IconPicker";
 import DayPicker from "@/app/components/habits/DayPicker";
 import TimePicker from "@/app/components/habits/TimePicker";
 import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
+import { ALL_DAYS, getTodayDayIndex } from "@/lib/repeatDays";
+import { emitHabitSavedNotice, habitSavedNotice } from "@/lib/habitSavedNotice";
 
 export default function NewHabitScreen() {
   const insets = useSafeAreaInsets();
@@ -29,7 +31,8 @@ export default function NewHabitScreen() {
 
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState<string | null>(DEFAULT_ICON);
-  const [repeatDays, setRepeatDays] = useState<number[]>([0, 1, 2, 3, 4]);
+  // Every day, so a habit left at the defaults is on today's list at once.
+  const [repeatDays, setRepeatDays] = useState<number[]>(ALL_DAYS);
   const [reminderTime, setReminderTime] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -40,6 +43,12 @@ export default function NewHabitScreen() {
     setSubmitting(true);
     try {
       await addGoal(title, { icon, repeatDays, reminderTime });
+      const notice = habitSavedNotice({
+        title: title.trim(),
+        days: repeatDays,
+        today: getTodayDayIndex(),
+      });
+      if (notice) emitHabitSavedNotice(notice);
       router.back();
     } catch {
       // useOptimisticGoalMutation already surfaced an Alert and rolled the

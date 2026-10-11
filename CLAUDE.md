@@ -112,6 +112,8 @@ Reanimated 4 with `newArchEnabled`, so layout animations work without extra setu
 
 `lib/repeatDays.ts` owns the whole convention and is the only place that should know it: `getTodayDayIndex()` / `toRepeatDayIndex()` for the shift, `isScheduledOn()` and `filterGoalsForToday()` for the "is this due today" check, `formatRepeatDays()` for display, plus the shared `DAY_LABELS` / `DAY_NAMES` / `ALL_DAYS` constants. An empty or absent `repeat_days` means "every day".
 
+The dashboard lists only the habits due today, so a habit saved for other days drops off it and the save looks like it did nothing (on a Sunday, the old Mon–Fri default on New habit hid every new habit). New habit therefore starts on every day, and `lib/habitSavedNotice.ts` builds the line the dashboard shows under the add button for a few seconds — "Read saved. First up Monday." for a new habit not due today, "Run is off today. Next up tomorrow." for an edit that takes today away (an edit to a habit already off today says nothing). The forms emit it after their save resolves, queued offline included, never on a failure; it is an event like the day-close pulse, not derived state.
+
 In SQL the same index is `extract(isodow from local_ts)::int - 1` — never `extract(dow ...)`, which is Sunday = 0. `goals.reminder_time` (E3) is a wall-clock `time` in the owner's `notification_prefs.timezone`, and quiet hours may wrap midnight, so don't compare them with a plain `BETWEEN`.
 
 ## Styling

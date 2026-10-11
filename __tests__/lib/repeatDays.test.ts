@@ -1,6 +1,7 @@
 import {
   DAY_LABELS,
   DAY_NAMES,
+  daysUntilNextScheduled,
   filterGoalsForToday,
   formatRepeatDays,
   getTodayDayIndex,
@@ -123,5 +124,20 @@ describe("day label constants", () => {
     expect(DAY_NAMES).toHaveLength(7);
     expect(DAY_NAMES[0]).toBe("Mon");
     expect(DAY_NAMES.map((n) => n[0])).toEqual(DAY_LABELS);
+  });
+});
+
+describe("daysUntilNextScheduled", () => {
+  it("counts forward to the next scheduled day, wrapping past Sunday", () => {
+    expect(daysUntilNextScheduled({ repeat_days: [0, 1, 2, 3, 4] }, 6)).toBe(1);
+    expect(daysUntilNextScheduled({ repeat_days: [1] }, 4)).toBe(4);
+  });
+
+  it("is a week away when today is the only scheduled day", () => {
+    expect(daysUntilNextScheduled({ repeat_days: [2] }, 2)).toBe(7);
+  });
+
+  it("is tomorrow for an empty schedule, which means every day", () => {
+    expect(daysUntilNextScheduled({ repeat_days: [] }, 6)).toBe(1);
   });
 });

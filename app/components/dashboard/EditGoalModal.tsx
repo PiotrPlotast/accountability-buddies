@@ -14,7 +14,8 @@ import { Goal } from "@/types/dashboardTypes";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useTheme } from "@/hooks/useTheme";
-import { ALL_DAYS } from "@/lib/repeatDays";
+import { ALL_DAYS, getTodayDayIndex } from "@/lib/repeatDays";
+import { emitHabitSavedNotice, habitSavedNotice } from "@/lib/habitSavedNotice";
 import { themeColors } from "@/lib/colors";
 import IconPicker from "@/app/components/habits/IconPicker";
 import DayPicker from "@/app/components/habits/DayPicker";
@@ -77,6 +78,13 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
     setSaving(true);
     try {
       await editGoal(goal.id, { title, icon, repeatDays, reminderTime });
+      const notice = habitSavedNotice({
+        title: title.trim(),
+        days: repeatDays,
+        previousDays: goal.repeat_days ?? [],
+        today: getTodayDayIndex(),
+      });
+      if (notice) emitHabitSavedNotice(notice);
       onClose();
     } catch {
       // useOptimisticGoalMutation already surfaced an Alert and rolled the

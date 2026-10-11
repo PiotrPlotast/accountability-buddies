@@ -9,6 +9,7 @@ import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 import * as haptics from "@/lib/haptics";
+import { emitHabitSavedNotice } from "@/lib/habitSavedNotice";
 import { emitShowTab } from "@/lib/notificationTaps";
 
 import {
@@ -256,6 +257,46 @@ describe("Dashboard nudges", () => {
       jest.advanceTimersByTime(3_000);
     });
     expect(queryByText("Nudge sent to Buddy")).toBeNull();
+  });
+});
+
+// A habit saved for other days is filtered off today's list, so the save
+// would otherwise look like it did nothing.
+describe("Dashboard habit saved notice", () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("shows the notice under the add button, for a few seconds", async () => {
+    jest.useFakeTimers();
+    const { getByText, queryByText } = renderDashboard();
+
+    act(() => emitHabitSavedNotice("Read saved. First up Monday."));
+    expect(getByText("Read saved. First up Monday.")).toBeTruthy();
+
+    await act(async () => {
+      jest.advanceTimersByTime(3_000);
+    });
+    expect(queryByText("Read saved. First up Monday.")).toBeNull();
+  });
+
+  it("shows the latest notice when a second one arrives", () => {
+    const { getByText, queryByText } = renderDashboard();
+
+    act(() => emitHabitSavedNotice("Read saved. First up Monday."));
+    act(() => emitHabitSavedNotice("Run is off today. Next up tomorrow."));
+
+    expect(getByText("Run is off today. Next up tomorrow.")).toBeTruthy();
+    expect(queryByText("Read saved. First up Monday.")).toBeNull();
+  });
+
+  it("keeps it off a buddy's tab", () => {
+    const { getByLabelText, queryByText } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+
+    act(() => emitHabitSavedNotice("Read saved. First up Monday."));
+
+    expect(queryByText("Read saved. First up Monday.")).toBeNull();
   });
 });
 

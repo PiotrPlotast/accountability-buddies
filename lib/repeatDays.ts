@@ -5,6 +5,15 @@
 
 export const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+export const DAY_FULL_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 type Repeatable = { repeat_days?: number[] | null };
@@ -22,6 +31,18 @@ export function isScheduledOn(goal: Repeatable, dayIndex: number): boolean {
   const days = goal.repeat_days;
   if (!days || days.length === 0) return true;
   return days.includes(dayIndex);
+}
+
+// Days from `dayIndex` to the next scheduled day after it, 1 (tomorrow) to 7
+// (the same weekday next week, when it is the only one).
+export function daysUntilNextScheduled(
+  goal: Repeatable,
+  dayIndex: number,
+): number {
+  for (let ahead = 1; ahead < 7; ahead++) {
+    if (isScheduledOn(goal, (dayIndex + ahead) % 7)) return ahead;
+  }
+  return 7;
 }
 
 export function filterGoalsForToday<T extends Repeatable>(goals: T[]): T[] {
