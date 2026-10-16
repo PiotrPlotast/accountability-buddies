@@ -182,6 +182,38 @@ describe("Tour navigation", () => {
   });
 });
 
+// NativeWind replaces a Pressable's `style` with its className styles when
+// both are set, and a style *function* is dropped outright — so an accent fill
+// written as `style={({ pressed }) => ...}` drew a transparent button with
+// dark text on the phone: Next and Let's go were invisible but tappable. Jest
+// runs without NativeWind, so the guard is on the prop itself.
+describe("Tour buttons", () => {
+  const ACCENT = "#C6F94A";
+
+  function pressableStyle(utils: Utils, label: string) {
+    return utils.UNSAFE_getByProps({ accessibilityLabel: label }).props.style;
+  }
+
+  it("fills Next with the accent through a plain style object", () => {
+    const utils = renderTour();
+
+    const style = pressableStyle(utils, "Next");
+
+    expect(typeof style).toBe("object");
+    expect(style).toEqual(expect.objectContaining({ backgroundColor: ACCENT }));
+  });
+
+  it("fills Let's go the same way", () => {
+    const utils = renderTour();
+    goToSlide(utils, TOUR_SLIDES[TOUR_SLIDES.length - 1].id);
+
+    const style = pressableStyle(utils, "Let's go");
+
+    expect(typeof style).toBe("object");
+    expect(style).toEqual(expect.objectContaining({ backgroundColor: ACCENT }));
+  });
+});
+
 describe("Tour demos", () => {
   it("habits: ticking fills the ring, and the tick that closes the day celebrates", () => {
     const utils = renderTour();

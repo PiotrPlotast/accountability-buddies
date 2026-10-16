@@ -133,7 +133,6 @@ export default function Tour({ mode }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Back"
               className="h-14 px-6 rounded-tile items-center justify-center bg-surface border border-border"
-              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
             >
               <Text className="font-mono-medium text-base text-text">Back</Text>
             </Pressable>
@@ -143,10 +142,11 @@ export default function Tour({ mode }: Props) {
             accessibilityRole="button"
             accessibilityLabel={isLast ? "Let's go" : "Next"}
             className="flex-1 h-14 rounded-tile items-center justify-center"
-            style={({ pressed }) => ({
-              backgroundColor: accent.hex,
-              opacity: pressed ? 0.8 : 1,
-            })}
+            // A plain object, never a `({ pressed }) => …` function: with a
+            // className present NativeWind replaces the style prop and drops a
+            // function outright, which left this button transparent with dark
+            // text, invisible but still tappable.
+            style={{ backgroundColor: accent.hex }}
           >
             <Text className="font-mono-bold text-base text-bg">
               {isLast ? "Let's go" : "Next"}
