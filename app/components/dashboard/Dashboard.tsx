@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { View, ScrollView, RefreshControl, Platform } from "react-native";
+import { onlineManager } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useTheme } from "@/hooks/useTheme";
@@ -13,10 +14,13 @@ import { Goal } from "@/types/dashboardTypes";
 import { filterGoalsForToday } from "@/lib/repeatDays";
 import { resolveViewedMemberId } from "@/lib/viewedMember";
 import HabitManagerModal from "./HabitsManagerModal";
-import NudgeButton from "./NudgeButton";
+import BuddyActions from "./BuddyActions";
 import NudgeModal from "./NudgeModal";
+import CheerModal from "./CheerModal";
 import { firstName, habitNudgeMessage } from "@/lib/nudge";
-import { onShowTab } from "@/lib/notificationTaps";
+import { onCheerRequest, onShowTab } from "@/lib/notificationTaps";
+import type { CheerRequest } from "@/lib/cheer";
+import { getTodayLocalDate } from "@/lib/date";
 import { OfflineBanner, OfflineRetry } from "./ConnectionNotice";
 
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
@@ -30,7 +34,12 @@ type NudgeTarget = {
   key: number;
 };
 
-// How long "Nudge sent to …" stays under the button.
+// The same for a cheer. The member is looked up at render, so a cheer asked
+// for by a tap before the members have loaded still opens once they have, and
+// one for somebody who has left the group opens nothing.
+type CheerTarget = CheerRequest & { key: number };
+
+// How long "Nudge sent to …" stays under the buttons.
 const SENT_NOTICE_MS = 3000;
 
 export default function Dashboard() {
@@ -64,7 +73,8 @@ export default function Dashboard() {
   const currentMember = members.find((m) => m.user_id === viewedId);
 
   const [nudgeTarget, setNudgeTarget] = useState<NudgeTarget | null>(null);
-  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [cheerTarget, setCheerTarget] = useState<CheerTarget | null>(null);
+  const [sent, setSent] = useState<{ to: string; notice: string } | null>(null);
   const buddyName = firstName(currentMember?.full_name ?? "");
 
   const openNudge = (message: string) => {
@@ -77,13 +87,38 @@ export default function Dashboard() {
     });
   };
 
+  // A cheer needs the server, so offline it isn't opened at all, from the
+  // button, a swipe or a tap — the same rule as the nudge. Read from
+  // `onlineManager` itself, not a render's copy, so the tap listener below
+  // never needs re-subscribing.
+  const openCheer = (request: CheerRequest) => {
+    if (!onlineManager.isOnline()) return;
+    setCheerTarget({ ...request, key: Date.now() });
+  };
+  // A tapped buddy push asks for one (`useNotificationTaps`); the tab it
+  // opens arrives separately, through `onShowTab`.
+  useEffect(
+    () =>
+      onCheerRequest((request) => {
+        if (onlineManager.isOnline()) {
+          setCheerTarget({ ...request, key: Date.now() });
+        }
+      }),
+    [],
+  );
+  const cheerMember = cheerTarget
+    ? members.find(
+        (m) => m.user_id === cheerTarget.buddyId && m.user_id !== userId,
+      )
+    : undefined;
+
   // The confirmation clears itself; the timer is the only thing this effect
   // does, so it sets no state synchronously.
   useEffect(() => {
-    if (!sentTo) return;
-    const timer = setTimeout(() => setSentTo(null), SENT_NOTICE_MS);
+    if (!sent) return;
+    const timer = setTimeout(() => setSent(null), SENT_NOTICE_MS);
     return () => clearTimeout(timer);
-  }, [sentTo]);
+  }, [sent]);
 
   const todayGoals = useMemo(
     () => filterGoalsForToday(currentMember?.goals ?? []),
@@ -163,10 +198,18 @@ export default function Dashboard() {
           {isViewingMe ? (
             <AddGoalInput />
           ) : (
-            <NudgeButton
+            <BuddyActions
               name={buddyName}
-              onPress={() => openNudge("")}
-              sent={sentTo === viewedId}
+              onNudge={() => openNudge("")}
+              onCheer={() =>
+                viewedId &&
+                openCheer({
+                  buddyId: viewedId,
+                  goal: null,
+                  day: getTodayLocalDate(),
+                })
+              }
+              sentNotice={sent?.to === viewedId ? sent.notice : null}
               disabled={!isOnline}
             />
           )}
@@ -181,6 +224,16 @@ export default function Dashboard() {
             onNudge={
               isOnline
                 ? (goal) => openNudge(habitNudgeMessage(buddyName, goal.title))
+                : undefined
+            }
+            onCheer={
+              isOnline && viewedId
+                ? (goal) =>
+                    openCheer({
+                      buddyId: viewedId,
+                      goal: { id: goal.id, title: goal.title },
+                      day: getTodayLocalDate(),
+                    })
                 : undefined
             }
           />
@@ -204,7 +257,28 @@ export default function Dashboard() {
           initialMessage={nudgeTarget.message}
           isVisible
           onClose={() => setNudgeTarget(null)}
-          onSent={() => setSentTo(nudgeTarget.userId)}
+          onSent={(name) =>
+            setSent({ to: nudgeTarget.userId, notice: `Nudge sent to ${name}` })
+          }
+        />
+      ) : null}
+      {cheerTarget && cheerMember ? (
+        <CheerModal
+          key={cheerTarget.key}
+          recipient={{
+            userId: cheerTarget.buddyId,
+            name: firstName(cheerMember.full_name ?? ""),
+          }}
+          goal={cheerTarget.goal}
+          day={cheerTarget.day}
+          isVisible
+          onClose={() => setCheerTarget(null)}
+          onSent={(name) =>
+            setSent({
+              to: cheerTarget.buddyId,
+              notice: `Cheer sent to ${name}`,
+            })
+          }
         />
       ) : null}
       <HabitManagerModal

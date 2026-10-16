@@ -87,7 +87,12 @@ describe("GoalList swipe actions", () => {
 
   function renderWithGoal(
     selectedTabId: string,
-    handlers: { onNudge?: jest.Mock; onDelete?: jest.Mock },
+    handlers: {
+      onNudge?: jest.Mock;
+      onDelete?: jest.Mock;
+      onCheer?: jest.Mock;
+    },
+    done = false,
   ) {
     const queryClient = makeQueryClient();
     queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
@@ -102,10 +107,13 @@ describe("GoalList swipe actions", () => {
     const utils = render(
       <GoalList
         selectedTabId={selectedTabId}
-        goals={[{ ...buddyGoal, user_id: selectedTabId }]}
+        goals={[
+          { ...buddyGoal, user_id: selectedTabId, completed_today: done },
+        ]}
         onEdit={jest.fn()}
         onDelete={handlers.onDelete ?? jest.fn()}
         onNudge={handlers.onNudge}
+        onCheer={handlers.onCheer}
       />,
       { wrapper: Wrapper },
     );
@@ -145,6 +153,32 @@ describe("GoalList swipe actions", () => {
     const action = renderAction(swipeable.props.renderRightActions, close);
     fireEvent.press(action.getByText("Nudge"));
     expect(close).toHaveBeenCalled();
+  });
+
+  // A ticked habit is something to cheer, not to nudge about.
+  it("offers a cheer instead of a nudge for a buddy's ticked habit", () => {
+    const onNudge = jest.fn();
+    const onCheer = jest.fn();
+    const close = jest.fn();
+    const { swipeable } = renderWithGoal("user-2", { onNudge, onCheer }, true);
+
+    const action = renderAction(swipeable.props.renderRightActions, close);
+    expect(action.queryByText("Nudge")).toBeNull();
+    fireEvent.press(action.getByText("Cheer"));
+    expect(onCheer).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "g-2", title: "Run" }),
+    );
+    expect(onNudge).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalled();
+  });
+
+  it("offers no swipe on a ticked habit when cheering isn't available", () => {
+    const { swipeable } = renderWithGoal(
+      "user-2",
+      { onNudge: jest.fn() },
+      true,
+    );
+    expect(swipeable.props.renderRightActions).toBeUndefined();
   });
 
   it("keeps delete, not nudge, on your own habits", () => {

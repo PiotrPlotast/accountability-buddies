@@ -51,8 +51,9 @@ type Props = {
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
   // A buddy's tab only: the swipe that your own rows use for delete opens a
-  // nudge about that habit instead.
+  // nudge about an unticked habit instead, and a cheer for a ticked one.
   onNudge?: (goal: Goal) => void;
+  onCheer?: (goal: Goal) => void;
 };
 
 type ActionProps = {
@@ -81,14 +82,17 @@ function RightActionComponent({ drag, goal, onAction }: ActionProps) {
   );
 }
 
-// Same slot and motion as delete, on the rows where delete can't apply. The
-// accent rather than a warning colour: this is encouragement, not a hazard.
-function NudgeActionComponent({
+// Same slot and motion as delete, on the rows where delete can't apply: a
+// nudge on an unticked habit, a cheer on a ticked one. The accent rather than
+// a warning colour: this is encouragement, not a hazard.
+function BuddyActionComponent({
   drag,
   goal,
   onAction,
   close,
-}: ActionProps & { close?: () => void }) {
+  emoji,
+  label,
+}: ActionProps & { close?: () => void; emoji: string; label: string }) {
   const { accent } = useTheme();
   const styleAnimation = useAnimatedStyle(() => ({
     transform: [{ translateX: drag.value + ACTION_WIDTH + ACTION_GAP }],
@@ -97,7 +101,7 @@ function NudgeActionComponent({
     <Reanimated.View style={styleAnimation}>
       <Pressable
         onPress={() => {
-          // The row stays under the nudge box; don't leave it swiped open.
+          // The row stays under the message box; don't leave it swiped open.
           close?.();
           onAction(goal);
         }}
@@ -108,9 +112,9 @@ function NudgeActionComponent({
         }}
         className="px-4 py-4 rounded-tile items-center justify-center"
       >
-        <Text style={{ fontSize: 18 }}>👋</Text>
+        <Text style={{ fontSize: 18 }}>{emoji}</Text>
         <Text className="text-bg font-mono-medium uppercase text-[10px] tracking-widest mt-1">
-          Nudge
+          {label}
         </Text>
       </Pressable>
     </Reanimated.View>
@@ -314,6 +318,7 @@ function GoalListContent({
   onEdit,
   onDelete,
   onNudge,
+  onCheer,
 }: Props) {
   const { loading, userId, activeGroupId } = useActiveGroup();
   const { toggleGoal } = useDashboardActions(activeGroupId);
@@ -387,6 +392,9 @@ function GoalListContent({
     <View style={{ gap: 10 }}>
       {goals.map((goal) => {
         const done = goal.completed_today;
+        const buddyAction = done
+          ? onCheer && { onAction: onCheer, emoji: "🎉", label: "Cheer" }
+          : onNudge && { onAction: onNudge, emoji: "👋", label: "Nudge" };
         return (
           <Reanimated.View
             key={goal.id}
@@ -407,13 +415,13 @@ function GoalListContent({
                         onAction={onDelete}
                       />
                     )
-                  : onNudge
+                  : buddyAction
                     ? (prog, drag, methods) => (
-                        <NudgeActionComponent
+                        <BuddyActionComponent
                           drag={drag}
                           goal={goal}
-                          onAction={onNudge}
                           close={methods?.close}
+                          {...buddyAction}
                         />
                       )
                     : undefined

@@ -10,7 +10,7 @@ import {
   useForgetTapsWhileSignedOut,
   useNotificationTaps,
 } from "@/hooks/useNotificationTaps";
-import { onShowTab } from "@/lib/notificationTaps";
+import { onCheerRequest, onShowTab } from "@/lib/notificationTaps";
 import type { NotificationTap } from "@/lib/push";
 
 import {
@@ -294,6 +294,94 @@ describe("useNotificationTaps", () => {
 
     expect(router.navigate).not.toHaveBeenCalled();
     expect(showTab).not.toHaveBeenCalled();
+  });
+});
+
+describe("useNotificationTaps, cheers", () => {
+  let cheer: jest.Mock;
+  let offCheer: () => void;
+  beforeEach(() => {
+    // A cheer from an earlier test's buddy tap, made with nobody listening,
+    // is still held for the first listener; take it before the real one.
+    onCheerRequest(() => {})();
+    cheer = jest.fn();
+    offCheer = onCheerRequest(cheer);
+  });
+  afterEach(() => offCheer());
+
+  it("opens a habit cheer on the buddy's tab for a push about one habit", () => {
+    push.getLastNotificationTap.mockReturnValue(
+      nudgeTap({
+        type: "buddy_ticked",
+        buddy_id: "user-2",
+        goal_id: "goal-1",
+        goal_title: "Run",
+        day: "2026-10-16",
+      }),
+    );
+    renderWith(<Taps />);
+
+    expect(showTab).toHaveBeenCalledWith("user-2");
+    expect(cheer).toHaveBeenCalledTimes(1);
+    expect(cheer).toHaveBeenCalledWith({
+      buddyId: "user-2",
+      goal: { id: "goal-1", title: "Run" },
+      day: "2026-10-16",
+    });
+  });
+
+  it("opens a day cheer for a closed-day push", () => {
+    push.getLastNotificationTap.mockReturnValue(
+      nudgeTap({ type: "buddy_done", buddy_id: "user-2", day: "2026-10-16" }),
+    );
+    renderWith(<Taps />);
+
+    expect(showTab).toHaveBeenCalledWith("user-2");
+    expect(cheer).toHaveBeenCalledWith({
+      buddyId: "user-2",
+      goal: null,
+      day: "2026-10-16",
+    });
+  });
+
+  it("offers no cheer for someone joining, only their tab", () => {
+    push.getLastNotificationTap.mockReturnValue(
+      nudgeTap({ type: "member_joined", buddy_id: "user-2" }),
+    );
+    renderWith(<Taps />);
+
+    expect(showTab).toHaveBeenCalledWith("user-2");
+    expect(cheer).not.toHaveBeenCalled();
+  });
+
+  it("opens your own tab for a cheer you received, like a nudge", () => {
+    push.getLastNotificationTap.mockReturnValue(
+      nudgeTap({ type: "cheer", kind: "habit", sender_id: "user-2" }),
+    );
+    renderWith(<Taps />);
+
+    expect(router.navigate).toHaveBeenCalledWith("/");
+    expect(showTab).toHaveBeenCalledWith(null);
+    expect(cheer).not.toHaveBeenCalled();
+  });
+
+  it("opens no cheer for a user with no group", () => {
+    setGates({ hasNoGroup: true });
+    push.getLastNotificationTap.mockReturnValue(
+      nudgeTap({ type: "buddy_done", buddy_id: "user-2" }),
+    );
+    renderWith(<Taps />);
+
+    expect(cheer).not.toHaveBeenCalled();
+  });
+
+  it("opens the cheer once, however often the hook mounts again", () => {
+    const tap = nudgeTap({ type: "buddy_done", buddy_id: "user-2" });
+    push.getLastNotificationTap.mockReturnValue(tap);
+    renderWith(<Taps />).unmount();
+    renderWith(<Taps />);
+
+    expect(cheer).toHaveBeenCalledTimes(1);
   });
 });
 
