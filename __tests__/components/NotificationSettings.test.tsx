@@ -304,6 +304,6 @@ describe("Notification settings — the tour", () => {
 
     fireEvent.press(getByRole("button", { name: "Show the tour again" }));
 
-    expect(router.push).toHaveBeenCalledWith("/tour");
+    expect(router.push).toHaveBeenCalledWith("/tour-replay");
   });
 });

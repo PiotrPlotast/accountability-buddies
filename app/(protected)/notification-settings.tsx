@@ -235,7 +235,7 @@ export default function NotificationSettingsScreen() {
           Help
         </Text>
         <Pressable
-          onPress={() => router.push("/tour")}
+          onPress={() => router.push("/tour-replay")}
           accessibilityRole="button"
           accessibilityLabel="Show the tour again"
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}

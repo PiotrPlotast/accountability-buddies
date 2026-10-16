@@ -25,8 +25,8 @@ export default function ProtectedLayout() {
 
   // The first-run tour is a guard too, between the name and the rest of the
   // app, so a new user reads it before join-group asks them for a code.
-  // `tour` itself stays mounted once named, which is what lets settings push
-  // it again as a replay.
+  // Finishing it flips `needsTour` and this guard swaps the app in; settings
+  // replays it through `tour-replay`, a separate route inside the app.
   const { needsTour } = useTourGate();
   useTourSeenSync();
   const inApp = !needsName && !needsTour;
@@ -47,10 +47,10 @@ export default function ProtectedLayout() {
           />
         </Stack.Protected>
 
-        <Stack.Protected guard={!needsName}>
+        <Stack.Protected guard={!needsName && needsTour}>
           <Stack.Screen
             name="tour"
-            options={{ headerShown: false, gestureEnabled: !needsTour }}
+            options={{ headerShown: false, gestureEnabled: false }}
           />
         </Stack.Protected>
 
@@ -70,6 +70,10 @@ export default function ProtectedLayout() {
           />
           <Stack.Screen
             name="notification-settings"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="tour-replay"
             options={{ headerShown: false, presentation: "modal" }}
           />
         </Stack.Protected>

@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 
-import TourScreen from "@/app/(protected)/tour";
+import Tour from "@/app/components/tour/Tour";
 import { queryKeys } from "@/lib/queryKeys";
 import { TOUR_SLIDES } from "@/lib/tour";
 import { ProfileRow } from "@/types/dashboardTypes";
@@ -44,7 +44,7 @@ beforeEach(async () => {
 describe("TourScreen", () => {
   it("opens on the first slide with a way to skip", () => {
     const { Wrapper } = setup(FIRST_RUN);
-    const { getByText, getByRole } = render(<TourScreen />, {
+    const { getByText, getByRole } = render(<Tour mode="firstRun" />, {
       wrapper: Wrapper,
     });
 
@@ -55,7 +55,9 @@ describe("TourScreen", () => {
 
   it("marks every slide title as a heading for VoiceOver", () => {
     const { Wrapper } = setup(FIRST_RUN);
-    const { getAllByRole } = render(<TourScreen />, { wrapper: Wrapper });
+    const { getAllByRole } = render(<Tour mode="firstRun" />, {
+      wrapper: Wrapper,
+    });
 
     expect(getAllByRole("header").map((h) => h.props.children)).toEqual(
       TOUR_SLIDES.map((s) => s.title),
@@ -64,9 +66,12 @@ describe("TourScreen", () => {
 
   it("steps through every slide with Next and ends on Let's go", () => {
     const { Wrapper } = setup(FIRST_RUN);
-    const { getByRole, getByText, queryByRole } = render(<TourScreen />, {
-      wrapper: Wrapper,
-    });
+    const { getByRole, getByText, queryByRole } = render(
+      <Tour mode="firstRun" />,
+      {
+        wrapper: Wrapper,
+      },
+    );
 
     for (let i = 1; i < TOUR_SLIDES.length; i++) {
       fireEvent.press(getByRole("button", { name: "Next" }));
@@ -78,16 +83,21 @@ describe("TourScreen", () => {
     expect(getByRole("button", { name: "Let's go" })).toBeTruthy();
   });
 
-  it("finishing on first run records it and moves on into the app", async () => {
+  it("finishing on first run records it and leaves the move to the layout's guard", async () => {
+    // Navigating from here raced the guard: "/" was still guarded off when
+    // the replace ran, so the tour stayed on screen. The guard moves on by
+    // itself once `needsTour` flips.
     const { qb, Wrapper } = setup(FIRST_RUN);
-    const { getByRole } = render(<TourScreen />, { wrapper: Wrapper });
+    const { getByRole } = render(<Tour mode="firstRun" />, {
+      wrapper: Wrapper,
+    });
 
     for (let i = 1; i < TOUR_SLIDES.length; i++) {
       fireEvent.press(getByRole("button", { name: "Next" }));
     }
     fireEvent.press(getByRole("button", { name: "Let's go" }));
 
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.replace).not.toHaveBeenCalled();
     expect(router.back).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(qb.update).toHaveBeenCalledWith({
@@ -98,17 +108,31 @@ describe("TourScreen", () => {
 
   it("skipping on first run counts as seen", async () => {
     const { qb, Wrapper } = setup(FIRST_RUN);
-    const { getByRole } = render(<TourScreen />, { wrapper: Wrapper });
+    const { getByRole } = render(<Tour mode="firstRun" />, {
+      wrapper: Wrapper,
+    });
 
     fireEvent.press(getByRole("button", { name: "Skip" }));
 
-    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.replace).not.toHaveBeenCalled();
     await waitFor(() => expect(qb.update).toHaveBeenCalled());
+  });
+
+  it("a replay closes from the last slide too", () => {
+    const { Wrapper } = setup(REPLAY);
+    const { getByRole } = render(<Tour mode="replay" />, { wrapper: Wrapper });
+
+    for (let i = 1; i < TOUR_SLIDES.length; i++) {
+      fireEvent.press(getByRole("button", { name: "Next" }));
+    }
+    fireEvent.press(getByRole("button", { name: "Let's go" }));
+
+    expect(router.back).toHaveBeenCalled();
   });
 
   it("a replay from settings just closes, and writes nothing", () => {
     const { qb, Wrapper } = setup(REPLAY);
-    const { getByRole } = render(<TourScreen />, { wrapper: Wrapper });
+    const { getByRole } = render(<Tour mode="replay" />, { wrapper: Wrapper });
 
     fireEvent.press(getByRole("button", { name: "Skip" }));
 
