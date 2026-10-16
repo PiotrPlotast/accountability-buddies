@@ -3,6 +3,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useNameGate } from "@/hooks/useNameGate";
 import { useNotificationTaps } from "@/hooks/useNotificationTaps";
 import { usePushRegistration } from "@/hooks/usePushRegistration";
+import { useTourGate, useTourSeenSync } from "@/hooks/useTour";
 import { themeColors } from "@/lib/colors";
 
 export default function ProtectedLayout() {
@@ -22,6 +23,14 @@ export default function ProtectedLayout() {
   // Likewise the one place a tapped notification is routed from.
   useNotificationTaps();
 
+  // The first-run tour is a guard too, between the name and the rest of the
+  // app, so a new user reads it before join-group asks them for a code.
+  // `tour` itself stays mounted once named, which is what lets settings push
+  // it again as a replay.
+  const { needsTour } = useTourGate();
+  useTourSeenSync();
+  const inApp = !needsName && !needsTour;
+
   return (
     <GestureHandlerRootView
       style={{ flex: 1, backgroundColor: themeColors.background }}
@@ -39,6 +48,13 @@ export default function ProtectedLayout() {
         </Stack.Protected>
 
         <Stack.Protected guard={!needsName}>
+          <Stack.Screen
+            name="tour"
+            options={{ headerShown: false, gestureEnabled: !needsTour }}
+          />
+        </Stack.Protected>
+
+        <Stack.Protected guard={inApp}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="join-group"

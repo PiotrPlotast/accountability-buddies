@@ -293,3 +293,17 @@ describe("Notification settings — quiet hours", () => {
     expect(qb.update).not.toHaveBeenCalled();
   });
 });
+
+describe("Notification settings — the tour", () => {
+  it("offers the tour again", () => {
+    const router = require("expo-router").__router as { push: jest.Mock };
+    const { Wrapper } = setup();
+    const { getByRole } = render(<NotificationSettingsScreen />, {
+      wrapper: Wrapper,
+    });
+
+    fireEvent.press(getByRole("button", { name: "Show the tour again" }));
+
+    expect(router.push).toHaveBeenCalledWith("/tour");
+  });
+});

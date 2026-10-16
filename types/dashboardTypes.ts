@@ -43,6 +43,10 @@ export type Member = {
 export type ProfileRow = {
   full_name: string | null;
   avatar_url: string | null;
+  // When the first-run tour was finished or skipped; null until then.
+  // Optional because a profile cached before the column existed has no key at
+  // all, which `useTourGate` must not read as "never seen".
+  tour_seen_at?: string | null;
 };
 
 export type GroupResult = {

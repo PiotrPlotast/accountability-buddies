@@ -14,7 +14,7 @@ export function useProfile() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url")
+        .select("full_name, avatar_url, tour_seen_at")
         .eq("id", userId)
         // maybeSingle: a freshly signed-up user may not have a profile row
         // yet, which is a null result rather than a failure.

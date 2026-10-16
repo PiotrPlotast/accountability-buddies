@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { onlineManager } from "@tanstack/react-query";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useNameGate } from "@/hooks/useNameGate";
+import { useTourGate } from "@/hooks/useTour";
 import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
 import { useIsOnline } from "@/lib/onlineStatus";
 
@@ -44,14 +45,17 @@ export function useDashboardData() {
   // anywhere. `(protected)/_layout.tsx` normally keeps the dashboard
   // unmounted in that state, which leaves this covering the window before the
   // profile has been read.
+  // The first-run tour comes before join-group in the same way.
   const { isResolved: nameResolved, needsName } = useNameGate();
+  const { isResolved: tourResolved, needsTour } = useTourGate();
 
   useEffect(() => {
     if (!nameResolved || needsName) return;
+    if (!tourResolved || needsTour) return;
     if (hasNoGroup) {
       router.replace("/(protected)/join-group");
     }
-  }, [hasNoGroup, nameResolved, needsName, router]);
+  }, [hasNoGroup, nameResolved, needsName, tourResolved, needsTour, router]);
 
   // A failed read, or a phone that says it is offline, shows the cache with a
   // banner when there is one, and a retry screen when there is nothing to

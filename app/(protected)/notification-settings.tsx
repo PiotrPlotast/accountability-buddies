@@ -232,6 +232,22 @@ export default function NotificationSettingsScreen() {
         </Text>
 
         <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
+          Help
+        </Text>
+        <Pressable
+          onPress={() => router.push("/tour")}
+          accessibilityRole="button"
+          accessibilityLabel="Show the tour again"
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center gap-3"
+        >
+          <Text className="flex-1 text-text font-mono-medium text-base">
+            Show the tour again
+          </Text>
+          <Text style={{ fontSize: 18, color: themeColors.textDim }}>›</Text>
+        </Pressable>
+
+        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
           Account
         </Text>
         <Pressable
