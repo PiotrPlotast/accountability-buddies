@@ -23,7 +23,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-import { sendPushes } from "./expoPush.ts";
+import { deliverNotification } from "./deliver.ts";
 
 type EnqueueResult = {
   success: boolean;
@@ -89,37 +89,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } },
     );
-
-    const { data: notification, error: readError } = await admin
-      .from("notifications")
-      .select("recipient_id, title, body, data")
-      .eq("id", notificationId)
-      .single();
-    if (readError) throw readError;
-
-    const { data: tokenRows, error: tokenError } = await admin
-      .from("device_push_tokens")
-      .select("expo_push_token")
-      .eq("user_id", notification.recipient_id);
-    if (tokenError) throw tokenError;
-
-    const tickets = await sendPushes({
-      tokens: (tokenRows ?? []).map((row) => row.expo_push_token as string),
-      notification: {
-        title: notification.title,
-        body: notification.body,
-        // The id rides along so the tap handler (step 3) can mark it read.
-        data: { ...notification.data, notification_id: notificationId },
-      },
-      accessToken: Deno.env.get("EXPO_ACCESS_TOKEN"),
-      fetchImpl: fetch,
-    });
-
-    const { error: recordError } = await admin.rpc("record_push_tickets", {
-      p_notification: notificationId,
-      p_tickets: tickets,
-    });
-    if (recordError) throw recordError;
+    await deliverNotification(admin, notificationId);
   } catch (e) {
     // The row is stored and stays `pending`; E5's dispatcher picks it up.
     console.error("delivering nudge", notificationId, e);
