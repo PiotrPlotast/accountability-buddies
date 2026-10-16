@@ -42,21 +42,21 @@ describe("the tour's local memory", () => {
 });
 
 describe("TOUR_SLIDES", () => {
-  it("covers habits, buddies, nudges, reminders and the group streak, in that order", () => {
+  it("covers habits, editing them, buddies and nudges, reminders and the group streak, in that order", () => {
     expect(TOUR_SLIDES.map((s) => s.id)).toEqual([
       "habits",
+      "manage",
       "buddies",
-      "nudges",
       "reminders",
       "streak",
     ]);
   });
 
-  it("gives every slide an emoji, a title and a body", () => {
+  it("gives every slide a title, a body and a hint for its demo", () => {
     for (const slide of TOUR_SLIDES) {
-      expect(slide.emoji).toBeTruthy();
       expect(slide.title).toBeTruthy();
       expect(slide.body).toBeTruthy();
+      expect(slide.hint).toMatch(/^Try it: /);
     }
   });
 });

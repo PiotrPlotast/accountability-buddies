@@ -88,3 +88,30 @@ describe("DeleteGoalModal", () => {
     });
   });
 });
+
+describe("DeleteGoalModal with its own onConfirm", () => {
+  it("hands the delete to onConfirm instead of deleting", async () => {
+    const fromImpl = jest.fn(() => makeQueryBuilder({ error: null }));
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ fromImpl }),
+      queryClient: makeQueryClient(),
+    });
+    const onConfirm = jest.fn(() => Promise.resolve());
+    const onClose = jest.fn();
+    const { getByText } = render(
+      <DeleteGoalModal
+        goal={goal}
+        isVisible
+        onClose={onClose}
+        onConfirm={onConfirm}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    fireEvent.press(getByText("Delete"));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(onConfirm).toHaveBeenCalledWith(goal);
+    expect(fromImpl).not.toHaveBeenCalled();
+  });
+});

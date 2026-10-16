@@ -205,3 +205,34 @@ describe("EditGoalModal", () => {
     });
   });
 });
+
+// The tour opens the real edit sheet on a sample habit, so the save has to be
+// replaceable: nothing a sample does may reach the server.
+describe("EditGoalModal with its own onSave", () => {
+  it("hands the edit to onSave instead of saving it", async () => {
+    const queryClient = makeQueryClient();
+    const fromImpl = jest.fn(() => makeQueryBuilder({ error: null }));
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ fromImpl }),
+      queryClient,
+    });
+    const onSave = jest.fn(() => Promise.resolve());
+    const onClose = jest.fn();
+    const { getByDisplayValue, getByText } = render(
+      <EditGoalModal goal={goal} isVisible onClose={onClose} onSave={onSave} />,
+      { wrapper: Wrapper },
+    );
+
+    fireEvent.changeText(getByDisplayValue("Run"), "Walk");
+    fireEvent.press(getByText("Save"));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(onSave).toHaveBeenCalledWith("g-1", {
+      title: "Walk",
+      icon: "🏃",
+      repeatDays: [0, 2, 4],
+      reminderTime: null,
+    });
+    expect(fromImpl).not.toHaveBeenCalled();
+  });
+});

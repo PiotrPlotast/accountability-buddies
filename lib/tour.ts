@@ -11,42 +11,43 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
  */
 
 export type TourSlide = {
-  id: string;
-  emoji: string;
+  id: "habits" | "manage" | "buddies" | "reminders" | "streak";
   title: string;
   body: string;
+  // What to do with the slide's demo (`app/components/tour/TourDemos.tsx`).
+  hint: string;
 };
 
 export const TOUR_SLIDES: readonly TourSlide[] = [
   {
     id: "habits",
-    emoji: "✅",
     title: "Your habits, every day",
-    body: "Add the habits you want to keep and pick the days they repeat. Tick them off as you go, and the ring at the top fills up as your day gets done.",
+    body: "Add the habits you want to keep and tick them off as you do them. The ring fills up as your day gets done.",
+    hint: "Try it: tick both habits and watch the ring close.",
+  },
+  {
+    id: "manage",
+    title: "Edit or delete a habit",
+    body: "Swipe a habit right to change its name, icon, days or reminder, and left to delete it. The Habits button on Home lists all of them, even ones not due today.",
+    hint: "Try it: swipe a habit right to edit it, or left to delete it.",
   },
   {
     id: "buddies",
-    emoji: "👯",
     title: "Your buddies",
-    body: "Each person in your group has a tab at the top of Home. Tap one to see their day. They can see yours too, so that's the accountability part.",
-  },
-  {
-    id: "nudges",
-    emoji: "👉",
-    title: "Nudge a friend",
-    body: "On a buddy's tab, tap Nudge to send them a push, or swipe right on one of their habits to nudge them about that one.",
+    body: "Everyone in your group has a tab at the top of Home, and they can see your day too. On a buddy's tab, Nudge sends them a push, and swiping right on one of their habits nudges them about that one.",
+    hint: "Try it: open Ada's tab and send her a nudge.",
   },
   {
     id: "reminders",
-    emoji: "⏰",
     title: "Reminders",
-    body: "Give a habit a time and we'll remind you if it isn't ticked by then. Quiet hours and the rest of your notifications live behind the gear on Profile.",
+    body: "Give a habit a time and you'll get a push if it isn't ticked by then. Quiet hours and the rest of your notifications are behind the gear on Profile.",
+    hint: "Try it: switch the reminder on and pick a time.",
   },
   {
     id: "streak",
-    emoji: "🔥",
     title: "Keep the streak alive",
-    body: "Your group's streak grows on every day everyone finishes what's due. Next, join a group with an invite code or start your own.",
+    body: "Your group's streak grows on every day that everyone finishes what's due. Invite friends with your group's code, then join a group or start your own.",
+    hint: "Try it: finish today and watch the streak go up.",
   },
 ];
 
