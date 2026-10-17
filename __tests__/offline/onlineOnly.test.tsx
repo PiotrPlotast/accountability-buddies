@@ -205,7 +205,7 @@ describe("saving a habit offline", () => {
 describe("online-only screens offline", () => {
   it("won't save group settings", () => {
     const { qb, Wrapper } = setup();
-    const { getByPlaceholderText, getByText } = render(
+    const { getAllByText, getByPlaceholderText, getByText } = render(
       <GroupSettingsScreen />,
       {
         wrapper: Wrapper,
@@ -215,7 +215,8 @@ describe("online-only screens offline", () => {
     fireEvent.changeText(getByPlaceholderText("Swole Mates"), "My Crew");
     fireEvent.press(getByText("Save"));
 
-    expect(getByText("Needs a connection")).toBeTruthy();
+    // Under Save, and again under Leave group.
+    expect(getAllByText("Needs a connection")).toHaveLength(2);
     expect(qb.update).not.toHaveBeenCalled();
   });
 
