@@ -18,6 +18,7 @@ import { themeColors } from "@/lib/colors";
 import { useTheme } from "@/hooks/useTheme";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import { useIsOnline } from "@/lib/onlineStatus";
+import { MAX_GROUP_NAME_LENGTH } from "@/lib/textLimits";
 
 export default function JoinGroupScreen() {
   const { supabase, session } = useSupabase();
@@ -155,6 +156,7 @@ export default function JoinGroupScreen() {
                   value={groupName}
                   onChangeText={setGroupName}
                   placeholder="Swole Mates"
+                  maxLength={MAX_GROUP_NAME_LENGTH}
                   className="text-text text-base"
                 />
               </View>

@@ -69,3 +69,12 @@ describe("New habit reminder", () => {
     );
   });
 });
+
+describe("New habit title", () => {
+  it("stops at 60 characters, the server's limit", () => {
+    const { getByPlaceholderText } = setup();
+    expect(getByPlaceholderText("Meditate 10 minutes").props.maxLength).toBe(
+      60,
+    );
+  });
+});
