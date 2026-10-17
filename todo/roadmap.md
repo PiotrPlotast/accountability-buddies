@@ -531,6 +531,33 @@ Concrete things found in the repo, not generalities:
   side has its own `supabase/functions/.env.example` (`EXPO_ACCESS_TOKEN`,
   `DISPATCH_SECRET`, plus the two Vault secrets). The README is brought up to
   SDK 57 and the E3–E5 backend.
+- ~~**Accessibility, the blockers.**~~ — **done 2026-10-17** (PR #67, audit
+  in `/mnt/project-files/accessibility/accessibility-audit.md`). VoiceOver
+  could not use the delete, edit, rename, nudge or cheer sheets (each read as
+  a single "Cancel"); now it can, and a two-finger scrub closes them. A habit
+  row's swipes are also VoiceOver actions, so a single-habit cheer no longer
+  needs a swipe. Text fields, glyph buttons and swatches are named, titles are
+  headings, and the sent confirmation is spoken. `text-dim` is `#8A919E`
+  (4.7:1), and ticked rows are dimmed by their background, not by fading the
+  text.
+- **Accessibility, still open** from the same audit:
+  - **Large text (Dynamic Type).** Buttons, fields, member chips and header
+    pills have fixed heights (`h-14`, `h-12`, `h-11`, `h-8`), so at the
+    largest text sizes labels clip, and the group name is cut to one line.
+    Piotr's call: let them grow with the text rather than cap the scaling.
+    Its own PR.
+  - **Borders are nearly invisible.** `border` `#2A2A2E` is 1.04:1 against
+    `surface` and 1.24:1 against `bg`; WCAG asks 3:1 for the outline of a
+    field or an unselected chip. Changing it changes the app's look, so it is
+    a design decision for Piotr first. The week strip's "missed" dot
+    (1.43:1) is in the same boat, though its row has a spoken summary.
+  - **The offline banner is silent.** "Offline. Showing your last update."
+    and "N changes waiting to sync" appear without being announced.
+  - **The Android tab icons** point at `custom_android_drawable`, which may
+    not exist; the Home and Profile labels carry the meaning either way.
+  - **A device pass.** Nothing above was tried with VoiceOver or TalkBack on
+    a phone, nor were the emoji sheet (`rn-emoji-keyboard`) and the native
+    time picker checked at all.
 - **Done 2026-10-08: `npm run lint` is clean.** The six `set-state-in-effect` sites now seed during render, store only the user's edits, open directly off iOS, or use Reanimated's `LayoutAnimationConfig skipEntering`, each pinned by tests first. What follows is the original write-up.
 - **Eleven lint errors, eight of them worth reading.** (The eleventh, added
   since: a `prettier/prettier` missing newline in `expo-env.d.ts` — generated,
