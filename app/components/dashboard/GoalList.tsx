@@ -299,12 +299,40 @@ function GoalCheckbox({ done, icon, accentHex, reduceMotion }: CheckboxProps) {
   );
 }
 
+// The rows on the active group: `GoalListView` plus the reads and the toggle
+// mutation behind it.
+export default function GoalList({ selectedTabId, ...rest }: Props) {
+  const { loading, userId, activeGroupId } = useActiveGroup();
+  const { toggleGoal } = useDashboardActions(activeGroupId);
+
+  return (
+    <GoalListView
+      {...rest}
+      loading={loading}
+      canEdit={selectedTabId === userId}
+      onToggle={toggleGoal}
+    />
+  );
+}
+
+type ViewProps = Omit<Props, "selectedTabId"> & {
+  loading: boolean;
+  // Your own tab: rows tick, and swipe to edit or delete. A buddy's rows are
+  // read-only and swipe to nudge (unticked, with `onNudge`) or cheer (ticked,
+  // with `onCheer`).
+  canEdit: boolean;
+  onToggle: (goal: Goal) => void;
+};
+
+// The habit rows with nothing behind them, so the first-run tour can drive
+// them with sample habits that never reach the server.
+//
 // `skipEntering` keeps the first paint still: entering animations fire on
 // mount, and every row mounts when the dashboard opens. The config applies only
 // to what is there when it mounts, so it wraps the list for its whole life —
 // skeleton and empty state included — and rows that appear afterwards (an
 // optimistic insert, or the rows that land once loading ends) still fade in.
-export default function GoalList(props: Props) {
+export function GoalListView(props: ViewProps) {
   return (
     <LayoutAnimationConfig skipEntering>
       <GoalListContent {...props} />
@@ -313,15 +341,15 @@ export default function GoalList(props: Props) {
 }
 
 function GoalListContent({
-  selectedTabId,
   goals,
+  loading,
+  canEdit,
+  onToggle,
   onEdit,
   onDelete,
   onNudge,
   onCheer,
-}: Props) {
-  const { loading, userId, activeGroupId } = useActiveGroup();
-  const { toggleGoal } = useDashboardActions(activeGroupId);
+}: ViewProps) {
   const { accent } = useTheme();
 
   // Jeden zegar na całą listę — `WeekStrip` tylko go czyta. Musi stać przed
@@ -344,7 +372,7 @@ function GoalListContent({
     return () => cancelAnimation(pulse);
   }, [reduceMotion, pulse]);
 
-  const isViewingMe = selectedTabId === userId;
+  const isViewingMe = canEdit;
 
   // A swipe begins as a touch on the row, and the row's press still fires when
   // the finger lifts, so swiping to edit or delete also ticked the habit. A
@@ -450,7 +478,7 @@ function GoalListContent({
                 }}
                 onPress={() => {
                   if (swipedDuringTouch.current) return;
-                  toggleGoal(goal);
+                  onToggle(goal);
                 }}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: done, disabled: !isViewingMe }}

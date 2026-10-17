@@ -16,6 +16,8 @@ type Props = {
   isVisible: boolean;
   onClose: () => void;
   onSent: (name: string) => void;
+  // Replaces the send. The tour's sample buddies can't receive a push.
+  onSend?: (message: string) => Promise<void>;
 };
 
 /**
@@ -29,12 +31,14 @@ export default function NudgeModal({
   isVisible,
   onClose,
   onSent,
+  onSend,
 }: Props) {
   const { mutateAsync, isPending } = useSendNudge();
 
   const send = async (message: string) => {
     if (!recipient) throw new Error("No recipient");
-    await mutateAsync({ recipientId: recipient.userId, message });
+    if (onSend) await onSend(message);
+    else await mutateAsync({ recipientId: recipient.userId, message });
     onSent(recipient.name);
   };
 

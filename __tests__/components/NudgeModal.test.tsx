@@ -165,3 +165,40 @@ describe("NudgeModal", () => {
     await waitFor(() => expect(onSent).toHaveBeenCalledTimes(1));
   });
 });
+
+describe("NudgeModal with its own onSend", () => {
+  beforeEach(() => {
+    jest.spyOn(haptics, "celebrate").mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("hands the message to onSend instead of sending it", async () => {
+    const invoke = jest.fn();
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ functionsImpl: invoke }),
+    });
+    const onSend = jest.fn(() => Promise.resolve());
+    const onSent = jest.fn();
+    const onClose = jest.fn();
+    const { getByText } = render(
+      <NudgeModal
+        recipient={{ userId: "tour-ada", name: "Ada" }}
+        initialMessage="Ada, what about your run?"
+        isVisible
+        onClose={onClose}
+        onSent={onSent}
+        onSend={onSend}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    await act(async () => {
+      fireEvent.press(getByText("Send"));
+    });
+
+    expect(onSend).toHaveBeenCalledWith("Ada, what about your run?");
+    expect(invoke).not.toHaveBeenCalled();
+    expect(onSent).toHaveBeenCalledWith("Ada");
+    expect(onClose).toHaveBeenCalled();
+  });
+});

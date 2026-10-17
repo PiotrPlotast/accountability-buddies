@@ -6,7 +6,8 @@ import NeedsConnection from "@/app/components/ui/NeedsConnection";
 type Props = {
   name: string;
   onNudge: () => void;
-  onCheer: () => void;
+  // Left out (the first-run tour), only Nudge shows.
+  onCheer?: () => void;
   // "Nudge sent to Ada" or "Cheer sent to Ada", for a few seconds after one
   // went through.
   sentNotice: string | null;
@@ -54,7 +55,7 @@ export default function BuddyActions({
     <View className="mb-3">
       <View className="flex-row gap-3">
         {button("👋", `Nudge ${name}`, onNudge)}
-        {button("🎉", `Cheer ${name}`, onCheer)}
+        {onCheer ? button("🎉", `Cheer ${name}`, onCheer) : null}
       </View>
       {disabled ? <NeedsConnection /> : null}
       {sentNotice ? (

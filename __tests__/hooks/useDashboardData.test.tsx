@@ -60,6 +60,25 @@ describe("useDashboardData group gate", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
+  it("stays put while the tour is still owed", async () => {
+    // The tour comes before join-group, so it can explain groups first.
+    const { Wrapper } = buildNoGroup({
+      full_name: "Piotr",
+      avatar_url: null,
+      tour_seen_at: null,
+    });
+
+    const utils = await renderHookWithSession(
+      () => useDashboardData(),
+      Wrapper,
+    );
+
+    await waitFor(() => {
+      expect(utils.result.current.value.loading).toBe(false);
+    });
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
   it("stays put when the group read failed", async () => {
     const supabase = buildFakeSupabase({
       rpcImpl: jest.fn(() =>
