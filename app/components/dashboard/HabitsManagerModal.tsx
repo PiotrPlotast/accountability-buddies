@@ -41,10 +41,16 @@ export default function HabitManagerModal({
         style={{ paddingTop: insets.top ? insets.top + 10 : 20 }}
       >
         <View className="flex-row items-center justify-between px-5 pb-4 border-b border-border">
-          <Text className="text-text font-mono-bold text-xl">All Habits</Text>
+          <Text
+            accessibilityRole="header"
+            className="text-text font-mono-bold text-xl"
+          >
+            All Habits
+          </Text>
           <Pressable
             onPress={onClose}
             hitSlop={12}
+            accessibilityRole="button"
             className="bg-surface border border-border px-4 py-2 rounded-pill"
           >
             <Text className="text-text font-mono-medium">Done</Text>

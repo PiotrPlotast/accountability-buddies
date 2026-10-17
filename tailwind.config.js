@@ -11,7 +11,7 @@ module.exports = {
         border: "#2A2A2E",
         text: "#F4F4F5",
         "text-muted": "#9CA3AF",
-        "text-dim": "#6B7280",
+        "text-dim": "#8A919E",
         fire: "#F97316",
         danger: "#EF4444",
         warning: "#FACC15",

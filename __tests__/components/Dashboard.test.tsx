@@ -1,4 +1,4 @@
-import { AppState, Platform } from "react-native";
+import { AccessibilityInfo, AppState, Platform } from "react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import Dashboard from "@/app/components/dashboard/Dashboard";
@@ -243,6 +243,25 @@ describe("Dashboard nudges", () => {
     expect(getByLabelText("Nudge message").props.value).toBe(
       "Buddy, what about your buddy habit?",
     );
+  });
+
+  // The line under the button is invisible to VoiceOver unless it is spoken.
+  it("speaks the confirmation after a send", async () => {
+    const announce = jest
+      .spyOn(AccessibilityInfo, "announceForAccessibility")
+      .mockImplementation(() => {});
+    const { getByLabelText, getByText } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    fireEvent.press(getByText("Nudge Buddy"));
+
+    await act(async () => {
+      fireEvent.press(getByText("Send"));
+    });
+
+    await waitFor(() =>
+      expect(announce).toHaveBeenCalledWith("Nudge sent to Buddy"),
+    );
+    announce.mockRestore();
   });
 
   it("confirms under the button after a send, for a few seconds", async () => {

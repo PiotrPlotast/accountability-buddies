@@ -65,7 +65,12 @@ export default function ComposeModal({
       onBackdropPress={close}
       backdropLabel="Cancel"
     >
-      <Text className="text-text font-mono-bold text-lg mb-4">{title}</Text>
+      <Text
+        accessibilityRole="header"
+        className="text-text font-mono-bold text-lg mb-4"
+      >
+        {title}
+      </Text>
 
       <View
         style={{ borderColor: accent.hex }}
@@ -83,7 +88,10 @@ export default function ComposeModal({
           style={{ minHeight: 60 }}
         />
       </View>
-      <Text className="text-text-muted font-mono text-xs text-right mt-2">
+      <Text
+        accessibilityLabel={`${message.length} of ${maxLength} characters`}
+        className="text-text-muted font-mono text-xs text-right mt-2"
+      >
         {`${message.length}/${maxLength}`}
       </Text>
 
@@ -92,6 +100,7 @@ export default function ComposeModal({
           <Pressable
             key={preset}
             onPress={() => setMessage(preset)}
+            accessibilityRole="button"
             className="px-3 py-2 rounded-tile bg-bg border border-border"
           >
             <Text className="text-text font-mono text-xs">{preset}</Text>
@@ -103,6 +112,8 @@ export default function ComposeModal({
         <Pressable
           onPress={onClose}
           disabled={isPending}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isPending }}
           className="flex-1 h-12 rounded-tile items-center justify-center bg-bg border border-border"
         >
           <Text className="text-text-muted font-mono-medium">Cancel</Text>
@@ -110,6 +121,9 @@ export default function ComposeModal({
         <Pressable
           onPress={handleSend}
           disabled={isPending}
+          accessibilityRole="button"
+          accessibilityLabel="Send"
+          accessibilityState={{ disabled: isPending, busy: isPending }}
           className="flex-1 h-12 rounded-tile items-center justify-center"
           style={{ backgroundColor: accent.hex }}
         >

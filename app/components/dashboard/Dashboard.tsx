@@ -1,5 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { View, ScrollView, RefreshControl, Platform } from "react-native";
+import {
+  AccessibilityInfo,
+  View,
+  ScrollView,
+  RefreshControl,
+  Platform,
+} from "react-native";
 import { onlineManager } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -76,6 +82,12 @@ export default function Dashboard() {
   const [cheerTarget, setCheerTarget] = useState<CheerTarget | null>(null);
   const [sent, setSent] = useState<{ to: string; notice: string } | null>(null);
   const buddyName = firstName(currentMember?.full_name ?? "");
+  // Shown under the buttons and spoken, from the send itself rather than an
+  // effect on `sent`: the line alone never reaches a screen reader.
+  const confirmSent = (to: string, notice: string) => {
+    setSent({ to, notice });
+    AccessibilityInfo.announceForAccessibility(notice);
+  };
 
   const openNudge = (message: string) => {
     if (!viewedId || isViewingMe || !isOnline) return;
@@ -258,7 +270,7 @@ export default function Dashboard() {
           isVisible
           onClose={() => setNudgeTarget(null)}
           onSent={(name) =>
-            setSent({ to: nudgeTarget.userId, notice: `Nudge sent to ${name}` })
+            confirmSent(nudgeTarget.userId, `Nudge sent to ${name}`)
           }
         />
       ) : null}
@@ -274,10 +286,7 @@ export default function Dashboard() {
           isVisible
           onClose={() => setCheerTarget(null)}
           onSent={(name) =>
-            setSent({
-              to: cheerTarget.buddyId,
-              notice: `Cheer sent to ${name}`,
-            })
+            confirmSent(cheerTarget.buddyId, `Cheer sent to ${name}`)
           }
         />
       ) : null}

@@ -3,6 +3,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  StyleSheet,
   View,
 } from "react-native";
 
@@ -39,30 +40,28 @@ export default function DialogShell({
       onRequestClose={onRequestClose}
     >
       <KeyboardAvoidingView
+        testID="dialog-shell"
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+        style={{ flex: 1, justifyContent: "center", padding: 20 }}
+        // VoiceOver's two-finger scrub: the screen reader's tap outside.
+        onAccessibilityEscape={onBackdropPress ?? onRequestClose}
       >
+        {/* The backdrop sits behind the card, never around it. A Pressable
+            is an accessibility element by default, and on iOS one of those
+            hides everything inside it: wrapped in the backdrop, the whole
+            card was a single "Cancel" to VoiceOver, field and buttons
+            unreachable. */}
         <Pressable
           onPress={onBackdropPress}
+          accessible={!!onBackdropPress}
           accessibilityRole={onBackdropPress ? "button" : undefined}
           accessibilityLabel={onBackdropPress ? backdropLabel : undefined}
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.7)",
-            justifyContent: "center",
-            padding: 20,
-          }}
-        >
-          {/* Absorbs taps landing on the card so they don't reach the
-              backdrop. A plain responder rather than a Pressable, so the card
-              doesn't announce itself as a button. */}
-          <View
-            onStartShouldSetResponder={() => true}
-            className={cardClassName}
-          >
-            {children}
-          </View>
-        </Pressable>
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: "rgba(0,0,0,0.7)" },
+          ]}
+        />
+        <View className={cardClassName}>{children}</View>
       </KeyboardAvoidingView>
     </Modal>
   );

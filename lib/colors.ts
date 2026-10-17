@@ -9,6 +9,7 @@ export const themeColors = {
   border: "#2A2A2E", // border
   text: "#F4F4F5", // text
   textMuted: "#9CA3AF", // text-muted
-  textDim: "#6B7280", // text-dim
+  // 4.7:1 on surface, 5.6:1 on bg: WCAG AA for normal text.
+  textDim: "#8A919E", // text-dim
   danger: "#EF4444", // danger
 };

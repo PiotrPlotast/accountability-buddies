@@ -48,6 +48,7 @@ export default function Page() {
         <Text
           className="text-text font-mono-bold"
           style={{ fontSize: 32, lineHeight: 36 }}
+          accessibilityRole="header"
         >
           Sign in
         </Text>
@@ -87,6 +88,7 @@ export default function Page() {
             className="font-mono-medium text-sm"
             style={{ color: accent.hex }}
             onPress={() => router.replace("/sign-up")}
+            accessibilityRole="link"
           >
             Sign up
           </Text>
