@@ -16,7 +16,7 @@
       "web"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.piotrplotast.accountabilitybuddies",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
