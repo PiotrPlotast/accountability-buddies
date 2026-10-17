@@ -40,7 +40,10 @@ export default function Page() {
   const isFilled = !!email && !!password;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <SafeAreaView
+      edges={["left", "right", "bottom"]}
+      style={{ flex: 1, backgroundColor: themeColors.background }}
+    >
       <ScrollView
         contentContainerStyle={{ padding: 24, gap: 16 }}
         keyboardShouldPersistTaps="handled"
