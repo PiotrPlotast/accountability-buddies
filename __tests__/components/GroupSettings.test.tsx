@@ -1,8 +1,11 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { onlineManager } from "@tanstack/react-query";
+import { Alert, AlertButton } from "react-native";
 
 import GroupSettingsScreen from "@/app/(protected)/group-settings";
 import { queryKeys } from "@/lib/queryKeys";
 import { GroupResult } from "@/types/dashboardTypes";
+import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
 
 import {
   buildFakeSupabase,
@@ -10,6 +13,10 @@ import {
   makeQueryBuilder,
   makeQueryClient,
 } from "../test-utils/render";
+
+jest.mock("@/hooks/usePendingGoalChanges", () => ({
+  usePendingGoalChanges: jest.fn(() => 0),
+}));
 
 const stats = (name: string, icon = "👥"): GroupResult => ({
   group_id: "group-1",
@@ -112,5 +119,137 @@ describe("Group settings name length", () => {
   it("stops at 40 characters, the server's limit", () => {
     const { getByPlaceholderText } = renderScreen(stats("Night Owls"));
     expect(getByPlaceholderText("Swole Mates").props.maxLength).toBe(40);
+  });
+});
+
+describe("Group settings Leave group", () => {
+  // The mocked router `useRouter()` hands every screen (jest.setup.js).
+  const router = require("expo-router").__router;
+  function renderForLeave(leaveResult: {
+    data?: unknown;
+    error?: { message: string } | null;
+  }) {
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData(
+      queryKeys.groupStats("user-1"),
+      stats("Habit Crew"),
+    );
+    const rpcImpl = jest.fn((name: string) =>
+      name === "leave_group"
+        ? makeQueryBuilder(leaveResult)
+        : { maybeSingle: () => new Promise(() => {}) },
+    );
+    const supabase = buildFakeSupabase({ rpcImpl });
+    const { Wrapper } = buildWrapper({ supabase, queryClient });
+    const utils = render(<GroupSettingsScreen />, { wrapper: Wrapper });
+    return { ...utils, rpcImpl, queryClient };
+  }
+
+  function pressAlertButton(label: string) {
+    const calls = (Alert.alert as jest.Mock).mock.calls;
+    const buttons = calls[calls.length - 1][2] as AlertButton[];
+    const button = buttons.find((b) => b.text === label);
+    if (!button) throw new Error(`No "${label}" button`);
+    button.onPress?.();
+  }
+
+  beforeEach(() => {
+    jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    (router.back as jest.Mock).mockClear();
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+    (usePendingGoalChanges as jest.Mock).mockReturnValue(0);
+    onlineManager.setOnline(true);
+  });
+
+  it("asks before leaving, naming the group and the way back", () => {
+    const { getByLabelText, rpcImpl } = renderForLeave({
+      data: { success: true },
+      error: null,
+    });
+
+    fireEvent.press(getByLabelText("Leave group"));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      "Leave Habit Crew?",
+      "You'll need a new invite code to come back.",
+      expect.any(Array),
+    );
+    expect(rpcImpl).not.toHaveBeenCalledWith("leave_group");
+  });
+
+  it("leaves on Leave and closes the screen", async () => {
+    const { getByLabelText, rpcImpl } = renderForLeave({
+      data: { success: true },
+      error: null,
+    });
+
+    fireEvent.press(getByLabelText("Leave group"));
+    await act(async () => pressAlertButton("Leave"));
+
+    await waitFor(() => expect(router.back).toHaveBeenCalled());
+    expect(rpcImpl).toHaveBeenCalledWith("leave_group");
+  });
+
+  it("does nothing on Cancel", () => {
+    const { getByLabelText, rpcImpl } = renderForLeave({
+      data: { success: true },
+      error: null,
+    });
+
+    fireEvent.press(getByLabelText("Leave group"));
+    pressAlertButton("Cancel");
+
+    expect(rpcImpl).not.toHaveBeenCalledWith("leave_group");
+  });
+
+  it("stays on the screen when the server refuses", async () => {
+    const { getByLabelText } = renderForLeave({
+      data: { success: false, message: "You're not in a group" },
+      error: null,
+    });
+
+    fireEvent.press(getByLabelText("Leave group"));
+    await act(async () => pressAlertButton("Leave"));
+
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenCalledWith(
+        "Couldn't leave the group",
+        "You're not in a group",
+      ),
+    );
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it("warns that unsynced habit changes will be lost", () => {
+    (usePendingGoalChanges as jest.Mock).mockReturnValue(2);
+    const { getByLabelText } = renderForLeave({
+      data: { success: true },
+      error: null,
+    });
+
+    fireEvent.press(getByLabelText("Leave group"));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      "Leave Habit Crew?",
+      "You'll need a new invite code to come back. 2 changes haven't synced and will be lost.",
+      expect.any(Array),
+    );
+  });
+
+  it("is greyed out offline and says it needs a connection", () => {
+    act(() => onlineManager.setOnline(false));
+    const { getByLabelText } = renderForLeave({
+      data: { success: true },
+      error: null,
+    });
+
+    const button = getByLabelText("Leave group");
+    expect(button.props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true }),
+    );
+    fireEvent.press(button);
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });
