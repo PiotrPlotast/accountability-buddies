@@ -189,6 +189,31 @@ describe("Compose dialog", () => {
 
 // The swipes have no screen-reader equivalent, and a single-habit cheer has
 // no other route at all, so every row offers its swipe as an action.
+// A ticked row is dimmed by its background alone, never by opacity: a faded
+// row took its text down with it, to about 1.9:1. `text-dim` on `bg` is 5.6:1.
+describe("Ticked habit rows", () => {
+  const rowClass = (completed_today: boolean) =>
+    render(
+      <GoalListView
+        goals={[{ ...goal, completed_today }]}
+        loading={false}
+        canEdit
+        onToggle={jest.fn()}
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    ).getByLabelText("Read").props.className as string;
+
+  it("sits on the darker background when ticked", () => {
+    expect(rowClass(true)).toMatch(/\bbg-bg\b/);
+    expect(rowClass(true)).not.toMatch(/opacity-/);
+  });
+
+  it("keeps the card colour when not ticked", () => {
+    expect(rowClass(false)).toMatch(/\bbg-surface\b/);
+  });
+});
+
 describe("Habit row actions", () => {
   function renderRow(props: Partial<Parameters<typeof GoalListView>[0]>) {
     const handlers = {

@@ -258,10 +258,12 @@ function GoalListContent({
                     .find((a) => a.name === event.nativeEvent.actionName)
                     ?.run(goal)
                 }
-                // No fade on a ticked row: `text-dim` inside a row at 60%
-                // opacity was about 1.9:1. The filled checkbox and the
-                // strike-through already say "done".
-                className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center"
+                // A ticked row is dimmed by its background, never by opacity:
+                // a faded row took its text down with it, to about 1.9:1.
+                // `text-dim` on `bg` is 5.6:1.
+                className={`${
+                  done ? "bg-bg" : "bg-surface"
+                } border border-border rounded-tile px-4 py-4 flex-row items-center`}
               >
                 <GoalCheckbox
                   done={done}
