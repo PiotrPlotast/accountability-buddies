@@ -72,6 +72,13 @@ export default function GroupSettingsScreen() {
             onPress={handleSave}
             disabled={!canSave}
             hitSlop={12}
+            accessibilityRole="button"
+            // "..." while saving is no name for a button.
+            accessibilityLabel="Save"
+            accessibilityState={{
+              disabled: !canSave,
+              busy: updateGroup.isPending,
+            }}
             className="w-14 items-end justify-center"
           >
             <Text
@@ -97,6 +104,7 @@ export default function GroupSettingsScreen() {
             value={name}
             onChangeText={setName}
             placeholder="Swole Mates"
+            accessibilityLabel="Group name"
             maxLength={MAX_GROUP_NAME_LENGTH}
             className="text-text text-base"
           />
@@ -120,6 +128,15 @@ export default function GroupSettingsScreen() {
         <Pressable
           onPress={handleCopyInvite}
           disabled={!inviteCode}
+          accessibilityRole="button"
+          // Spelled out: read as one word the code is a blur, and the ⧉
+          // glyph beside it has no spoken name.
+          accessibilityLabel={
+            inviteCode
+              ? `Copy invite code ${inviteCode.split("").join(" ")}`
+              : "Copy invite code"
+          }
+          accessibilityState={{ disabled: !inviteCode }}
           className="bg-surface border border-border rounded-tile px-4 h-14 flex-row items-center justify-between"
         >
           {/* A Text, so `font-mono-bold` reaches it — this used to say medium
@@ -144,6 +161,9 @@ export default function GroupSettingsScreen() {
                 key={p.id}
                 onPress={() => setAccent(p.id)}
                 hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={`${p.id[0].toUpperCase()}${p.id.slice(1)} accent`}
+                accessibilityState={{ selected: active }}
                 className="w-12 h-12 rounded-pill items-center justify-center"
                 style={{
                   backgroundColor: p.hex,

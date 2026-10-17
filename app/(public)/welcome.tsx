@@ -32,12 +32,14 @@ export default function Page() {
             className="h-14 rounded-tile items-center justify-center"
             style={{ backgroundColor: accent.hex }}
             onPress={() => router.push("/sign-up")}
+            accessibilityRole="button"
           >
             <Text className="text-bg font-mono-bold">Create account</Text>
           </Pressable>
           <Pressable
             className="h-14 rounded-tile items-center justify-center bg-surface border border-border"
             onPress={() => router.push("/sign-in")}
+            accessibilityRole="button"
           >
             <Text className="text-text font-mono-medium">
               I have an account

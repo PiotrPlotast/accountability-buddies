@@ -11,7 +11,8 @@ const ACTION_GAP = 8;
 // Delete warns, edit is a caution, and a buddy's nudge or cheer takes the
 // accent rather than a warning colour: it is encouragement, not a hazard.
 const TONES = {
-  danger: { tile: "bg-danger", label: "text-text" },
+  // Dark on the red: the light text was 3.4:1 at 10px, this is 4.7:1.
+  danger: { tile: "bg-danger", label: "text-bg" },
   warning: { tile: "bg-warning", label: "text-bg" },
   accent: { tile: "", label: "text-bg" },
 } as const;
@@ -51,6 +52,8 @@ export default function SwipeAction({
     <Reanimated.View style={styleAnimation}>
       <Pressable
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
         style={{
           width: ACTION_WIDTH,
           [side === "right" ? "marginLeft" : "marginRight"]: ACTION_GAP,

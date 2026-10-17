@@ -119,6 +119,7 @@ export default function JoinGroupScreen() {
           className="px-6"
         >
           <Text
+            accessibilityRole="header"
             className="text-text font-mono-bold"
             style={{ fontSize: 32, lineHeight: 36 }}
           >
@@ -142,6 +143,7 @@ export default function JoinGroupScreen() {
                   onChangeText={setCode}
                   autoCapitalize="characters"
                   placeholder="A1B2C3D4E5"
+                  accessibilityLabel="Invite code"
                   weight="bold"
                   className="text-text text-2xl text-center tracking-widest"
                 />
@@ -155,6 +157,7 @@ export default function JoinGroupScreen() {
                   value={groupName}
                   onChangeText={setGroupName}
                   placeholder="Swole Mates"
+                  accessibilityLabel="Group name"
                   maxLength={MAX_GROUP_NAME_LENGTH}
                   className="text-text text-base"
                 />
@@ -164,7 +167,12 @@ export default function JoinGroupScreen() {
             <Pressable
               onPress={isJoin ? handleJoin : handleCreate}
               disabled={loading || !isOnline}
-              accessibilityState={{ disabled: loading || !isOnline }}
+              accessibilityRole="button"
+              accessibilityLabel={isJoin ? "Join group" : "Create group"}
+              accessibilityState={{
+                disabled: loading || !isOnline,
+                busy: loading,
+              }}
               className="h-14 rounded-tile items-center justify-center mt-2"
               style={{
                 backgroundColor: accent.hex,
@@ -184,6 +192,7 @@ export default function JoinGroupScreen() {
 
           <Pressable
             onPress={() => setMode(isJoin ? "CREATE" : "JOIN")}
+            accessibilityRole="button"
             className="mt-8 items-center"
           >
             <Text

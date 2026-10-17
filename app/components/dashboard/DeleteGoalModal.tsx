@@ -50,7 +50,10 @@ export default function DeleteGoalModal({
       onBackdropPress={deleting ? undefined : onClose}
       backdropLabel="Cancel"
     >
-      <Text className="text-text font-mono-bold text-lg mb-2">
+      <Text
+        accessibilityRole="header"
+        className="text-text font-mono-bold text-lg mb-2"
+      >
         Delete habit?
       </Text>
       <Text className="text-text-muted font-mono text-sm mb-5">
@@ -60,6 +63,8 @@ export default function DeleteGoalModal({
         <Pressable
           onPress={onClose}
           disabled={deleting}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: deleting }}
           className="flex-1 h-12 rounded-tile items-center justify-center bg-bg border border-border"
         >
           <Text className="text-text-muted font-mono-medium">Cancel</Text>
@@ -68,6 +73,9 @@ export default function DeleteGoalModal({
           className="flex-1 h-12 rounded-tile items-center justify-center bg-danger"
           disabled={deleting}
           onPress={handleDelete}
+          accessibilityRole="button"
+          accessibilityLabel="Delete"
+          accessibilityState={{ disabled: deleting, busy: deleting }}
         >
           <Text className="text-text font-mono-bold">
             {deleting ? "Deleting…" : "Delete"}

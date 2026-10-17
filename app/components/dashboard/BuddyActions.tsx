@@ -36,6 +36,8 @@ export default function BuddyActions({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
+      // The text alone: the emoji would be read out first ("waving hand").
+      accessibilityLabel={label}
       accessibilityState={{ disabled }}
       style={{ borderColor: accent.hex, opacity: disabled ? 0.4 : 1 }}
       className="flex-1 h-14 rounded-tile border flex-row items-center justify-center gap-2 px-2"

@@ -116,6 +116,7 @@ export default function EditGoalModal({
         <Pressable
           onPress={onClose}
           disabled={saving}
+          accessibilityRole="button"
           className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
         >
           <Text className="text-text-muted font-mono-medium text-base">

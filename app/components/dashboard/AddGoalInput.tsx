@@ -8,6 +8,8 @@ export default function AddGoalInput() {
     <View className="mb-3">
       <Pressable
         onPress={() => router.push("/new-habit")}
+        accessibilityRole="button"
+        accessibilityLabel="Add a new habit"
         className="h-14 rounded-tile border border-dashed border-border flex-row items-center justify-center gap-2"
       >
         <Text className="text-text-muted font-mono-medium text-lg">+</Text>

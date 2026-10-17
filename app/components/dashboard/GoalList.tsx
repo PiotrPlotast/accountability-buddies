@@ -49,6 +49,8 @@ export default function GoalList({ selectedTabId, ...rest }: Props) {
   );
 }
 
+type RowAction = { name: string; label: string; run: (goal: Goal) => void };
+
 type ViewProps = Omit<Props, "selectedTabId"> & {
   loading: boolean;
   // Your own tab: rows tick, and swipe to edit or delete. A buddy's rows are
@@ -157,6 +159,23 @@ function GoalListContent({
         const buddyAction = done
           ? onCheer && { onAction: onCheer, emoji: "🎉", label: "Cheer" }
           : onNudge && { onAction: onNudge, emoji: "👋", label: "Nudge" };
+        // The swipes, offered to a screen reader, which can't swipe a row:
+        // VoiceOver's Actions rotor and TalkBack's actions menu. A cheer for
+        // one habit has no other route.
+        const rowActions: RowAction[] = isViewingMe
+          ? [
+              { name: "edit", label: "Edit", run: onEdit },
+              { name: "delete", label: "Delete", run: onDelete },
+            ]
+          : buddyAction
+            ? [
+                {
+                  name: buddyAction.label.toLowerCase(),
+                  label: buddyAction.label,
+                  run: buddyAction.onAction,
+                },
+              ]
+            : [];
         return (
           <Reanimated.View
             key={goal.id}
@@ -230,9 +249,21 @@ function GoalListContent({
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: done, disabled: !isViewingMe }}
                 accessibilityLabel={goal.title}
-                className={`bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center ${
-                  done ? "opacity-60" : ""
-                }`}
+                accessibilityActions={rowActions.map(({ name, label }) => ({
+                  name,
+                  label,
+                }))}
+                onAccessibilityAction={(event) =>
+                  rowActions
+                    .find((a) => a.name === event.nativeEvent.actionName)
+                    ?.run(goal)
+                }
+                // A ticked row is dimmed by its background, never by opacity:
+                // a faded row took its text down with it, to about 1.9:1.
+                // `text-dim` on `bg` is 5.6:1.
+                className={`${
+                  done ? "bg-bg" : "bg-surface"
+                } border border-border rounded-tile px-4 py-4 flex-row items-center`}
               >
                 <GoalCheckbox
                   done={done}

@@ -112,6 +112,10 @@ Reanimated 4 with `newArchEnabled`, so layout animations work without extra setu
 
 `useReducedMotion()` degrades movement only: no springs, no scale, no sliding, but colour cross-fades and opacity stay, since losing them makes the checkbox snap between two very different colours. NativeWind doesn't support `className` on a `Reanimated.View`, so animated components use inline styles.
 
+### Accessibility
+
+Three rules from the October 2026 audit. **Never nest content inside a `Pressable`** you don't mean to be one element: a Pressable is `accessible` by default, and on iOS an accessible view hides its descendants from VoiceOver, so `DialogShell` draws its backdrop as an `absoluteFill` sibling behind the card (the card wrapped in it read as a single "Cancel"), and dismisses on `onAccessibilityEscape`. **Every gesture has an action**: a habit row's swipes are also `accessibilityActions` (edit/delete on yours, nudge/cheer on a buddy's), the only screen-reader route to a single-habit cheer. **Label what the text doesn't**: every text field carries its caption as `accessibilityLabel`, emoji and glyph buttons (‹, ⧉, swatches) are named in words, and screen and dialog titles are `accessibilityRole="header"`. `text-dim` is `#8A919E` because it has to clear 4.5:1 on `surface` (tested in `__tests__/components/accessibility.test.tsx`), and a ticked habit row is dimmed by switching its background to `bg`, never by opacity, for the same reason.
+
 ### `repeat_days` day indexes
 
 `goals.repeat_days` is stored as **Monday = 0 … Sunday = 6** — the order the day picker writes. JS `Date#getDay()` is Sunday = 0, so never compare a stored index against `getDay()` directly.

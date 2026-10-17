@@ -24,7 +24,12 @@ export default function ScreenHeader({
       >
         <Text className="text-text font-mono-medium text-2xl">‹</Text>
       </Pressable>
-      <Text className="text-text font-mono-medium text-base">{title}</Text>
+      <Text
+        accessibilityRole="header"
+        className="text-text font-mono-medium text-base"
+      >
+        {title}
+      </Text>
       {right ?? <View className="w-10" />}
     </View>
   );

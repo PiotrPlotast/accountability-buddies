@@ -49,6 +49,7 @@ export default function HabitFormFields({
           value={title}
           onChangeText={onTitleChange}
           placeholder={titlePlaceholder}
+          accessibilityLabel="Habit name"
           maxLength={MAX_HABIT_TITLE_LENGTH}
           className="text-text text-base"
           autoFocus
