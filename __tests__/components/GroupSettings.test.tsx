@@ -107,3 +107,10 @@ describe("Group settings name field", () => {
     expect(updateQB.update).not.toHaveBeenCalled();
   });
 });
+
+describe("Group settings name length", () => {
+  it("stops at 40 characters, the server's limit", () => {
+    const { getByPlaceholderText } = renderScreen(stats("Night Owls"));
+    expect(getByPlaceholderText("Swole Mates").props.maxLength).toBe(40);
+  });
+});

@@ -244,3 +244,10 @@ describe("EditGoalModal with its own onSave", () => {
     expect(fromImpl).not.toHaveBeenCalled();
   });
 });
+
+describe("EditGoalModal title", () => {
+  it("stops at 60 characters, the server's limit", () => {
+    const { getByDisplayValue } = setup();
+    expect(getByDisplayValue("Run").props.maxLength).toBe(60);
+  });
+});

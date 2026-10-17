@@ -2,6 +2,7 @@ import { View, Text } from "react-native";
 import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useTheme } from "@/hooks/useTheme";
 import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
+import { MAX_HABIT_TITLE_LENGTH } from "@/lib/textLimits";
 import IconPicker from "./IconPicker";
 import DayPicker from "./DayPicker";
 import TimePicker from "./TimePicker";
@@ -47,6 +48,7 @@ export default function HabitFormFields({
           value={title}
           onChangeText={onTitleChange}
           placeholder={titlePlaceholder}
+          maxLength={MAX_HABIT_TITLE_LENGTH}
           className="text-text text-base"
           autoFocus
         />

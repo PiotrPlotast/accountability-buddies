@@ -20,6 +20,7 @@ import IconPicker from "@/app/components/habits/IconPicker";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import { themeColors } from "@/lib/colors";
 import { useIsOnline } from "@/lib/onlineStatus";
+import { MAX_GROUP_NAME_LENGTH } from "@/lib/textLimits";
 
 export default function GroupSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -109,6 +110,7 @@ export default function GroupSettingsScreen() {
             value={name}
             onChangeText={setName}
             placeholder="Swole Mates"
+            maxLength={MAX_GROUP_NAME_LENGTH}
             className="text-text text-base"
           />
         </View>
