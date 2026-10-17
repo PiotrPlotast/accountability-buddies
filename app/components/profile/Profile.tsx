@@ -2,7 +2,6 @@ import { useState } from "react";
 import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, type Href } from "expo-router";
-import { useSupabase } from "@/hooks/useSupabase";
 import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
@@ -26,6 +25,7 @@ function formatMemberSince(iso: string | null): string {
 
 export default function Profile() {
   const {
+    userId,
     fullName,
     avatarUrl,
     memberSince,
@@ -35,9 +35,7 @@ export default function Profile() {
     groupMemberCount,
   } = useProfileData();
   const { accent } = useTheme();
-  const { session } = useSupabase();
   const router = useRouter();
-  const userId = session?.user.id;
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
   const [renaming, setRenaming] = useState(false);

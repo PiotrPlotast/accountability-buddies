@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Alert } from "react-native";
 
 import { useSupabase } from "@/hooks/useSupabase";
-import { errorMessage } from "@/lib/errorMessage";
+import { optimisticPatchOptions } from "@/lib/optimisticPatch";
 import { queryKeys } from "@/lib/queryKeys";
 import { GroupResult } from "@/types/dashboardTypes";
 
@@ -31,29 +30,18 @@ export function useUpdateGroup() {
         .eq("id", groupId);
       if (error) throw error;
     },
-    onMutate: async ({ name, icon }) => {
-      await queryClient.cancelQueries({ queryKey: statsKey });
-      const previous = queryClient.getQueryData<GroupResult | null>(statsKey);
-      if (previous) {
-        queryClient.setQueryData<GroupResult>(statsKey, {
-          ...previous,
-          name: name !== undefined ? name.trim() : previous.name,
-          icon: icon !== undefined ? icon : previous.icon,
-        });
-      }
-      return { previous };
-    },
-    onError: (err, _vars, ctx) => {
-      if (ctx?.previous !== undefined) {
-        queryClient.setQueryData(statsKey, ctx.previous);
-      }
-      Alert.alert(
-        "Update failed",
-        errorMessage(err, "Could not save group changes."),
-      );
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: statsKey });
-    },
+    ...optimisticPatchOptions<GroupResult, UpdateGroupParams>({
+      queryClient,
+      queryKey: statsKey,
+      patch: (previous, { name, icon }) =>
+        previous
+          ? {
+              ...previous,
+              name: name !== undefined ? name.trim() : previous.name,
+              icon: icon !== undefined ? icon : previous.icon,
+            }
+          : undefined,
+      fallback: "Could not save group changes.",
+    }),
   });
 }

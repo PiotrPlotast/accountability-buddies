@@ -7,7 +7,6 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
@@ -15,10 +14,7 @@ import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
 import { DEFAULT_ICON } from "@/lib/habitIcons";
 import { themeColors } from "@/lib/colors";
-import IconPicker from "@/app/components/habits/IconPicker";
-import DayPicker from "@/app/components/habits/DayPicker";
-import TimePicker from "@/app/components/habits/TimePicker";
-import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
+import HabitFormFields from "@/app/components/habits/HabitFormFields";
 
 export default function NewHabitScreen() {
   const insets = useSafeAreaInsets();
@@ -66,44 +62,17 @@ export default function NewHabitScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-          Habit name
-        </Text>
-        <View
-          style={{ borderColor: accent.hex }}
-          className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
-        >
-          <AppTextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Meditate 10 minutes"
-            className="text-text text-base"
-            autoFocus
-          />
-        </View>
-
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Pick an icon
-        </Text>
-        <IconPicker value={icon} onChange={setIcon} />
-
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Repeat
-        </Text>
-        <DayPicker value={repeatDays} onChange={setRepeatDays} />
-
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Remind me
-        </Text>
-        <TimePicker
-          label="Reminder"
-          value={reminderTime}
-          onChange={setReminderTime}
-          defaultTime={DEFAULT_REMINDER_TIME}
+        <HabitFormFields
+          title={title}
+          onTitleChange={setTitle}
+          titlePlaceholder="Meditate 10 minutes"
+          icon={icon}
+          onIconChange={setIcon}
+          repeatDays={repeatDays}
+          onRepeatDaysChange={setRepeatDays}
+          reminderTime={reminderTime}
+          onReminderTimeChange={setReminderTime}
         />
-        <Text className="text-text-dim font-mono text-xs mt-2">
-          Only if you haven&apos;t ticked it off yet.
-        </Text>
       </ScrollView>
 
       <View

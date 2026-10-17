@@ -44,6 +44,12 @@ function setup() {
 }
 
 describe("New habit reminder", () => {
+  it("explains when the reminder fires", () => {
+    const { getByText } = setup();
+
+    expect(getByText("Only if you haven't ticked it off yet.")).toBeTruthy();
+  });
+
   it("starts with no reminder and creates the habit without one", async () => {
     const { getByLabelText, getByText, insertQB } = setup();
     expect(getByLabelText("Reminder").props.value).toBe(false);

@@ -7,6 +7,11 @@ export const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
+// An empty or absent schedule spelled out as every day, for the day picker.
+export function repeatDaysOrAll(days: number[] | null | undefined): number[] {
+  return days?.length ? days : ALL_DAYS;
+}
+
 type Repeatable = { repeat_days?: number[] | null };
 
 export function toRepeatDayIndex(jsDay: number): number {

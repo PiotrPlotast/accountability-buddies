@@ -2,6 +2,7 @@ import { act } from "@testing-library/react-native";
 import { Alert } from "react-native";
 
 import { useUpdateGroup } from "@/hooks/useUpdateGroup";
+import * as haptics from "@/lib/haptics";
 
 import {
   buildFakeSupabase,
@@ -39,7 +40,7 @@ describe("useUpdateGroup alerts", () => {
     });
 
     expect(Alert.alert).toHaveBeenCalledWith(
-      "Update failed",
+      "Couldn't save",
       "Check your connection and try again.",
     );
   });
@@ -49,6 +50,17 @@ describe("useUpdateGroup alerts", () => {
   it("shows the server's message for a refusal", async () => {
     await renameWith({ message: "Name too long", code: "23514" });
 
-    expect(Alert.alert).toHaveBeenCalledWith("Update failed", "Name too long");
+    expect(Alert.alert).toHaveBeenCalledWith("Couldn't save", "Name too long");
+  });
+
+  // Every failure Alert gets the error buzz beside it, as the goal mutations
+  // and the notification switches already do.
+  it("buzzes the error haptic beside the Alert", async () => {
+    const buzz = jest.spyOn(haptics, "error").mockImplementation(() => {});
+
+    await renameWith({ message: "Name too long", code: "23514" });
+
+    expect(buzz).toHaveBeenCalledTimes(1);
+    buzz.mockRestore();
   });
 });

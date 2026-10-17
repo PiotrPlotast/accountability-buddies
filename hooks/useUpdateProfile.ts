@@ -1,9 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Alert } from "react-native";
 
 import { useSupabase } from "@/hooks/useSupabase";
 import { isValidName, normalizeName } from "@/lib/displayName";
-import { errorMessage } from "@/lib/errorMessage";
+import { optimisticPatchOptions } from "@/lib/optimisticPatch";
 import { queryKeys } from "@/lib/queryKeys";
 import { ProfileRow } from "@/types/dashboardTypes";
 
@@ -16,8 +15,8 @@ interface UpdateProfileParams {
  *
  * Hand-rolled rather than built on `lib/useOptimisticGoalMutation.ts`: that
  * hook hard-codes the `groupMembers` cache and "patch my own goals", neither
- * of which applies here. `useUpdateGroup` is the shape this follows —
- * cancel, snapshot, patch, roll back with an Alert, invalidate on settle.
+ * of which applies here. The lifecycle is `optimisticPatchOptions`, shared
+ * with `useUpdateGroup` and `useNotificationPrefs`.
  */
 export function useUpdateProfile() {
   const { supabase, session } = useSupabase();
@@ -47,24 +46,14 @@ export function useUpdateProfile() {
         throw new Error("Your profile isn't ready yet. Please try again.");
       }
     },
-    onMutate: async ({ fullName }) => {
-      await queryClient.cancelQueries({ queryKey: profileKey });
-      const previous = queryClient.getQueryData<ProfileRow | null>(profileKey);
-      queryClient.setQueryData<ProfileRow>(profileKey, {
+    ...optimisticPatchOptions<ProfileRow, UpdateProfileParams>({
+      queryClient,
+      queryKey: profileKey,
+      patch: (previous, { fullName }) => ({
         ...previous,
         avatar_url: previous?.avatar_url ?? null,
         full_name: normalizeName(fullName),
-      });
-      return { previous };
-    },
-    onError: (err, _vars, ctx) => {
-      if (ctx?.previous !== undefined) {
-        queryClient.setQueryData(profileKey, ctx.previous);
-      }
-      Alert.alert("Couldn't save your name", errorMessage(err));
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: profileKey });
-    },
+      }),
+    }),
   });
 }
