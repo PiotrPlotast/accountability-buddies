@@ -5,7 +5,7 @@ import DeleteGoalModal from "@/app/components/dashboard/DeleteGoalModal";
 import EditGoalModal from "@/app/components/dashboard/EditGoalModal";
 import { GoalListView } from "@/app/components/dashboard/GoalList";
 import MemberTabs from "@/app/components/dashboard/MemberTabs";
-import NudgeButton from "@/app/components/dashboard/NudgeButton";
+import BuddyActions from "@/app/components/dashboard/BuddyActions";
 import NudgeModal from "@/app/components/dashboard/NudgeModal";
 import ProgressRing from "@/app/components/dashboard/ProgressRing";
 import TimePicker from "@/app/components/habits/TimePicker";
@@ -263,10 +263,10 @@ function BuddiesDemo() {
         />
       ) : (
         <View>
-          <NudgeButton
+          <BuddyActions
             name={name}
-            onPress={() => openNudge("")}
-            sent={sentTo === name}
+            onNudge={() => openNudge("")}
+            sentNotice={sentTo === name ? `Nudge sent to ${name}` : null}
           />
           <GoalListView
             goals={filterGoalsForToday(viewed.goals)}

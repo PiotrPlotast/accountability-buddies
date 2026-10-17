@@ -447,4 +447,55 @@ begin
   end if;
 end $$;
 
+-- 18. Every push names the day it is about, for E7's cheer; a single-habit
+--     tick also names the habit (its id, and its title for the cheer's
+--     default line), while several habits and a closed day name none.
+do $$
+declare
+  g uuid := pg_temp.mk_group();
+  ada uuid := pg_temp.mk_member(g, 'Ada');
+  bob uuid := pg_temp.mk_member(g, 'Bob');
+  run uuid := pg_temp.mk_goal(ada, g, 'Run', '🏃');
+  read uuid := pg_temp.mk_goal(ada, g, 'Read', '📚');
+  swim uuid := pg_temp.mk_goal(ada, g, 'Swim', '🏊');
+  n public.notifications;
+begin
+  perform pg_temp.tick(run, now() - interval '20 minutes');
+  perform pg_temp.run(now() - interval '19 minutes');
+  select * into n from pg_temp.sent_to(bob, 'buddy_ticked');
+  if n.data->>'goal_id' is distinct from run::text or n.data->>'goal_title' is distinct from 'Run'
+     or n.data->>'day' is distinct from current_date::text then
+    raise exception 'case 18 (one habit): unexpected data %', n.data;
+  end if;
+  perform pg_temp.tick(read, now() - interval '3 minutes');
+  perform pg_temp.tick(swim, now() - interval '2 minutes');
+  update public.goals set repeat_days = pg_temp.not_today() where id = swim;
+  perform pg_temp.run();
+  select * into n from pg_temp.sent_to(bob, 'buddy_done');
+  if n.id is null or n.data ? 'goal_id' or n.data->>'day' is distinct from current_date::text then
+    raise exception 'case 18 (closed day): unexpected data %', n.data;
+  end if;
+end $$;
+
+-- 18b. Several habits in one push name the day and no habit.
+do $$
+declare
+  g uuid := pg_temp.mk_group();
+  ada uuid := pg_temp.mk_member(g, 'Ada');
+  bob uuid := pg_temp.mk_member(g, 'Bob');
+  run uuid := pg_temp.mk_goal(ada, g, 'Run', '🏃');
+  read uuid := pg_temp.mk_goal(ada, g, 'Read', '📚');
+  swim uuid := pg_temp.mk_goal(ada, g, 'Swim', '🏊');
+  n public.notifications;
+begin
+  perform pg_temp.tick(run, now() - interval '2 minutes');
+  perform pg_temp.tick(read);
+  perform pg_temp.run();
+  select * into n from pg_temp.sent_to(bob, 'buddy_ticked');
+  if n.id is null or n.data ? 'goal_id' or n.data ? 'goal_title'
+     or n.data->>'day' is distinct from current_date::text then
+    raise exception 'case 18b: unexpected data %', n.data;
+  end if;
+end $$;
+
 rollback;

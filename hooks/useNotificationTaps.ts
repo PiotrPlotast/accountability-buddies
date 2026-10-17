@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useNameGate } from "@/hooks/useNameGate";
 import { useSupabase } from "@/hooks/useSupabase";
-import { claimTap, emitShowTab } from "@/lib/notificationTaps";
+import { cheerFromTap } from "@/lib/cheer";
+import { claimTap, emitShowTab, requestCheer } from "@/lib/notificationTaps";
 import {
   NotificationTap,
   clearLastNotificationTap,
@@ -12,8 +13,9 @@ import {
   onNotificationTap,
 } from "@/lib/push";
 
-// Both ask you to do your habits, which only your own tab can.
-const OWN_TAB_TYPES = new Set<unknown>(["nudge", "reminder"]);
+// A nudge and a reminder ask you to do your habits, which only your own tab
+// can; a cheer is about them.
+const OWN_TAB_TYPES = new Set<unknown>(["nudge", "reminder", "cheer"]);
 // About a buddy, so their tab. The push names them in `buddy_id`.
 const BUDDY_TAB_TYPES = new Set<unknown>([
   "buddy_ticked",
@@ -35,9 +37,10 @@ function tabFor(data: Record<string, unknown>): string | null | undefined {
  * Routes a tapped notification. Mounted once, in `app/(protected)/_layout.tsx`,
  * so it only ever runs signed in.
  *
- * A nudge or a habit reminder opens the dashboard on your own tab: both ask
- * you to do your habits, and what they say is already on the notification. A
- * buddy event (a tick, a closed day, a join) opens that buddy's tab. Every tap
+ * A nudge, a habit reminder or a cheer opens the dashboard on your own tab:
+ * what they say is already on the notification. A buddy event (a tick, a
+ * closed day, a join) opens that buddy's tab, and a tick or a closed day also
+ * opens a cheer for them (`cheerFromTap` says which kind). Every tap
  * marks its row read. A user still owed a name or a group stays where the
  * gates put them — finishing either lands on the dashboard anyway. Any other
  * type just opens the app.
@@ -78,6 +81,8 @@ export function useNotificationTaps(): void {
     if (tab === undefined || needsName || hasNoGroup) return;
     router.navigate("/");
     emitShowTab(tab);
+    const cheer = cheerFromTap(tap.data);
+    if (cheer) requestCheer(cheer);
   }, [tap, isResolved, needsName, groupLoading, hasNoGroup, router, supabase]);
 }
 

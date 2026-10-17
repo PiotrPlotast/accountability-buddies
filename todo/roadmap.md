@@ -590,19 +590,27 @@ as separate scope, and nearly all of it already exists:
   `cheer` opens your own tab like a nudge does. Still once per tap, still
   waiting on the name gate and the group, still dropped while signed out.
 
-Decide before coding (the answers become the tests):
+Decided with Piotr on 2026-10-16 (the answers are the tests):
 
-- Whether a cheer can also be sent from inside the app (a button on a buddy's
-  tab next to `NudgeButton`), or only from the notification.
-- The default lines, and whether they name the habit from the push ("Nice
-  work on Read 20 pages!") — that needs the habit in the push data.
-- The limits: the nudge's numbers, looser ones, or one cheer per buddy per
-  habit per day.
-- Which switch governs receiving cheers: Social, Nudges, or a new one.
-- What happens when the tapped habit was unticked in the meantime — cheer
-  anyway, or open the tab without the modal.
-- Whether the cheered buddy gets a way to see who cheered them beyond the push
-  itself (a list, a badge) — probably later, not this stage.
+- **Both places.** From the push, and from inside the app: swiping a
+  *ticked* habit on a buddy's tab cheers that habit (an unticked one still
+  nudges), and a Cheer button beside `NudgeButton` cheers their day.
+- **Two kinds, worded differently.** A habit cheer comes from a
+  single-habit `buddy_ticked` push or the swipe: "Piotr cheered your Run 🏃",
+  with presets that name the habit ("Nice work on Run!"), so that push now
+  carries `goal_id`, `goal_title` and `day`. A day cheer comes from a
+  several-habit or `buddy_done` push or the button: "Piotr cheered your
+  day 🎉", with presets of its own.
+- **Limits:** one cheer per habit per day and one day cheer per buddy per day,
+  from each sender. Nothing else.
+- **Switch:** Social.
+- **Unticked in the meantime:** cheer anyway.
+- **A tapped cheer** opens your own tab, like a nudge.
+
+**Later, not this stage: seeing who cheered you.** Today a cheer is only the
+push; swipe it away and nothing in the app shows it again. Piotr wants to talk
+about an in-app view later: a list of the day's cheers, or a 🎉 on the habit
+someone cheered.
 
 Two PRs, like E4: the server (migration, SQL tests, Edge Function), then the
 app (modal, hook, tap routing).

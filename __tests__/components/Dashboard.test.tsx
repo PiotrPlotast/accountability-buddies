@@ -5,11 +5,13 @@ import Dashboard from "@/app/components/dashboard/Dashboard";
 import DeleteGoalModal from "@/app/components/dashboard/DeleteGoalModal";
 import EditGoalModal from "@/app/components/dashboard/EditGoalModal";
 import HabitManagerModal from "@/app/components/dashboard/HabitsManagerModal";
+import CheerModal from "@/app/components/dashboard/CheerModal";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 import * as haptics from "@/lib/haptics";
-import { emitShowTab } from "@/lib/notificationTaps";
+import { emitShowTab, requestCheer } from "@/lib/notificationTaps";
+import { onlineManager } from "@tanstack/react-query";
 
 import {
   buildFakeSupabase,
@@ -49,12 +51,15 @@ const buddy: Member = {
   goals: [goal("Buddy habit", "user-2")],
 };
 
-function renderDashboard() {
+function renderDashboard(
+  members: Member[] = [me, buddy],
+  functionsImpl?: jest.Mock,
+) {
   const queryClient = makeQueryClient();
   queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
   queryClient.setQueryData(
     queryKeys.groupMembers("group-1", getTodayLocalDate()),
-    [me, buddy],
+    members,
   );
   // Named, so the dashboard's name gate is settled and reads nothing.
   queryClient.setQueryData(queryKeys.profile("user-1"), {
@@ -62,7 +67,7 @@ function renderDashboard() {
     avatar_url: null,
   });
   const { Wrapper } = buildWrapper({
-    supabase: buildFakeSupabase(),
+    supabase: buildFakeSupabase(functionsImpl ? { functionsImpl } : {}),
     queryClient,
   });
   return { queryClient, ...render(<Dashboard />, { wrapper: Wrapper }) };
@@ -256,6 +261,129 @@ describe("Dashboard nudges", () => {
       jest.advanceTimersByTime(3_000);
     });
     expect(queryByText("Nudge sent to Buddy")).toBeNull();
+  });
+});
+
+describe("Dashboard cheers", () => {
+  const doneBuddy: Member = {
+    ...buddy,
+    goals: [{ ...goal("Done habit", "user-2"), completed_today: true }],
+  };
+  const cheerSent = () =>
+    jest.fn(() =>
+      Promise.resolve({
+        data: { success: true, message: "Cheer sent" },
+        error: null,
+      }),
+    );
+
+  beforeEach(() => {
+    jest.spyOn(haptics, "celebrate").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    onlineManager.setOnline(true);
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it("offers no cheer on your own tab", () => {
+    const { queryByText } = renderDashboard();
+    expect(queryByText(/^Cheer /)).toBeNull();
+  });
+
+  it("puts a cheer button beside the nudge on a buddy's tab", () => {
+    const { getByLabelText, getByText } = renderDashboard();
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    expect(getByText("Nudge Buddy")).toBeTruthy();
+    expect(getByText("Cheer Buddy")).toBeTruthy();
+  });
+
+  it("cheers the buddy's day from the button, dated today", async () => {
+    const invoke = cheerSent();
+    const { getByLabelText, getByText } = renderDashboard([me, buddy], invoke);
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    fireEvent.press(getByText("Cheer Buddy"));
+    expect(getByText("Cheer Buddy's day")).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(getByText("Send"));
+    });
+
+    expect(invoke).toHaveBeenCalledWith("send-cheer", {
+      body: {
+        recipient_id: "user-2",
+        message: "",
+        goal_id: null,
+        day: getTodayLocalDate(),
+      },
+    });
+    await waitFor(() => expect(getByText("Cheer sent to Buddy")).toBeTruthy());
+  });
+
+  it("cheers a ticked habit from its swipe, where an unticked one nudges", () => {
+    const { getByLabelText, getByText, UNSAFE_getByProps, UNSAFE_getByType } =
+      renderDashboard([me, doneBuddy]);
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+
+    const swipeable = UNSAFE_getByProps({ friction: 2 });
+    const action = render(
+      swipeable.props.renderRightActions({ value: 0 }, { value: 0 }),
+    );
+    expect(action.queryByText("Nudge")).toBeNull();
+    act(() => {
+      fireEvent.press(action.getByText("Cheer"));
+    });
+
+    // What it sends is CheerModal's to test: once a second root has been
+    // rendered (the action, above), presses in the first no longer reach
+    // their handlers, so Send can't be pressed here.
+    expect(getByText("Cheer Buddy for Done habit")).toBeTruthy();
+    expect(UNSAFE_getByType(CheerModal).props).toEqual(
+      expect.objectContaining({
+        recipient: { userId: "user-2", name: "Buddy" },
+        goal: { id: "Done habit", title: "Done habit" },
+        day: getTodayLocalDate(),
+      }),
+    );
+  });
+
+  it("opens the cheer a tapped push asks for, on that buddy's tab", () => {
+    const { getByText } = renderDashboard();
+
+    act(() => {
+      emitShowTab("user-2");
+      requestCheer({
+        buddyId: "user-2",
+        goal: { id: "goal-9", title: "Run" },
+        day: "2026-10-16",
+      });
+    });
+
+    expect(getByText("Buddy habit")).toBeTruthy();
+    expect(getByText("Cheer Buddy for Run")).toBeTruthy();
+  });
+
+  it("opens no cheer for someone who is no longer in the group", () => {
+    const { queryByLabelText } = renderDashboard();
+
+    act(() => {
+      requestCheer({ buddyId: "someone-else", goal: null, day: null });
+    });
+
+    expect(queryByLabelText("Cheer message")).toBeNull();
+  });
+
+  it("offline, disables the button and opens no cheer from a tap", () => {
+    const { getByLabelText, getByText, queryByLabelText } = renderDashboard();
+    act(() => onlineManager.setOnline(false));
+    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+
+    fireEvent.press(getByText("Cheer Buddy"));
+    act(() => {
+      requestCheer({ buddyId: "user-2", goal: null, day: null });
+    });
+
+    expect(queryByLabelText("Cheer message")).toBeNull();
   });
 });
 

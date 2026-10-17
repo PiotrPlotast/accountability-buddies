@@ -1,5 +1,8 @@
 // Which notification taps have been handled, and the dashboard's "show a
-// tab" signal. No `expo-notifications` here — that stays in `lib/push.ts`.
+// tab" and "open a cheer" signals. No `expo-notifications` here — that stays
+// in `lib/push.ts`.
+
+import type { CheerRequest } from "@/lib/cheer";
 
 // Module scope, for the life of the JS runtime: the protected layout remounts
 // on every sign-in, and the launch tap is still readable then, so a flag in
@@ -32,6 +35,42 @@ export function emitShowTab(memberId: string | null): void {
   for (const listener of [...listeners]) {
     try {
       listener(memberId);
+    } catch {
+      // One broken listener must not stop the others.
+    }
+  }
+}
+
+// A tapped buddy push also asks the dashboard to open a cheer. Unlike the tab
+// signal it is kept when nobody is listening: on a cold start the tap can be
+// routed before the dashboard has mounted, and a lost tab only means the
+// wrong tab, while a lost cheer means the tap did nothing it promised. The
+// first listener to subscribe takes it, once.
+type CheerListener = (request: CheerRequest) => void;
+
+const cheerListeners = new Set<CheerListener>();
+let unheardCheer: CheerRequest | null = null;
+
+export function onCheerRequest(listener: CheerListener): () => void {
+  cheerListeners.add(listener);
+  if (unheardCheer) {
+    const request = unheardCheer;
+    unheardCheer = null;
+    listener(request);
+  }
+  return () => {
+    cheerListeners.delete(listener);
+  };
+}
+
+export function requestCheer(request: CheerRequest): void {
+  if (cheerListeners.size === 0) {
+    unheardCheer = request;
+    return;
+  }
+  for (const listener of [...cheerListeners]) {
+    try {
+      listener(request);
     } catch {
       // One broken listener must not stop the others.
     }
