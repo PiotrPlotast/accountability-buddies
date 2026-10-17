@@ -1,15 +1,9 @@
 import { useState } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
+import DialogShell from "@/app/components/ui/DialogShell";
 
 type Props = {
   goal: Goal | null;
@@ -48,63 +42,38 @@ export default function DeleteGoalModal({
   };
 
   return (
-    <Modal
-      visible={isVisible}
-      animationType="fade"
-      transparent
+    // Tapping outside cancels — the safe half of a destructive choice.
+    // Ignored mid-delete so the sheet can't vanish under the request.
+    <DialogShell
+      isVisible={isVisible}
       onRequestClose={onClose}
+      onBackdropPress={deleting ? undefined : onClose}
+      backdropLabel="Cancel"
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        {/* Tapping outside cancels — the safe half of a destructive choice.
-            Ignored mid-delete so the sheet can't vanish under the request. */}
+      <Text className="text-text font-mono-bold text-lg mb-2">
+        Delete habit?
+      </Text>
+      <Text className="text-text-muted font-mono text-sm mb-5">
+        {goal?.title ? `"${goal.title}" will be removed.` : ""}
+      </Text>
+      <View className="flex-row gap-3">
         <Pressable
-          onPress={deleting ? undefined : onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Cancel"
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.7)",
-            justifyContent: "center",
-            padding: 20,
-          }}
+          onPress={onClose}
+          disabled={deleting}
+          className="flex-1 h-12 rounded-tile items-center justify-center bg-bg border border-border"
         >
-          {/* Absorbs taps that land on the dialog so they don't reach the
-              backdrop. A plain responder rather than a Pressable, so the card
-              doesn't announce itself as a button. */}
-          <View
-            onStartShouldSetResponder={() => true}
-            className="bg-surface border border-border rounded-tile p-6"
-          >
-            <Text className="text-text font-mono-bold text-lg mb-2">
-              Delete habit?
-            </Text>
-            <Text className="text-text-muted font-mono text-sm mb-5">
-              {goal?.title ? `"${goal.title}" will be removed.` : ""}
-            </Text>
-            <View className="flex-row gap-3">
-              <Pressable
-                onPress={onClose}
-                disabled={deleting}
-                className="flex-1 h-12 rounded-tile items-center justify-center bg-bg border border-border"
-              >
-                <Text className="text-text-muted font-mono-medium">Cancel</Text>
-              </Pressable>
-              <Pressable
-                className="flex-1 h-12 rounded-tile items-center justify-center bg-danger"
-                disabled={deleting}
-                onPress={handleDelete}
-              >
-                <Text className="text-text font-mono-bold">
-                  {deleting ? "Deleting…" : "Delete"}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+          <Text className="text-text-muted font-mono-medium">Cancel</Text>
         </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+        <Pressable
+          className="flex-1 h-12 rounded-tile items-center justify-center bg-danger"
+          disabled={deleting}
+          onPress={handleDelete}
+        >
+          <Text className="text-text font-mono-bold">
+            {deleting ? "Deleting…" : "Delete"}
+          </Text>
+        </Pressable>
+      </View>
+    </DialogShell>
   );
 }

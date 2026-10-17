@@ -1,20 +1,14 @@
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import AppTextInput from "@/app/components/ui/AppTextInput";
+import DialogShell from "@/app/components/ui/DialogShell";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
+import PrimaryButton from "@/app/components/ui/PrimaryButton";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { useTheme } from "@/hooks/useTheme";
 import { MAX_NAME_LENGTH, isValidName, normalizeName } from "@/lib/displayName";
-import { themeColors } from "@/lib/colors";
 import { useIsOnline } from "@/lib/onlineStatus";
 
 type Props = {
@@ -72,95 +66,55 @@ export default function RenameModal({
   };
 
   return (
-    <Modal
-      visible={isVisible}
-      animationType="fade"
-      transparent
+    <DialogShell
+      isVisible={isVisible}
       onRequestClose={onClose}
+      onBackdropPress={dismissOnBackdrop}
+      backdropLabel="Close"
+      cardClassName="bg-bg border border-border rounded-tile overflow-hidden"
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <Pressable
-          onPress={dismissOnBackdrop}
-          accessibilityRole={dismissOnBackdrop ? "button" : undefined}
-          accessibilityLabel={dismissOnBackdrop ? "Close" : undefined}
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.7)",
-            justifyContent: "center",
-            padding: 20,
-          }}
+      <View style={{ padding: 24 }}>
+        <SectionLabel className="mb-3">Your name</SectionLabel>
+        <View
+          style={{ borderColor: accent.hex }}
+          className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
         >
-          {/* Absorbs taps landing on the dialog so they don't reach the
-              backdrop, without announcing the card as a button. */}
-          <View
-            onStartShouldSetResponder={() => true}
-            className="bg-bg border border-border rounded-tile overflow-hidden"
-          >
-            <View style={{ padding: 24 }}>
-              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-                Your name
-              </Text>
-              <View
-                style={{ borderColor: accent.hex }}
-                className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
-              >
-                <AppTextInput
-                  value={name}
-                  onChangeText={setName}
-                  autoFocus
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  maxLength={MAX_NAME_LENGTH}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSave}
-                  placeholder="Your name"
-                  accessibilityLabel="Your name"
-                  className="text-text text-base"
-                />
-              </View>
-            </View>
+          <AppTextInput
+            value={name}
+            onChangeText={setName}
+            autoFocus
+            autoCapitalize="words"
+            autoCorrect={false}
+            maxLength={MAX_NAME_LENGTH}
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
+            placeholder="Your name"
+            accessibilityLabel="Your name"
+            className="text-text text-base"
+          />
+        </View>
+      </View>
 
-            <View className="flex-row gap-3 px-6 pb-6">
-              <Pressable
-                onPress={onClose}
-                disabled={saving}
-                accessibilityRole="button"
-                className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
-              >
-                <Text className="text-text-muted font-mono-medium text-base">
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSave}
-                disabled={!canSave}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !canSave }}
-                className="flex-1 h-14 rounded-tile items-center justify-center"
-                style={{
-                  backgroundColor: canSave ? accent.hex : themeColors.surface,
-                }}
-              >
-                {saving ? (
-                  <ActivityIndicator color={themeColors.background} />
-                ) : (
-                  <Text
-                    className={`font-mono-bold text-base ${
-                      canSave ? "text-bg" : "text-text-dim"
-                    }`}
-                  >
-                    Save
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-            {!isOnline ? <NeedsConnection className="mb-4 -mt-2" /> : null}
-          </View>
+      <View className="flex-row gap-3 px-6 pb-6">
+        <Pressable
+          onPress={onClose}
+          disabled={saving}
+          accessibilityRole="button"
+          className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
+        >
+          <Text className="text-text-muted font-mono-medium text-base">
+            Cancel
+          </Text>
         </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+        <PrimaryButton
+          label="Save"
+          onPress={handleSave}
+          filled={canSave}
+          busy={saving}
+          className="flex-1"
+        />
+      </View>
+      {!isOnline ? <NeedsConnection className="mb-4 -mt-2" /> : null}
+    </DialogShell>
   );
 }

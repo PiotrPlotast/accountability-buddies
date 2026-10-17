@@ -1,5 +1,6 @@
 import { View, Text } from "react-native";
 import AppTextInput from "@/app/components/ui/AppTextInput";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 import { useTheme } from "@/hooks/useTheme";
 import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
 import { MAX_HABIT_TITLE_LENGTH } from "@/lib/textLimits";
@@ -76,12 +77,8 @@ export default function HabitFormFields({
 
 function Label({ children, first }: { children: string; first?: boolean }) {
   return (
-    <Text
-      className={`text-text-muted font-mono uppercase text-xs tracking-widest mb-3 ${
-        first ? "" : "mt-8"
-      }`}
-    >
+    <SectionLabel className={first ? "mb-3" : "mt-8 mb-3"}>
       {children}
-    </Text>
+    </SectionLabel>
   );
 }

@@ -4,6 +4,7 @@ import { themeColors } from "@/lib/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 
 export default function Page() {
   const { accent } = useTheme();
@@ -12,9 +13,7 @@ export default function Page() {
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
       <View className="flex-1 px-6 justify-between pb-6">
         <View className="mt-10">
-          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-4">
-            Habit Pals
-          </Text>
+          <SectionLabel className="mb-4">Habit Pals</SectionLabel>
           <Text
             className="text-text font-mono-bold"
             style={{ fontSize: 40, lineHeight: 44 }}

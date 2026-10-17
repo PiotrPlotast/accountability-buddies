@@ -69,12 +69,9 @@ function pressSwipeAction(
       p: unknown,
       d: unknown,
       m: unknown,
-    ) => React.ReactElement<{
-      goal: unknown;
-      onAction: (goal: unknown) => void;
-    }>
+    ) => React.ReactElement<{ onPress: () => void }>
   )({ value: 0 }, { value: 0 }, { close: jest.fn() });
-  act(() => action.props.onAction(action.props.goal));
+  act(() => action.props.onPress());
 }
 
 beforeEach(async () => {

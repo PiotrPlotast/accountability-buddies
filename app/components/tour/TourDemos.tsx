@@ -31,6 +31,7 @@ import {
   toggleDemoGoal,
 } from "@/lib/tourDemo";
 import { Goal } from "@/types/dashboardTypes";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 
 /**
  * The live demos on the tour's slides. They are the dashboard's own pieces —
@@ -344,9 +345,7 @@ function StreakDemo() {
         >
           {streak}
         </Text>
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-1">
-          day group streak
-        </Text>
+        <SectionLabel className="mt-1">day group streak</SectionLabel>
       </View>
       <SampleHabits
         goals={goals}

@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ToggleRow from "@/app/components/settings/ToggleRow";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
+import ScreenHeader from "@/app/components/ui/ScreenHeader";
 import TimePicker from "@/app/components/habits/TimePicker";
 import { useNotificationPrefs } from "@/hooks/useNotificationPrefs";
 import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
@@ -27,6 +28,7 @@ import {
   toHHMM,
 } from "@/lib/reminderTime";
 import type { NotificationPrefs } from "@/hooks/useNotificationPrefs";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 
 /**
  * One settings surface, not two: the notification preferences (per account),
@@ -99,21 +101,7 @@ export default function NotificationSettingsScreen() {
 
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center justify-between px-5 h-14">
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          className="w-10 h-10 items-center justify-center"
-        >
-          <Text className="text-text font-mono-medium text-2xl">‹</Text>
-        </Pressable>
-        <Text className="text-text font-mono-medium text-base">
-          Notifications
-        </Text>
-        <View className="w-10" />
-      </View>
+      <ScreenHeader title="Notifications" />
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
         {blocked ? (
@@ -146,9 +134,7 @@ export default function NotificationSettingsScreen() {
           </View>
         ) : null}
 
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-          Push
-        </Text>
+        <SectionLabel className="mb-3">Push</SectionLabel>
         <View className="gap-3">
           <ToggleRow
             label="Reminders"
@@ -180,9 +166,7 @@ export default function NotificationSettingsScreen() {
           <NeedsConnection className="text-left" />
         )}
 
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Quiet hours
-        </Text>
+        <SectionLabel className="mt-8 mb-3">Quiet hours</SectionLabel>
         <View className="gap-3">
           <ToggleRow
             label="Quiet hours"
@@ -218,9 +202,7 @@ export default function NotificationSettingsScreen() {
           ) : null}
         </View>
 
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Feedback
-        </Text>
+        <SectionLabel className="mt-8 mb-3">Feedback</SectionLabel>
         <ToggleRow
           label="Haptics"
           description="Vibration on taps, check-ins and errors."
@@ -231,9 +213,7 @@ export default function NotificationSettingsScreen() {
           Stored on this device only.
         </Text>
 
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Help
-        </Text>
+        <SectionLabel className="mt-8 mb-3">Help</SectionLabel>
         <Pressable
           onPress={() => router.push("/tour-replay")}
           accessibilityRole="button"
@@ -247,9 +227,7 @@ export default function NotificationSettingsScreen() {
           <Text style={{ fontSize: 18, color: themeColors.textDim }}>›</Text>
         </Pressable>
 
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Account
-        </Text>
+        <SectionLabel className="mt-8 mb-3">Account</SectionLabel>
         <Pressable
           onPress={handleSignOut}
           accessible

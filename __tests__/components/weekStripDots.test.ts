@@ -1,4 +1,4 @@
-import { DOT_STYLES } from "@/app/components/dashboard/GoalList";
+import { DOT_STYLES } from "@/app/components/dashboard/WeekStrip";
 import { HistoryState } from "@/lib/goalHistory";
 import { themeColors } from "@/lib/colors";
 

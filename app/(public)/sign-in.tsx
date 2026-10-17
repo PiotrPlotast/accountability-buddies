@@ -1,14 +1,7 @@
 import "../../global.css";
-import { useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Text,
-  TextInput,
-  Pressable,
-  View,
-  ScrollView,
-} from "react-native";
-import AppTextInput from "@/app/components/ui/AppTextInput";
+import { useState } from "react";
+import { Text, View, ScrollView } from "react-native";
+import PrimaryButton from "@/app/components/ui/PrimaryButton";
 import { themeColors } from "@/lib/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { router } from "expo-router";
@@ -16,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useSignIn } from "@/hooks/useSignIn";
 import AppleAuth from "@/app/components/auth/AppleAuth";
+import CredentialFields from "@/app/components/auth/CredentialFields";
 import FormError from "@/app/components/auth/FormError";
 import { getAuthErrorMessage } from "@/lib/authErrors";
 
@@ -27,7 +21,6 @@ export default function Page() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const passwordRef = useRef<TextInput>(null);
 
   const onSignInPress = async () => {
     if (!isLoaded || submitting) return;
@@ -44,10 +37,7 @@ export default function Page() {
     }
   };
 
-  // Kept apart so the button stays filled (and the dark spinner stays visible)
-  // while the request is in flight, rather than greying out mid-submit.
   const isFilled = !!email && !!password;
-  const canSubmit = isFilled && !submitting;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
@@ -62,73 +52,30 @@ export default function Page() {
           Sign in
         </Text>
 
-        <View className="gap-2 mt-4">
-          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
-            Email
-          </Text>
-          <View className="border border-border rounded-tile px-4 h-14 justify-center bg-surface">
-            <AppTextInput
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              textContentType="username"
-              keyboardType="email-address"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              value={email}
-              placeholder="you@example.com"
-              onChangeText={(next) => {
-                setEmail(next);
-                setError(null);
-              }}
-              className="text-text text-base"
-            />
-          </View>
-        </View>
-
-        <View className="gap-2">
-          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
-            Password
-          </Text>
-          <View className="border border-border rounded-tile px-4 h-14 justify-center bg-surface">
-            <AppTextInput
-              ref={passwordRef}
-              value={password}
-              placeholder="••••••••"
-              secureTextEntry
-              autoComplete="current-password"
-              textContentType="password"
-              returnKeyType="go"
-              onSubmitEditing={onSignInPress}
-              onChangeText={(next) => {
-                setPassword(next);
-                setError(null);
-              }}
-              className="text-text text-base"
-            />
-          </View>
-        </View>
+        <CredentialFields
+          email={email}
+          password={password}
+          onEmailChange={(next) => {
+            setEmail(next);
+            setError(null);
+          }}
+          onPasswordChange={(next) => {
+            setPassword(next);
+            setError(null);
+          }}
+          onSubmit={onSignInPress}
+        />
 
         <FormError message={error} />
 
-        <Pressable
+        <PrimaryButton
+          label="Continue"
           onPress={onSignInPress}
-          disabled={!canSubmit}
-          className="h-14 rounded-tile items-center justify-center mt-2"
-          style={{
-            backgroundColor: isFilled ? accent.hex : themeColors.surface,
-          }}
-        >
-          {submitting ? (
-            <ActivityIndicator color={themeColors.background} />
-          ) : (
-            <Text
-              className={`font-mono-bold ${isFilled ? "text-bg" : "text-text-dim"}`}
-            >
-              Continue
-            </Text>
-          )}
-        </Pressable>
+          filled={isFilled}
+          busy={submitting}
+          className="mt-2"
+          smallLabel
+        />
 
         <AppleAuth onError={setError} />
 

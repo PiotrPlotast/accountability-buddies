@@ -1,27 +1,20 @@
 import "../../global.css";
 import { useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
+import { View, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
-import { useTheme } from "@/hooks/useTheme";
 import { DEFAULT_ICON } from "@/lib/habitIcons";
-import { themeColors } from "@/lib/colors";
 import HabitFormFields from "@/app/components/habits/HabitFormFields";
+import PrimaryButton from "@/app/components/ui/PrimaryButton";
+import ScreenHeader from "@/app/components/ui/ScreenHeader";
 
 export default function NewHabitScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeGroupId } = useActiveGroup();
   const { addGoal } = useDashboardActions(activeGroupId);
-  const { accent } = useTheme();
 
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState<string | null>(DEFAULT_ICON);
@@ -47,16 +40,7 @@ export default function NewHabitScreen() {
 
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center px-5 h-14">
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={12}
-          className="w-10 h-10 items-center justify-center"
-        >
-          <Text className="text-text font-mono-medium text-2xl">‹</Text>
-        </Pressable>
-        <Text className="text-text font-mono-medium text-base">New habit</Text>
-      </View>
+      <ScreenHeader title="New habit" />
 
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
@@ -79,24 +63,12 @@ export default function NewHabitScreen() {
         className="absolute left-0 right-0 bg-bg px-5"
         style={{ bottom: 0, paddingBottom: insets.bottom + 16, paddingTop: 12 }}
       >
-        <Pressable
+        <PrimaryButton
+          label="Create habit"
           onPress={handleSave}
-          disabled={!canSave}
-          style={{
-            backgroundColor: canSave ? accent.hex : themeColors.surface,
-          }}
-          className={`h-14 rounded-tile items-center justify-center`}
-        >
-          {submitting ? (
-            <ActivityIndicator color={themeColors.background} />
-          ) : (
-            <Text
-              className={`font-mono-bold text-base ${canSave ? "text-bg" : "text-text-dim"}`}
-            >
-              Create habit
-            </Text>
-          )}
-        </Pressable>
+          filled={canSave}
+          busy={submitting}
+        />
       </View>
     </View>
   );

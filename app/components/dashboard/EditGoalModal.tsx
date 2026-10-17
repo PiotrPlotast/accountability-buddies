@@ -1,21 +1,12 @@
 import { useState } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { View, Text, Pressable, ScrollView } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
-import { useTheme } from "@/hooks/useTheme";
 import { repeatDaysOrAll } from "@/lib/repeatDays";
-import { themeColors } from "@/lib/colors";
 import HabitFormFields from "@/app/components/habits/HabitFormFields";
+import DialogShell from "@/app/components/ui/DialogShell";
+import PrimaryButton from "@/app/components/ui/PrimaryButton";
 
 export type GoalEdit = {
   title: string;
@@ -42,7 +33,6 @@ export default function EditGoalModal({
   const { activeGroupId } = useActiveGroup();
   const { editGoal } = useDashboardActions(activeGroupId);
   const save = onSave ?? editGoal;
-  const { accent } = useTheme();
 
   const [title, setTitle] = useState(goal?.title ?? "");
   const [icon, setIcon] = useState<string | null>(goal?.icon ?? null);
@@ -98,85 +88,48 @@ export default function EditGoalModal({
   };
 
   return (
-    <Modal
-      visible={isVisible}
-      animationType="fade"
-      transparent
+    <DialogShell
+      isVisible={isVisible}
       onRequestClose={onClose}
+      onBackdropPress={dismissOnBackdrop}
+      backdropLabel="Close"
+      cardClassName="bg-bg border border-border rounded-tile overflow-hidden"
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+      <ScrollView
+        contentContainerStyle={{ padding: 24 }}
+        keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          onPress={dismissOnBackdrop}
-          accessibilityRole={dismissOnBackdrop ? "button" : undefined}
-          accessibilityLabel={dismissOnBackdrop ? "Close" : undefined}
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.7)",
-            justifyContent: "center",
-            padding: 20,
-          }}
-        >
-          {/* Absorbs taps landing on the dialog so they don't reach the
-              backdrop. A plain responder rather than a Pressable, so the card
-              doesn't announce itself as a button. */}
-          <View
-            onStartShouldSetResponder={() => true}
-            className="bg-bg border border-border rounded-tile overflow-hidden"
-          >
-            <ScrollView
-              contentContainerStyle={{ padding: 24 }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <HabitFormFields
-                title={title}
-                onTitleChange={setTitle}
-                titlePlaceholder="Habit name"
-                icon={icon}
-                onIconChange={setIcon}
-                repeatDays={repeatDays}
-                onRepeatDaysChange={setRepeatDays}
-                reminderTime={reminderTime}
-                onReminderTimeChange={setReminderTime}
-              />
-            </ScrollView>
+        <HabitFormFields
+          title={title}
+          onTitleChange={setTitle}
+          titlePlaceholder="Habit name"
+          icon={icon}
+          onIconChange={setIcon}
+          repeatDays={repeatDays}
+          onRepeatDaysChange={setRepeatDays}
+          reminderTime={reminderTime}
+          onReminderTimeChange={setReminderTime}
+        />
+      </ScrollView>
 
-            <View className="flex-row gap-3 px-6 pb-6">
-              <Pressable
-                onPress={onClose}
-                disabled={saving}
-                className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
-              >
-                <Text className="text-text-muted font-mono-medium text-base">
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSave}
-                disabled={!canSave}
-                className="flex-1 h-14 rounded-tile items-center justify-center"
-                style={{
-                  backgroundColor: canSave ? accent.hex : themeColors.surface,
-                }}
-              >
-                {saving ? (
-                  <ActivityIndicator color={themeColors.background} />
-                ) : (
-                  <Text
-                    className={`font-mono-bold text-base ${
-                      canSave ? "text-bg" : "text-text-dim"
-                    }`}
-                  >
-                    Save
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
+      <View className="flex-row gap-3 px-6 pb-6">
+        <Pressable
+          onPress={onClose}
+          disabled={saving}
+          className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
+        >
+          <Text className="text-text-muted font-mono-medium text-base">
+            Cancel
+          </Text>
         </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+        <PrimaryButton
+          label="Save"
+          onPress={handleSave}
+          filled={canSave}
+          busy={saving}
+          className="flex-1"
+        />
+      </View>
+    </DialogShell>
   );
 }
