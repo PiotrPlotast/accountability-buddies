@@ -20,6 +20,7 @@ import IconPicker from "@/app/components/habits/IconPicker";
 import DayPicker from "@/app/components/habits/DayPicker";
 import TimePicker from "@/app/components/habits/TimePicker";
 import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
+import { MAX_HABIT_TITLE_LENGTH } from "@/lib/textLimits";
 
 export type GoalEdit = {
   title: string;
@@ -147,6 +148,7 @@ export default function EditGoalModal({
                   onChangeText={setTitle}
                   autoFocus
                   placeholder="Habit name"
+                  maxLength={MAX_HABIT_TITLE_LENGTH}
                   className="text-text text-base"
                 />
               </View>
