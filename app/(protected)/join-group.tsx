@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useRouter } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSupabase } from "@/hooks/useSupabase";
 import { themeColors } from "@/lib/colors";
@@ -19,12 +20,22 @@ import { useTheme } from "@/hooks/useTheme";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import { useIsOnline } from "@/lib/onlineStatus";
 import { MAX_GROUP_NAME_LENGTH } from "@/lib/textLimits";
+import { queryKeys } from "@/lib/queryKeys";
 import SectionLabel from "@/app/components/ui/SectionLabel";
 
 export default function JoinGroupScreen() {
   const { supabase, session } = useSupabase();
   const { accent } = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // The dashboard sent you here on a cached "no group". Left in the cache, that
+  // answer bounces you straight back here when the dashboard mounts, so drop
+  // it and let the dashboard read the group you're now in.
+  const goToDashboard = () => {
+    queryClient.removeQueries({ queryKey: queryKeys.groupStatsAll() });
+    router.replace("/");
+  };
 
   const [code, setCode] = useState("");
   const [groupName, setGroupName] = useState("");
@@ -49,7 +60,7 @@ export default function JoinGroupScreen() {
         );
         return;
       }
-      router.replace("/");
+      goToDashboard();
     } catch (err) {
       Alert.alert(
         "Failed",
@@ -92,7 +103,7 @@ export default function JoinGroupScreen() {
           `"${trimmedName}" was created but you couldn't be added to it. Try joining with its invite code, or contact support.`,
         );
       }
-      router.replace("/");
+      goToDashboard();
     } catch (err) {
       Alert.alert(
         "Error",
