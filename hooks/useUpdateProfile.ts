@@ -51,6 +51,7 @@ export function useUpdateProfile() {
       await queryClient.cancelQueries({ queryKey: profileKey });
       const previous = queryClient.getQueryData<ProfileRow | null>(profileKey);
       queryClient.setQueryData<ProfileRow>(profileKey, {
+        ...previous,
         avatar_url: previous?.avatar_url ?? null,
         full_name: normalizeName(fullName),
       });

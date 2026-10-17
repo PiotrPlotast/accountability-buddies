@@ -13,4 +13,7 @@ export const queryKeys = {
   heatmap: (userId: string | undefined) => ["heatmap", userId] as const,
   notificationPrefs: (userId: string | undefined) =>
     ["notificationPrefs", userId] as const,
+  // This phone's memory that the tour was dismissed (`lib/tour.ts`).
+  tourSeenLocally: (userId: string | undefined) =>
+    ["tourSeenLocally", userId] as const,
 };

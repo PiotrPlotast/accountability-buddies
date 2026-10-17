@@ -21,15 +21,31 @@ import DayPicker from "@/app/components/habits/DayPicker";
 import TimePicker from "@/app/components/habits/TimePicker";
 import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
 
+export type GoalEdit = {
+  title: string;
+  icon: string | null;
+  repeatDays: number[];
+  reminderTime: string | null;
+};
+
 type Props = {
   goal: Goal | null;
   isVisible: boolean;
   onClose: () => void;
+  // Replaces the save. The tour edits a sample habit with this sheet, and a
+  // sample must never reach the server.
+  onSave?: (goalId: string, edit: GoalEdit) => Promise<void>;
 };
 
-export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
+export default function EditGoalModal({
+  goal,
+  isVisible,
+  onClose,
+  onSave,
+}: Props) {
   const { activeGroupId } = useActiveGroup();
   const { editGoal } = useDashboardActions(activeGroupId);
+  const save = onSave ?? editGoal;
   const { accent } = useTheme();
 
   const [title, setTitle] = useState(goal?.title ?? "");
@@ -76,7 +92,7 @@ export default function EditGoalModal({ goal, isVisible, onClose }: Props) {
     if (!goal?.id || !canSave) return;
     setSaving(true);
     try {
-      await editGoal(goal.id, { title, icon, repeatDays, reminderTime });
+      await save(goal.id, { title, icon, repeatDays, reminderTime });
       onClose();
     } catch {
       // useOptimisticGoalMutation already surfaced an Alert and rolled the

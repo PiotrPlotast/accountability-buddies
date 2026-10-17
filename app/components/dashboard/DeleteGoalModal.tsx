@@ -15,9 +15,16 @@ type Props = {
   goal: Goal | null;
   isVisible: boolean;
   onClose: () => void;
+  // Replaces the delete, for the tour's sample habits.
+  onConfirm?: (goal: Goal) => Promise<void>;
 };
 
-export default function DeleteGoalModal({ goal, isVisible, onClose }: Props) {
+export default function DeleteGoalModal({
+  goal,
+  isVisible,
+  onClose,
+  onConfirm,
+}: Props) {
   const { activeGroupId } = useActiveGroup();
   const { deleteGoal } = useDashboardActions(activeGroupId);
   const [deleting, setDeleting] = useState(false);
@@ -26,7 +33,11 @@ export default function DeleteGoalModal({ goal, isVisible, onClose }: Props) {
     if (!goal?.id || deleting) return;
     setDeleting(true);
     try {
-      await deleteGoal(goal.id, goal.title);
+      if (onConfirm) {
+        await onConfirm(goal);
+      } else {
+        await deleteGoal(goal.id, goal.title);
+      }
       onClose();
     } catch {
       // useOptimisticGoalMutation already surfaced an Alert and rolled the
