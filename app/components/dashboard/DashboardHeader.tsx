@@ -5,6 +5,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useDayCompleteSignal } from "@/lib/dayCompleteSignal";
 import ProgressRing from "./ProgressRing";
 import { Goal } from "@/types/dashboardTypes";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 
 type Props = {
   todayGoals: Goal[];
@@ -41,9 +42,9 @@ export default function DashboardHeader({
           >
             <Text style={{ fontSize: 16 }}>{groupIcon}</Text>
           </View>
-          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
+          <SectionLabel>
             Group · {peopleCount} {peopleCount === 1 ? "person" : "people"}
-          </Text>
+          </SectionLabel>
         </View>
 
         <View className="flex-row items-center gap-2">
@@ -96,9 +97,7 @@ export default function DashboardHeader({
 
       <View className="mt-5 bg-surface border border-border rounded-tile px-5 py-4 flex-row items-center justify-between">
         <View>
-          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-1">
-            Today
-          </Text>
+          <SectionLabel className="mb-1">Today</SectionLabel>
           <Text className="text-text font-mono-bold text-xl">
             {done} of {total} done
           </Text>

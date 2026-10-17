@@ -19,6 +19,7 @@ import { useTheme } from "@/hooks/useTheme";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import { useIsOnline } from "@/lib/onlineStatus";
 import { MAX_GROUP_NAME_LENGTH } from "@/lib/textLimits";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 
 export default function JoinGroupScreen() {
   const { supabase, session } = useSupabase();
@@ -130,9 +131,7 @@ export default function JoinGroupScreen() {
           </Text>
 
           <View className="mt-8 gap-3">
-            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
-              {isJoin ? "Invite code" : "Group name"}
-            </Text>
+            <SectionLabel>{isJoin ? "Invite code" : "Group name"}</SectionLabel>
             {isJoin ? (
               <View
                 className="border-2 rounded-tile px-4 h-16 justify-center bg-bg"

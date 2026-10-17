@@ -1,9 +1,7 @@
-import { Alert } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useSupabase } from "@/hooks/useSupabase";
-import { errorMessage } from "@/lib/errorMessage";
-import { error as errorHaptic } from "@/lib/haptics";
+import { optimisticPatchOptions } from "@/lib/optimisticPatch";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
@@ -25,9 +23,8 @@ const COLUMNS =
 /**
  * Read and change the signed-in user's notification preferences.
  *
- * Hand-rolled for the same reason `useUpdateProfile` is: the shared goal
- * mutation hard-codes the `groupMembers` cache. This follows the same shape —
- * cancel, snapshot, patch, roll back with an Alert, invalidate on settle.
+ * Not the shared goal mutation, which hard-codes the `groupMembers` cache:
+ * the lifecycle is `optimisticPatchOptions`, as for `useUpdateProfile`.
  *
  * An **update**, never an upsert: the row is created by a trigger on
  * `auth.users` and there is no client INSERT policy, so an upsert would be
@@ -64,29 +61,12 @@ export function useNotificationPrefs() {
     },
     // The switch moves now. A toggle that waits out a round trip reads as a
     // broken switch, and the round trip is the whole interaction here.
-    onMutate: async (patch) => {
-      await queryClient.cancelQueries({ queryKey: prefsKey });
-      const previous = queryClient.getQueryData<NotificationPrefs | null>(
-        prefsKey,
-      );
-      if (previous) {
-        queryClient.setQueryData<NotificationPrefs>(prefsKey, {
-          ...previous,
-          ...patch,
-        });
-      }
-      return { previous };
-    },
-    onError: (err, _patch, ctx) => {
-      if (ctx?.previous !== undefined) {
-        queryClient.setQueryData(prefsKey, ctx.previous);
-      }
-      errorHaptic();
-      Alert.alert("Couldn't save that", errorMessage(err));
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: prefsKey });
-    },
+    ...optimisticPatchOptions<NotificationPrefs, Partial<NotificationPrefs>>({
+      queryClient,
+      queryKey: prefsKey,
+      patch: (previous, patch) =>
+        previous ? { ...previous, ...patch } : undefined,
+    }),
   });
 
   return {

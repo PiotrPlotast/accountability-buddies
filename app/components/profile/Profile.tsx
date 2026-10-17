@@ -2,7 +2,6 @@ import { useState } from "react";
 import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, type Href } from "expo-router";
-import { useSupabase } from "@/hooks/useSupabase";
 import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
@@ -13,6 +12,7 @@ import RenameModal from "./RenameModal";
 import PencilIcon from "@/app/components/ui/PencilIcon";
 import GearIcon from "@/app/components/ui/GearIcon";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 
 const AVATAR_BLURHASH =
   "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
@@ -26,6 +26,7 @@ function formatMemberSince(iso: string | null): string {
 
 export default function Profile() {
   const {
+    userId,
     fullName,
     avatarUrl,
     memberSince,
@@ -35,9 +36,7 @@ export default function Profile() {
     groupMemberCount,
   } = useProfileData();
   const { accent } = useTheme();
-  const { session } = useSupabase();
   const router = useRouter();
-  const userId = session?.user.id;
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
   const [renaming, setRenaming] = useState(false);
@@ -90,9 +89,7 @@ export default function Profile() {
       contentContainerStyle={{ paddingBottom: 40 }}
     >
       <View className="px-5 pt-2 pb-4 flex-row items-center justify-between">
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest">
-          Profile / You
-        </Text>
+        <SectionLabel>Profile / You</SectionLabel>
         <Pressable
           onPress={() => router.push("/notification-settings")}
           hitSlop={8}
@@ -150,9 +147,9 @@ export default function Profile() {
             </Text>
             <PencilIcon color={accent.hex} />
           </Pressable>
-          <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-1">
+          <SectionLabel className="mt-1">
             Member since {formatMemberSince(memberSince)}
-          </Text>
+          </SectionLabel>
         </View>
       </View>
 
@@ -167,18 +164,16 @@ export default function Profile() {
       </View>
 
       <View className="px-5 mt-8">
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-          Heatmap / Last 12 weeks
-        </Text>
+        <SectionLabel className="mb-3">Heatmap / Last 12 weeks</SectionLabel>
         <View className="bg-surface border border-border rounded-tile p-4">
           <Heatmap userId={userId} />
         </View>
       </View>
 
       <View className="px-5 mt-8">
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
+        <SectionLabel className="mb-3">
           Groups / {String(groupsCount).padStart(2, "0")}
-        </Text>
+        </SectionLabel>
         {groupName ? (
           // The chevron always promised this row was tappable; now it is,
           // rather than being a decoration that leads nowhere.
@@ -219,9 +214,7 @@ export default function Profile() {
           settings screen in E3, so the two destructive-looking controls are no
           longer one tap apart — but this one still earns the distance. */}
       <View className="px-5 mt-8">
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-          Danger zone
-        </Text>
+        <SectionLabel className="mb-3">Danger zone</SectionLabel>
         <Pressable
           onPress={handleDeleteAccount}
           disabled={deleteBlocked}
@@ -280,9 +273,7 @@ function Stat({
       <Text className="font-mono-bold" style={{ fontSize: 28, color }}>
         {value}
       </Text>
-      <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-1">
-        {label}
-      </Text>
+      <SectionLabel className="mt-1">{label}</SectionLabel>
     </View>
   );
 }

@@ -167,7 +167,7 @@ describe("useNotificationPrefs", () => {
 
     await waitFor(() =>
       expect(Alert.alert).toHaveBeenCalledWith(
-        "Couldn't save that",
+        "Couldn't save",
         "Check your connection and try again.",
       ),
     );

@@ -1,10 +1,12 @@
 import {
+  ALL_DAYS,
   DAY_LABELS,
   DAY_NAMES,
   filterGoalsForToday,
   formatRepeatDays,
   getTodayDayIndex,
   isScheduledOn,
+  repeatDaysOrAll,
   toRepeatDayIndex,
 } from "@/lib/repeatDays";
 
@@ -123,5 +125,18 @@ describe("day label constants", () => {
     expect(DAY_NAMES).toHaveLength(7);
     expect(DAY_NAMES[0]).toBe("Mon");
     expect(DAY_NAMES.map((n) => n[0])).toEqual(DAY_LABELS);
+  });
+});
+
+describe("repeatDaysOrAll", () => {
+  it("keeps a habit's own days", () => {
+    expect(repeatDaysOrAll([0, 2, 4])).toEqual([0, 2, 4]);
+  });
+
+  // Empty or absent is "every day", spelled out for the day picker.
+  it("spells out every day for an empty or absent schedule", () => {
+    expect(repeatDaysOrAll([])).toEqual(ALL_DAYS);
+    expect(repeatDaysOrAll(null)).toEqual(ALL_DAYS);
+    expect(repeatDaysOrAll(undefined)).toEqual(ALL_DAYS);
   });
 });

@@ -1,26 +1,12 @@
 import { useState } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import AppTextInput from "@/app/components/ui/AppTextInput";
+import { View, Text, Pressable, ScrollView } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
-import { useTheme } from "@/hooks/useTheme";
-import { ALL_DAYS } from "@/lib/repeatDays";
-import { themeColors } from "@/lib/colors";
-import IconPicker from "@/app/components/habits/IconPicker";
-import DayPicker from "@/app/components/habits/DayPicker";
-import TimePicker from "@/app/components/habits/TimePicker";
-import { DEFAULT_REMINDER_TIME } from "@/lib/reminderTime";
-import { MAX_HABIT_TITLE_LENGTH } from "@/lib/textLimits";
+import { repeatDaysOrAll } from "@/lib/repeatDays";
+import HabitFormFields from "@/app/components/habits/HabitFormFields";
+import DialogShell from "@/app/components/ui/DialogShell";
+import PrimaryButton from "@/app/components/ui/PrimaryButton";
 
 export type GoalEdit = {
   title: string;
@@ -47,12 +33,11 @@ export default function EditGoalModal({
   const { activeGroupId } = useActiveGroup();
   const { editGoal } = useDashboardActions(activeGroupId);
   const save = onSave ?? editGoal;
-  const { accent } = useTheme();
 
   const [title, setTitle] = useState(goal?.title ?? "");
   const [icon, setIcon] = useState<string | null>(goal?.icon ?? null);
   const [repeatDays, setRepeatDays] = useState<number[]>(
-    goal?.repeat_days?.length ? goal.repeat_days : ALL_DAYS,
+    repeatDaysOrAll(goal?.repeat_days),
   );
   const [reminderTime, setReminderTime] = useState<string | null>(
     goal?.reminder_time ?? null,
@@ -69,7 +54,7 @@ export default function EditGoalModal({
     if (goal) {
       setTitle(goal.title);
       setIcon(goal.icon);
-      setRepeatDays(goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS);
+      setRepeatDays(repeatDaysOrAll(goal.repeat_days));
       setReminderTime(goal.reminder_time ?? null);
     }
   }
@@ -80,8 +65,7 @@ export default function EditGoalModal({
     !!goal &&
     (title !== goal.title ||
       icon !== goal.icon ||
-      repeatDays.join() !==
-        (goal.repeat_days?.length ? goal.repeat_days : ALL_DAYS).join() ||
+      repeatDays.join() !== repeatDaysOrAll(goal.repeat_days).join() ||
       reminderTime !== (goal.reminder_time ?? null));
 
   // Tapping outside closes only when there is nothing to lose. With edits in
@@ -104,110 +88,48 @@ export default function EditGoalModal({
   };
 
   return (
-    <Modal
-      visible={isVisible}
-      animationType="fade"
-      transparent
+    <DialogShell
+      isVisible={isVisible}
       onRequestClose={onClose}
+      onBackdropPress={dismissOnBackdrop}
+      backdropLabel="Close"
+      cardClassName="bg-bg border border-border rounded-tile overflow-hidden"
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+      <ScrollView
+        contentContainerStyle={{ padding: 24 }}
+        keyboardShouldPersistTaps="handled"
       >
+        <HabitFormFields
+          title={title}
+          onTitleChange={setTitle}
+          titlePlaceholder="Habit name"
+          icon={icon}
+          onIconChange={setIcon}
+          repeatDays={repeatDays}
+          onRepeatDaysChange={setRepeatDays}
+          reminderTime={reminderTime}
+          onReminderTimeChange={setReminderTime}
+        />
+      </ScrollView>
+
+      <View className="flex-row gap-3 px-6 pb-6">
         <Pressable
-          onPress={dismissOnBackdrop}
-          accessibilityRole={dismissOnBackdrop ? "button" : undefined}
-          accessibilityLabel={dismissOnBackdrop ? "Close" : undefined}
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.7)",
-            justifyContent: "center",
-            padding: 20,
-          }}
+          onPress={onClose}
+          disabled={saving}
+          className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
         >
-          {/* Absorbs taps landing on the dialog so they don't reach the
-              backdrop. A plain responder rather than a Pressable, so the card
-              doesn't announce itself as a button. */}
-          <View
-            onStartShouldSetResponder={() => true}
-            className="bg-bg border border-border rounded-tile overflow-hidden"
-          >
-            <ScrollView
-              contentContainerStyle={{ padding: 24 }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-                Habit name
-              </Text>
-              <View
-                style={{ borderColor: accent.hex }}
-                className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
-              >
-                <AppTextInput
-                  value={title}
-                  onChangeText={setTitle}
-                  autoFocus
-                  placeholder="Habit name"
-                  maxLength={MAX_HABIT_TITLE_LENGTH}
-                  className="text-text text-base"
-                />
-              </View>
-
-              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-                Pick an icon
-              </Text>
-              <IconPicker value={icon} onChange={setIcon} />
-
-              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-                Repeat
-              </Text>
-              <DayPicker value={repeatDays} onChange={setRepeatDays} />
-
-              <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-                Remind me
-              </Text>
-              <TimePicker
-                label="Reminder"
-                value={reminderTime}
-                onChange={setReminderTime}
-                defaultTime={DEFAULT_REMINDER_TIME}
-              />
-            </ScrollView>
-
-            <View className="flex-row gap-3 px-6 pb-6">
-              <Pressable
-                onPress={onClose}
-                disabled={saving}
-                className="flex-1 h-14 rounded-tile items-center justify-center bg-surface border border-border"
-              >
-                <Text className="text-text-muted font-mono-medium text-base">
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSave}
-                disabled={!canSave}
-                className="flex-1 h-14 rounded-tile items-center justify-center"
-                style={{
-                  backgroundColor: canSave ? accent.hex : themeColors.surface,
-                }}
-              >
-                {saving ? (
-                  <ActivityIndicator color={themeColors.background} />
-                ) : (
-                  <Text
-                    className={`font-mono-bold text-base ${
-                      canSave ? "text-bg" : "text-text-dim"
-                    }`}
-                  >
-                    Save
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
+          <Text className="text-text-muted font-mono-medium text-base">
+            Cancel
+          </Text>
         </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+        <PrimaryButton
+          label="Save"
+          onPress={handleSave}
+          filled={canSave}
+          busy={saving}
+          className="flex-1"
+        />
+      </View>
+    </DialogShell>
   );
 }

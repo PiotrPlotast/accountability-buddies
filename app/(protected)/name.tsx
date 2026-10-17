@@ -1,10 +1,8 @@
 import "../../global.css";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   View,
@@ -13,10 +11,11 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppTextInput from "@/app/components/ui/AppTextInput";
+import PrimaryButton from "@/app/components/ui/PrimaryButton";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { useTheme } from "@/hooks/useTheme";
 import { MAX_NAME_LENGTH, isValidName } from "@/lib/displayName";
-import { themeColors } from "@/lib/colors";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 
 /**
  * Asked once, of everyone — email and Apple sign-in alike — because a provider
@@ -61,9 +60,7 @@ export default function NameScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="flex-1 justify-center">
-            <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-              One last thing
-            </Text>
+            <SectionLabel className="mb-3">One last thing</SectionLabel>
             <Text className="text-text font-mono-bold text-2xl mb-2">
               What should we call you?
             </Text>
@@ -91,28 +88,12 @@ export default function NameScreen() {
             </View>
           </View>
 
-          <Pressable
+          <PrimaryButton
+            label="Continue"
             onPress={handleContinue}
-            disabled={!canSave}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !canSave }}
-            className="h-14 rounded-tile items-center justify-center"
-            style={{
-              backgroundColor: canSave ? accent.hex : themeColors.surface,
-            }}
-          >
-            {saving ? (
-              <ActivityIndicator color={themeColors.background} />
-            ) : (
-              <Text
-                className={`font-mono-bold text-base ${
-                  canSave ? "text-bg" : "text-text-dim"
-                }`}
-              >
-                Continue
-              </Text>
-            )}
-          </Pressable>
+            filled={canSave}
+            busy={saving}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

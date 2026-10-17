@@ -2,6 +2,7 @@ import { act, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
 
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import * as haptics from "@/lib/haptics";
 import { queryKeys } from "@/lib/queryKeys";
 import { ProfileRow } from "@/types/dashboardTypes";
 
@@ -128,7 +129,7 @@ describe("useUpdateProfile", () => {
     });
 
     expect(Alert.alert).toHaveBeenCalledWith(
-      "Couldn't save your name",
+      "Couldn't save",
       "Check your connection and try again.",
     );
   });
@@ -202,5 +203,25 @@ describe("useUpdateProfile", () => {
         queryKey: queryKeys.profile("user-1"),
       });
     });
+  });
+
+  it("buzzes the error haptic beside the Alert", async () => {
+    const buzz = jest.spyOn(haptics, "error").mockImplementation(() => {});
+    const qb = makeQueryBuilder({ data: null, error: { message: "nope" } });
+    const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
+    const { Wrapper } = buildWrapper({ supabase });
+    const utils = await renderHookWithSession(
+      () => useUpdateProfile(),
+      Wrapper,
+    );
+
+    await act(async () => {
+      await utils.result.current.value
+        .mutateAsync({ fullName: "Zofia" })
+        .catch(() => {});
+    });
+
+    expect(buzz).toHaveBeenCalledTimes(1);
+    buzz.mockRestore();
   });
 });

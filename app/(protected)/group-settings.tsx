@@ -1,13 +1,6 @@
 import "../../global.css";
 import { useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,9 +11,12 @@ import { useUpdateGroup } from "@/hooks/useUpdateGroup";
 import { useTheme } from "@/hooks/useTheme";
 import IconPicker from "@/app/components/habits/IconPicker";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
+import PrimaryButton from "@/app/components/ui/PrimaryButton";
+import ScreenHeader from "@/app/components/ui/ScreenHeader";
 import { themeColors } from "@/lib/colors";
 import { useIsOnline } from "@/lib/onlineStatus";
 import { MAX_GROUP_NAME_LENGTH } from "@/lib/textLimits";
+import SectionLabel from "@/app/components/ui/SectionLabel";
 
 export default function GroupSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -69,39 +65,30 @@ export default function GroupSettingsScreen() {
 
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center justify-between px-5 h-14">
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={12}
-          className="w-10 h-10 items-center justify-center"
-        >
-          <Text className="text-text font-mono-medium text-2xl">‹</Text>
-        </Pressable>
-        <Text className="text-text font-mono-medium text-base">
-          Group settings
-        </Text>
-        <Pressable
-          onPress={handleSave}
-          disabled={!canSave}
-          hitSlop={12}
-          className="w-14 items-end justify-center"
-        >
-          <Text
-            className="font-mono-medium text-base"
-            style={{ color: canSave ? accent.hex : themeColors.textDim }}
+      <ScreenHeader
+        title="Group settings"
+        right={
+          <Pressable
+            onPress={handleSave}
+            disabled={!canSave}
+            hitSlop={12}
+            className="w-14 items-end justify-center"
           >
-            {updateGroup.isPending ? "..." : "Save"}
-          </Text>
-        </Pressable>
-      </View>
+            <Text
+              className="font-mono-medium text-base"
+              style={{ color: canSave ? accent.hex : themeColors.textDim }}
+            >
+              {updateGroup.isPending ? "..." : "Save"}
+            </Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mb-3">
-          Group name
-        </Text>
+        <SectionLabel className="mb-3">Group name</SectionLabel>
         <View
           className="border-2 rounded-tile px-4 h-14 justify-center bg-bg"
           style={{ borderColor: accent.hex }}
@@ -115,9 +102,7 @@ export default function GroupSettingsScreen() {
           />
         </View>
 
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Group icon
-        </Text>
+        <SectionLabel className="mt-8 mb-3">Group icon</SectionLabel>
         <View className="flex-row items-center gap-4 mb-4">
           <View
             className="w-16 h-16 rounded-tile items-center justify-center"
@@ -131,9 +116,7 @@ export default function GroupSettingsScreen() {
         </View>
         <IconPicker kind="group" value={icon} onChange={setIcon} />
 
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Invite code
-        </Text>
+        <SectionLabel className="mt-8 mb-3">Invite code</SectionLabel>
         <Pressable
           onPress={handleCopyInvite}
           disabled={!inviteCode}
@@ -152,9 +135,7 @@ export default function GroupSettingsScreen() {
           Tap to copy. Share with people you want to add.
         </Text>
 
-        <Text className="text-text-muted font-mono uppercase text-xs tracking-widest mt-8 mb-3">
-          Your accent color
-        </Text>
+        <SectionLabel className="mt-8 mb-3">Your accent color</SectionLabel>
         <View className="flex-row flex-wrap gap-3">
           {palette.map((p) => {
             const active = p.id === accentId;
@@ -186,27 +167,12 @@ export default function GroupSettingsScreen() {
         className="absolute left-0 right-0 bg-bg px-5"
         style={{ bottom: 0, paddingBottom: insets.bottom + 16, paddingTop: 12 }}
       >
-        <Pressable
+        <PrimaryButton
+          label="Save changes"
           onPress={handleSave}
-          disabled={!canSave}
-          className="h-14 rounded-tile items-center justify-center"
-          style={{
-            backgroundColor: canSave ? accent.hex : themeColors.surface,
-          }}
-        >
-          {updateGroup.isPending ? (
-            <ActivityIndicator color={themeColors.background} />
-          ) : (
-            <Text
-              className="font-mono-bold text-base"
-              style={{
-                color: canSave ? themeColors.background : themeColors.textDim,
-              }}
-            >
-              Save changes
-            </Text>
-          )}
-        </Pressable>
+          filled={canSave}
+          busy={updateGroup.isPending}
+        />
         {!isOnline ? <NeedsConnection /> : null}
       </View>
     </View>

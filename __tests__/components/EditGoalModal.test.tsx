@@ -57,6 +57,14 @@ function setup(goalOverride: Goal | null = goal) {
 }
 
 describe("EditGoalModal", () => {
+  // The create screen always carried this line; the edit sheet, a copy of the
+  // same form, lost it.
+  it("explains when the reminder fires, as the create screen does", () => {
+    const { getByText } = setup();
+
+    expect(getByText("Only if you haven't ticked it off yet.")).toBeTruthy();
+  });
+
   it("prefills the title, icon and repeat days from the goal", () => {
     const { getByDisplayValue, getByLabelText } = setup();
 
