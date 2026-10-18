@@ -47,7 +47,11 @@ export function useActiveGroup() {
     // Read, and came back empty — distinct from "not read yet" and from a
     // read that failed. Offline with nothing cached, `isFetched` is true and
     // `data` empty too, which used to send people to join-group.
-    hasNoGroup: groupStats.isSuccess && !groupStats.data,
+    // Nor while it is being read again: a "no group" restored from an earlier
+    // launch may predate a join, and acting on it sends you to join-group
+    // just before the fresh read says otherwise.
+    hasNoGroup:
+      groupStats.isSuccess && !groupStats.data && !groupStats.isFetching,
     activeGroupId: groupStats.data?.group_id || null,
     // `null` until the group arrives. It used to be the literal "Loading...",
     // which callers then compared against — so a group actually named

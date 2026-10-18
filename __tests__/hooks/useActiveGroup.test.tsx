@@ -162,6 +162,35 @@ describe("useActiveGroup", () => {
     expect(result.current.value.hasNoGroup).toBe(false);
   });
 
+  // A "no group" restored from an earlier launch may already be wrong: you
+  // joined since. While the stats are being read again it is not an answer,
+  // or the dashboard sends you to join-group and the fresh read comes too late.
+  it("is not group-less while the stats are being read again", async () => {
+    const queryClient = makeQueryClient();
+    queryClient.setQueryData(queryKeys.groupStats("user-1"), null);
+    const rpcImpl = jest.fn(() => ({
+      maybeSingle: () => new Promise(() => {}),
+    }));
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ rpcImpl }),
+      queryClient,
+    });
+
+    const { result } = await renderHookWithSession(
+      () => useActiveGroup(),
+      Wrapper,
+    );
+    expect(result.current.value.hasNoGroup).toBe(true);
+
+    await act(async () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.groupStats("user-1"),
+      });
+    });
+
+    await waitFor(() => expect(result.current.value.hasNoGroup).toBe(false));
+  });
+
   // The whole point of the split: a modal or a screen that reads the group
   // must not carry its own copy of the dashboard's redirect.
   it("never navigates, even for a named user with no group", async () => {

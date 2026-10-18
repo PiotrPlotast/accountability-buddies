@@ -8,6 +8,8 @@ import * as Clipboard from "expo-clipboard";
 
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useUpdateGroup } from "@/hooks/useUpdateGroup";
+import { useLeaveGroup } from "@/hooks/useLeaveGroup";
+import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
 import { useTheme } from "@/hooks/useTheme";
 import IconPicker from "@/app/components/habits/IconPicker";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
@@ -27,6 +29,9 @@ export default function GroupSettingsScreen() {
   // The name and icon are the whole group's, so they don't queue offline. The
   // accent below is this phone's and works either way.
   const isOnline = useIsOnline();
+  const leaveGroup = useLeaveGroup();
+  const pendingChanges = usePendingGoalChanges();
+  const leaveBlocked = !activeGroupId || !isOnline || leaveGroup.isPending;
 
   // Only what the user changed is state; untouched, each field shows the
   // group's current value, so it fills in once the group lands and follows a
@@ -61,6 +66,30 @@ export default function GroupSettingsScreen() {
     if (!inviteCode) return;
     await Clipboard.setStringAsync(inviteCode);
     Alert.alert("Copied", `Invite code ${inviteCode} copied.`);
+  };
+
+  // Back to the dashboard, which sees no group and moves on to join-group.
+  // A queued habit change made in this group may be refused once you're out
+  // of it, so it is warned about the way Log out warns.
+  const handleLeave = () => {
+    if (leaveBlocked) return;
+    const unsynced =
+      pendingChanges > 0
+        ? ` ${pendingChanges} ${pendingChanges === 1 ? "change hasn't" : "changes haven't"} synced and will be lost.`
+        : "";
+    Alert.alert(
+      `Leave ${groupName ?? "the group"}?`,
+      `You'll need a new invite code to come back.${unsynced}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Leave",
+          style: "destructive",
+          onPress: () =>
+            leaveGroup.mutate(undefined, { onSuccess: () => router.back() }),
+        },
+      ],
+    );
   };
 
   return (
@@ -181,6 +210,26 @@ export default function GroupSettingsScreen() {
         <Text className="text-text-dim font-mono text-xs mt-2">
           Stored on this device only — each member can pick their own.
         </Text>
+
+        <SectionLabel className="mt-8 mb-3">Danger zone</SectionLabel>
+        <Pressable
+          onPress={handleLeave}
+          disabled={leaveBlocked}
+          accessibilityRole="button"
+          accessibilityLabel="Leave group"
+          accessibilityHint="Asks first, then takes you out of this group"
+          accessibilityState={{ disabled: leaveBlocked }}
+          style={{ opacity: leaveBlocked ? 0.6 : 1 }}
+          className="bg-surface border border-danger rounded-tile px-4 py-4"
+        >
+          <Text className="text-danger font-mono-medium text-base">
+            {leaveGroup.isPending ? "Leaving..." : "Leave group"}
+          </Text>
+        </Pressable>
+        <Text className="text-text-dim font-mono text-xs mt-2">
+          Your habits and history come with you to your next group.
+        </Text>
+        {!isOnline ? <NeedsConnection /> : null}
       </ScrollView>
 
       <View
