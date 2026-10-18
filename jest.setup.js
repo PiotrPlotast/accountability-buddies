@@ -277,6 +277,7 @@ jest.mock("expo-router", () => {
     replace: jest.fn(),
     back: jest.fn(),
     navigate: jest.fn(),
+    dismissTo: jest.fn(),
   };
   const Stack = function Stack({ children }) {
     return React.createElement(React.Fragment, null, children);

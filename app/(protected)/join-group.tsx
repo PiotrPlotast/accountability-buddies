@@ -1,5 +1,5 @@
 import "../../global.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,8 +12,10 @@ import {
 } from "react-native";
 import AppTextInput from "@/app/components/ui/AppTextInput";
 import { useRouter } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useActiveGroup } from "@/hooks/useActiveGroup";
+import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
 import { useSupabase } from "@/hooks/useSupabase";
 import { themeColors } from "@/lib/colors";
 import { useTheme } from "@/hooks/useTheme";
@@ -24,17 +26,57 @@ import { queryKeys } from "@/lib/queryKeys";
 import SectionLabel from "@/app/components/ui/SectionLabel";
 
 export default function JoinGroupScreen() {
-  const { supabase, session } = useSupabase();
+  const { supabase, session, signOut } = useSupabase();
   const { accent } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { activeGroupId } = useActiveGroup();
+  const pendingChanges = usePendingGoalChanges();
 
-  // The dashboard sent you here on a cached "no group". Left in the cache, that
-  // answer bounces you straight back here when the dashboard mounts, so drop
-  // it and let the dashboard read the group you're now in.
-  const goToDashboard = () => {
-    queryClient.removeQueries({ queryKey: queryKeys.groupStatsAll() });
-    router.replace("/");
+  // You were sent here on a "no group" that may be cached from before you
+  // joined, so ask again on the way in. Not while the cache is being restored
+  // after a launch: the restore would put the old answer back over the new.
+  const isRestoring = useIsRestoring();
+  useEffect(() => {
+    if (isRestoring) return;
+    queryClient.invalidateQueries({ queryKey: queryKeys.groupStatsAll() });
+  }, [isRestoring, queryClient]);
+
+  // Leave as soon as the group read says you have one, whether you just
+  // joined, just created, or were sent here on an out-of-date answer. On
+  // iPhone this screen is a modal over the dashboard, which stays mounted
+  // underneath, so it is dismissed rather than replaced; with nothing
+  // underneath, `dismissTo` replaces it instead.
+  useEffect(() => {
+    if (activeGroupId) router.dismissTo("/");
+  }, [activeGroupId, router]);
+
+  // Reading the group again is what takes you to the dashboard (above).
+  const refreshGroup = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.groupStatsAll() });
+
+  // Without a group there is no way to reach Settings, so this is the only
+  // way out of the screen. Same wording and warning as Settings' Log out.
+  const handleSignOut = () => {
+    const message =
+      pendingChanges > 0
+        ? `${pendingChanges} ${pendingChanges === 1 ? "change hasn't" : "changes haven't"} synced and will be lost.`
+        : "Are you sure?";
+    Alert.alert("Log out", message, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOut();
+          } catch (err) {
+            console.error("Sign out failed:", err);
+            Alert.alert("Log out failed", "Please try again.");
+          }
+        },
+      },
+    ]);
   };
 
   const [code, setCode] = useState("");
@@ -60,7 +102,7 @@ export default function JoinGroupScreen() {
         );
         return;
       }
-      goToDashboard();
+      await refreshGroup();
     } catch (err) {
       Alert.alert(
         "Failed",
@@ -103,7 +145,7 @@ export default function JoinGroupScreen() {
           `"${trimmedName}" was created but you couldn't be added to it. Try joining with its invite code, or contact support.`,
         );
       }
-      goToDashboard();
+      await refreshGroup();
     } catch (err) {
       Alert.alert(
         "Error",
@@ -205,6 +247,15 @@ export default function JoinGroupScreen() {
                 ? "No code? Create a new group"
                 : "Have a code? Join instead"}
             </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={handleSignOut}
+            accessibilityRole="button"
+            accessibilityHint="Signs you out of your account"
+            className="mt-6 items-center"
+          >
+            <Text className="text-text-muted font-mono text-sm">Log out</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
