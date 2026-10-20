@@ -17,7 +17,6 @@ import SignInScreen from "@/app/(public)/sign-in";
 import SignUpScreen from "@/app/(public)/sign-up";
 import JoinGroupScreen from "@/app/(protected)/join-group";
 import GroupSettingsScreen from "@/app/(protected)/group-settings";
-import { themeColors } from "@/lib/colors";
 import { Goal } from "@/types/dashboardTypes";
 
 import {
@@ -478,30 +477,4 @@ describe("Auth screens", () => {
   });
 });
 
-// WCAG 1.4.3: 4.5:1 for normal-size text. `text-dim` carries placeholders,
-// helper lines and ticked habits, so it has to clear that on both grounds.
-describe("Text contrast", () => {
-  const luminance = (hex: string) => {
-    const [r, g, b] = [1, 3, 5].map((i) => {
-      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
-      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  };
-  const contrast = (a: string, b: string) => {
-    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-    return (hi + 0.05) / (lo + 0.05);
-  };
-
-  it.each([
-    ["background", themeColors.background],
-    ["surface", themeColors.surface],
-  ])("text-dim reads at 4.5:1 on %s", (_, ground) => {
-    expect(contrast(themeColors.textDim, ground)).toBeGreaterThanOrEqual(4.5);
-  });
-
-  it("matches the Tailwind token", () => {
-    const tailwind = require("../../tailwind.config.js");
-    expect(tailwind.theme.extend.colors["text-dim"]).toBe(themeColors.textDim);
-  });
-});
+// Text contrast for both palettes lives in __tests__/lib/colors.test.ts.

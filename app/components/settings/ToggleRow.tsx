@@ -1,7 +1,6 @@
 import { View, Text, Switch } from "react-native";
 
 import { useTheme } from "@/hooks/useTheme";
-import { themeColors } from "@/lib/colors";
 
 interface Props {
   label: string;
@@ -26,7 +25,7 @@ export default function ToggleRow({
   disabled,
   onValueChange,
 }: Props) {
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
 
   return (
     <View className="bg-surface border border-border rounded-tile px-4 py-4 flex-row items-center gap-3">
@@ -43,8 +42,8 @@ export default function ToggleRow({
         disabled={disabled}
         onValueChange={onValueChange}
         accessibilityLabel={label}
-        trackColor={{ false: themeColors.surface2, true: accent.dim }}
-        thumbColor={value ? accent.hex : themeColors.textDim}
+        trackColor={{ false: colors.surface2, true: accent.dim }}
+        thumbColor={value ? accent.hex : colors.textDim}
       />
     </View>
   );

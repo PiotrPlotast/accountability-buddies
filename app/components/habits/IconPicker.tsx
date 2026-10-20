@@ -3,7 +3,6 @@ import { View, Text, Pressable } from "react-native";
 import EmojiPicker from "rn-emoji-keyboard";
 import { useTheme } from "@/hooks/useTheme";
 import { tapLight } from "@/lib/haptics";
-import { themeColors } from "@/lib/colors";
 import {
   IconKind,
   defaultIconRecents,
@@ -22,7 +21,7 @@ type Props = {
 // See DayPicker: unselected tiles are `bg-surface`, so they need a `bg-bg`
 // surface behind them to stay visible.
 export default function IconPicker({ value, onChange, kind = "habit" }: Props) {
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
   const [recents, setRecents] = useState(() => defaultIconRecents(kind));
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -87,23 +86,23 @@ export default function IconPicker({ value, onChange, kind = "habit" }: Props) {
         categoryPosition="top"
         theme={{
           backdrop: "#00000080",
-          knob: themeColors.textDim,
-          container: themeColors.background,
-          header: themeColors.text,
-          skinTonesContainer: themeColors.surface,
+          knob: colors.textDim,
+          container: colors.background,
+          header: colors.text,
+          skinTonesContainer: colors.surface,
           category: {
-            icon: themeColors.textMuted,
+            icon: colors.textMuted,
             iconActive: accent.hex,
-            container: themeColors.surface,
-            containerActive: themeColors.surface2,
+            container: colors.surface,
+            containerActive: colors.surface2,
           },
           search: {
-            background: themeColors.surface,
-            text: themeColors.text,
-            placeholder: themeColors.textDim,
-            icon: themeColors.textMuted,
+            background: colors.surface,
+            text: colors.text,
+            placeholder: colors.textDim,
+            icon: colors.textMuted,
           },
-          emoji: { selected: themeColors.surface2 },
+          emoji: { selected: colors.surface2 },
         }}
       />
     </View>

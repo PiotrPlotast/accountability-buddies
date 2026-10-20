@@ -55,12 +55,12 @@ export default function MemberTabs({
             style={isActive ? { backgroundColor: accent.hex } : undefined}
           >
             <Text
-              className={`font-mono-medium text-sm ${isActive ? "text-bg" : "text-text"}`}
+              className={`font-mono-medium text-sm ${isActive ? "text-on-accent" : "text-text"}`}
             >
               {label}
             </Text>
             <Text
-              className={`font-mono text-xs ${isActive ? "text-bg" : "text-text-muted"}`}
+              className={`font-mono text-xs ${isActive ? "text-on-accent" : "text-text-muted"}`}
             >
               {done}/{total}
             </Text>

@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { TextInput, TextInputProps } from "react-native";
-import { themeColors } from "@/lib/colors";
+
+import { useTheme } from "@/hooks/useTheme";
 
 const FONTS = {
   regular: "GeistMono_400Regular",
@@ -36,11 +37,13 @@ const AppTextInput = forwardRef<TextInput, Props>(function AppTextInput(
   { weight = "regular", style, placeholderTextColor, ...rest },
   ref,
 ) {
+  const { colors } = useTheme();
+
   return (
     <TextInput
       ref={ref}
       {...rest}
-      placeholderTextColor={placeholderTextColor ?? themeColors.textDim}
+      placeholderTextColor={placeholderTextColor ?? colors.textDim}
       style={[{ fontFamily: FONTS[weight] }, style]}
     />
   );

@@ -1,5 +1,6 @@
 import { Alert, AlertButton, Linking } from "react-native";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { act, render, fireEvent, waitFor } from "@testing-library/react-native";
+import { onlineManager } from "@tanstack/react-query";
 
 import NotificationSettingsScreen from "@/app/(protected)/notification-settings";
 import { queryKeys } from "@/lib/queryKeys";
@@ -12,19 +13,18 @@ import {
   makeQueryClient,
 } from "../test-utils/render";
 
-// The global useTheme stub hands back a fresh object — and so a fresh
-// `setHapticsEnabled` — on every render, which nothing can assert against.
+// The global useTheme stub hands back a fresh object — and so fresh setters —
+// on every render, which nothing can assert against.
 const mockSetHapticsEnabled = jest.fn();
+const mockSetColorMode = jest.fn();
+let mockColorMode = "system";
 jest.mock("@/hooks/useTheme", () => ({
-  useTheme: () => ({
-    accentId: "neon",
-    accent: { id: "neon", hex: "#C6F94A", dim: "#8FB732", shades: [] },
-    setAccent: jest.fn(),
-    palette: [],
-    hapticsEnabled: true,
-    setHapticsEnabled: (v: boolean) => mockSetHapticsEnabled(v),
-    hydrated: true,
-  }),
+  useTheme: () =>
+    require("../test-utils/theme").stubTheme({
+      colorMode: mockColorMode,
+      setHapticsEnabled: (v: boolean) => mockSetHapticsEnabled(v),
+      setColorMode: (m: string) => mockSetColorMode(m),
+    }),
 }));
 
 // The OS permission state, and the re-registration that follows a grant, are
@@ -172,6 +172,66 @@ describe("Notification settings — the OS permission", () => {
     });
 
     expect(queryByLabelText("Open Settings")).toBeNull();
+  });
+});
+
+// Per device, like Haptics and the accent: it needs no connection and no
+// account, and every phone the person signs in on keeps its own.
+describe("Notification settings — appearance", () => {
+  afterEach(() => {
+    mockColorMode = "system";
+    // The screen is still mounted here and reads the online state.
+    act(() => onlineManager.setOnline(true));
+  });
+
+  it.each([
+    ["System", "system"],
+    ["Light", "light"],
+    ["Dark", "dark"],
+  ])("marks %s as the current choice when it is", (label, mode) => {
+    mockColorMode = mode;
+    const { Wrapper } = setup();
+    const { getByRole, getAllByRole } = render(<NotificationSettingsScreen />, {
+      wrapper: Wrapper,
+    });
+
+    const checked = getAllByRole("radio").filter(
+      (r) => r.props.accessibilityState?.checked,
+    );
+    expect(checked).toHaveLength(1);
+    expect(
+      getByRole("radio", { name: label }).props.accessibilityState,
+    ).toEqual(expect.objectContaining({ checked: true }));
+  });
+
+  it.each([
+    ["Light", "light"],
+    ["Dark", "dark"],
+    ["System", "system"],
+  ])("switches to %s", (label, mode) => {
+    mockColorMode = label === "System" ? "dark" : "system";
+    const { Wrapper } = setup();
+    const { getByRole } = render(<NotificationSettingsScreen />, {
+      wrapper: Wrapper,
+    });
+
+    fireEvent.press(getByRole("radio", { name: label }));
+
+    expect(mockSetColorMode).toHaveBeenCalledWith(mode);
+  });
+
+  it("works offline", () => {
+    onlineManager.setOnline(false);
+    const { Wrapper } = setup();
+    const { getByRole } = render(<NotificationSettingsScreen />, {
+      wrapper: Wrapper,
+    });
+
+    const light = getByRole("radio", { name: "Light" });
+    expect(light.props.accessibilityState?.disabled).toBeFalsy();
+    fireEvent.press(light);
+
+    expect(mockSetColorMode).toHaveBeenCalledWith("light");
   });
 });
 

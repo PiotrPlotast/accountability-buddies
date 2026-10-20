@@ -1,11 +1,14 @@
 import { Stack } from "expo-router";
-import { themeColors } from "@/lib/colors";
+
+import { useTheme } from "@/hooks/useTheme";
 
 // Each screen draws its own heading, so the native header carries only the
 // back button: no title, and opaque in the screen's own colour so the content
 // starts below it. A transparent large-title header painted "Sign Up" faintly
 // under "Create account" and put the back button on top of the heading.
 export default function PublicLayout() {
+  const { colors } = useTheme();
+
   return (
     <Stack
       initialRouteName="welcome"
@@ -13,9 +16,9 @@ export default function PublicLayout() {
         headerTitle: "",
         headerBackButtonDisplayMode: "minimal",
         headerShadowVisible: false,
-        headerStyle: { backgroundColor: themeColors.background },
-        headerTintColor: themeColors.text,
-        contentStyle: { backgroundColor: themeColors.background },
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.text,
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen

@@ -7,6 +7,8 @@ import {
   View,
 } from "react-native";
 
+import { useTheme } from "@/hooks/useTheme";
+
 type Props = {
   isVisible: boolean;
   // Android back. Pass `undefined` while a request is in flight.
@@ -32,6 +34,8 @@ export default function DialogShell({
   cardClassName = "bg-surface border border-border rounded-tile p-6",
   children,
 }: Props) {
+  const { colors } = useTheme();
+
   return (
     <Modal
       visible={isVisible}
@@ -58,7 +62,7 @@ export default function DialogShell({
           accessibilityLabel={onBackdropPress ? backdropLabel : undefined}
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: "rgba(0,0,0,0.7)" },
+            { backgroundColor: colors.backdrop },
           ]}
         />
         <View className={cardClassName}>{children}</View>

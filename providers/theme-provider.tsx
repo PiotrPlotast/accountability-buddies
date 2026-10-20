@@ -1,53 +1,29 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
+import { Appearance, useColorScheme, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { vars } from "nativewind";
 
-import { Accent, AccentId, ThemeContext } from "@/context/theme-context";
+import { AccentId, ThemeContext } from "@/context/theme-context";
+import { accentsFor, isAccentId } from "@/lib/accents";
+import {
+  ColorMode,
+  cssVariables,
+  isColorMode,
+  resolveColorScheme,
+  schemeColors,
+} from "@/lib/colors";
 import { setHapticsEnabled as syncHaptics } from "@/lib/haptics";
 
 const STORAGE_KEY = "theme.accent.v1";
 const HAPTICS_KEY = "theme.haptics.v1";
+const MODE_KEY = "theme.mode.v1";
 
-const PALETTE: Accent[] = [
-  {
-    id: "neon",
-    hex: "#C6F94A",
-    dim: "#8FB732",
-    shades: ["#1E1E21", "#3A5F10", "#6E9E22", "#C6F94A"],
-  },
-  {
-    id: "blue",
-    hex: "#4AB8F9",
-    dim: "#2E7AB7",
-    shades: ["#1E1E21", "#103040", "#1F6F9E", "#4AB8F9"],
-  },
-  {
-    id: "purple",
-    hex: "#B45EFF",
-    dim: "#7E3FB3",
-    shades: ["#1E1E21", "#3A1F4F", "#7E3FB3", "#B45EFF"],
-  },
-  {
-    id: "orange",
-    hex: "#FF8A3D",
-    dim: "#B85F25",
-    shades: ["#1E1E21", "#4F2A11", "#B85F25", "#FF8A3D"],
-  },
-  {
-    id: "pink",
-    hex: "#FF5E9C",
-    dim: "#B73F70",
-    shades: ["#1E1E21", "#4F1E33", "#B73F70", "#FF5E9C"],
-  },
-  {
-    id: "teal",
-    hex: "#3DD9C5",
-    dim: "#1F8E80",
-    shades: ["#1E1E21", "#103E38", "#1F8E80", "#3DD9C5"],
-  },
-];
-
-const isAccentId = (s: string): s is AccentId =>
-  PALETTE.some((p) => p.id === s);
+// The native pieces the app doesn't draw — time pickers, alerts, sheets, the
+// keyboard — follow `Appearance`, not this provider. An explicit choice is
+// handed over as an override; System drops it ("unspecified" from RN 0.82,
+// where `null` no longer clears it) so they follow the phone again.
+const applyToNative = (mode: ColorMode) =>
+  Appearance.setColorScheme(mode === "system" ? "unspecified" : mode);
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -56,17 +32,22 @@ interface ThemeProviderProps {
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   const [accentId, setAccentIdState] = useState<AccentId>("neon");
   const [hapticsEnabled, setHapticsEnabledState] = useState(true);
-  // The stored accent arrives a frame or two after mount, so anything painted
-  // before then uses the default. `_layout` holds the splash until this flips,
-  // otherwise a user who picked purple watches the app open green.
+  const [colorMode, setColorModeState] = useState<ColorMode>("system");
+  // Under an override this reports the override, which is fine: `system` is
+  // the only mode that reads it, and System clears the override.
+  const systemScheme = useColorScheme();
+  // The stored accent and mode arrive a frame or two after mount, so anything
+  // painted before then uses the defaults. `_layout` holds the splash until
+  // this flips, otherwise a user who picked purple watches the app open green.
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     Promise.all([
       AsyncStorage.getItem(STORAGE_KEY),
       AsyncStorage.getItem(HAPTICS_KEY),
+      AsyncStorage.getItem(MODE_KEY),
     ])
-      .then(([storedAccent, storedHaptics]) => {
+      .then(([storedAccent, storedHaptics, storedMode]) => {
         if (storedAccent && isAccentId(storedAccent))
           setAccentIdState(storedAccent);
         // Only an explicit "false" turns haptics off. Anything else — nothing
@@ -76,6 +57,12 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
         const on = storedHaptics !== "false";
         setHapticsEnabledState(on);
         syncHaptics(on);
+        // System is the default and needs no override, so only an explicit
+        // choice is handed to the native side.
+        if (storedMode && isColorMode(storedMode) && storedMode !== "system") {
+          setColorModeState(storedMode);
+          applyToNative(storedMode);
+        }
       })
       // A failed read just means the defaults — never a stuck splash.
       .catch(() => {})
@@ -95,9 +82,19 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
     AsyncStorage.setItem(HAPTICS_KEY, String(on)).catch(() => {});
   };
 
+  const setColorMode = (mode: ColorMode) => {
+    setColorModeState(mode);
+    applyToNative(mode);
+    AsyncStorage.setItem(MODE_KEY, mode).catch(() => {});
+  };
+
+  const scheme = resolveColorScheme(colorMode, systemScheme);
+  const colors = schemeColors[scheme];
+  const palette = accentsFor(scheme);
+
   const accent = useMemo(
-    () => PALETTE.find((p) => p.id === accentId) ?? PALETTE[0],
-    [accentId],
+    () => palette.find((p) => p.id === accentId) ?? palette[0],
+    [palette, accentId],
   );
 
   const value = useMemo(
@@ -105,15 +102,34 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
       accentId,
       accent,
       setAccent,
-      palette: PALETTE,
+      palette,
       hapticsEnabled,
       setHapticsEnabled,
+      colorMode,
+      setColorMode,
+      scheme,
+      colors,
       hydrated,
     }),
-    [accentId, accent, hapticsEnabled, hydrated],
+    [
+      accentId,
+      accent,
+      palette,
+      hapticsEnabled,
+      colorMode,
+      scheme,
+      colors,
+      hydrated,
+    ],
   );
 
+  // NativeWind's tokens are CSS variables; setting them here is what moves
+  // every class below — modals included, since they inherit through React.
+  const variables = useMemo(() => vars(cssVariables(colors)), [colors]);
+
   return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>
+      <View style={[{ flex: 1 }, variables]}>{children}</View>
+    </ThemeContext.Provider>
   );
 };

@@ -5,7 +5,6 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 
 import { useTheme } from "@/hooks/useTheme";
-import { themeColors } from "@/lib/colors";
 import { tapLight } from "@/lib/haptics";
 import { dateToHHMM, formatReminderTime, hhmmToDate } from "@/lib/reminderTime";
 
@@ -33,7 +32,7 @@ export default function TimePicker({
   defaultTime = "09:00",
   allowOff = true,
 }: Props) {
-  const { accent } = useTheme();
+  const { accent, colors, scheme } = useTheme();
   const [androidOpen, setAndroidOpen] = useState(false);
   const isIOS = Platform.OS === "ios";
 
@@ -60,7 +59,7 @@ export default function TimePicker({
           display="compact"
           value={hhmmToDate(value)}
           onChange={handlePick}
-          themeVariant="dark"
+          themeVariant={scheme}
           accentColor={accent.hex}
         />
       ) : null}
@@ -74,7 +73,7 @@ export default function TimePicker({
         >
           <Text
             className="font-mono-medium text-base"
-            style={{ color: accent.hex }}
+            style={{ color: accent.text }}
           >
             {formatReminderTime(value)}
           </Text>
@@ -86,8 +85,8 @@ export default function TimePicker({
           value={!!value}
           onValueChange={toggle}
           accessibilityLabel={label}
-          trackColor={{ false: themeColors.surface2, true: accent.dim }}
-          thumbColor={value ? accent.hex : themeColors.textDim}
+          trackColor={{ false: colors.surface2, true: accent.dim }}
+          thumbColor={value ? accent.hex : colors.textDim}
         />
       ) : null}
 

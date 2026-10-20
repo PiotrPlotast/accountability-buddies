@@ -35,32 +35,14 @@ jest.mock("@react-native-community/datetimepicker", () => ({
   },
 }));
 
-// Replace useTheme with a static accent. The real ThemeProvider hydrates from
-// AsyncStorage on mount, which every themed component would otherwise have to
-// wait on; tests care about behaviour, not which accent is selected.
-jest.mock("@/hooks/useTheme", () => {
-  const accent = {
-    id: "neon",
-    hex: "#C6F94A",
-    dim: "#8FB732",
-    shades: ["#1E1E21", "#3A5F10", "#6E9E22", "#C6F94A"],
-  };
-  return {
-    useTheme: () => ({
-      accentId: accent.id,
-      accent,
-      setAccent: jest.fn(),
-      palette: [accent],
-      // The real kill switch lives in `lib/haptics`; this is only what a
-      // settings row would render. Tests that care about silencing haptics
-      // call `setHapticsEnabled` from that module directly.
-      hapticsEnabled: true,
-      setHapticsEnabled: jest.fn(),
-      // Tests never wait on AsyncStorage, so the preferences are always settled.
-      hydrated: true,
-    }),
-  };
-});
+// Replace useTheme with a static accent and the dark palette. The real
+// ThemeProvider hydrates from AsyncStorage on mount, which every themed
+// component would otherwise have to wait on; tests care about behaviour, not
+// which accent is selected. A test that needs light mode calls
+// `setStubScheme("light")` from `__tests__/test-utils/theme`.
+jest.mock("@/hooks/useTheme", () => ({
+  useTheme: () => require("./__tests__/test-utils/theme").stubTheme(),
+}));
 
 // Safe-area insets — the library ships a jest mock with fixed metrics, so
 // screens and modals calling useSafeAreaInsets render without a provider.

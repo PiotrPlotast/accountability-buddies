@@ -6,7 +6,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useCompleteTour } from "@/hooks/useTour";
-import { themeColors } from "@/lib/colors";
 import { tapLight } from "@/lib/haptics";
 import { TOUR_SLIDES } from "@/lib/tour";
 import TourDemo from "./TourDemos";
@@ -32,7 +31,7 @@ type Props = {
  */
 export default function Tour({ mode }: Props) {
   const router = useRouter();
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
   const completeTour = useCompleteTour();
 
   const [index, setIndex] = useState(0);
@@ -95,7 +94,7 @@ export default function Tour({ mode }: Props) {
             {slide.body}
           </Text>
           <Text
-            style={{ color: accent.hex }}
+            style={{ color: accent.text }}
             className="font-mono-medium text-sm mb-5"
           >
             {slide.hint}
@@ -117,8 +116,7 @@ export default function Tour({ mode }: Props) {
                 width: 8,
                 height: 8,
                 borderRadius: 4,
-                backgroundColor:
-                  i === index ? accent.hex : themeColors.surface2,
+                backgroundColor: i === index ? accent.hex : colors.surface2,
               }}
             />
           ))}
@@ -148,7 +146,7 @@ export default function Tour({ mode }: Props) {
             // text, invisible but still tappable.
             style={{ backgroundColor: accent.hex }}
           >
-            <Text className="font-mono-bold text-base text-bg">
+            <Text className="font-mono-bold text-base text-on-accent">
               {isLast ? "Let's go" : "Next"}
             </Text>
           </Pressable>

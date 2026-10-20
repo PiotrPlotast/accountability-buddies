@@ -1,14 +1,13 @@
 import { ActivityIndicator, Pressable, Text } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
-import { themeColors } from "@/lib/colors";
 
 type Props = {
   label: string;
   onPress: () => void;
-  // The form has what it needs: the accent fill and dark label. Unfilled is
+  // The form has what it needs: the accent fill and a `text-on-accent` label. Unfilled is
   // the grey `surface` tile with a dim label, and can't be pressed.
   filled: boolean;
-  // A request is in flight. The fill stays (the dark spinner needs it) rather
+  // A request is in flight. The fill stays (the `bg`-coloured spinner needs it) rather
   // than greying out mid-submit, and a second press is refused.
   busy?: boolean;
   // Refuses presses without changing the look, e.g. offline.
@@ -33,7 +32,7 @@ export default function PrimaryButton({
   className = "",
   smallLabel = false,
 }: Props) {
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
   const inactive = !filled || busy || disabled;
 
   return (
@@ -44,17 +43,17 @@ export default function PrimaryButton({
       accessibilityLabel={label}
       accessibilityState={{ disabled: inactive, busy }}
       className={`h-14 rounded-tile items-center justify-center ${className}`}
-      style={{ backgroundColor: filled ? accent.hex : themeColors.surface }}
+      style={{ backgroundColor: filled ? accent.hex : colors.surface }}
     >
       {busy ? (
         <ActivityIndicator
           testID="primary-button-spinner"
-          color={themeColors.background}
+          color={colors.onAccent}
         />
       ) : (
         <Text
           className={`font-mono-bold ${smallLabel ? "" : "text-base"} ${
-            filled ? "text-bg" : "text-text-dim"
+            filled ? "text-on-accent" : "text-text-dim"
           }`}
         >
           {label}

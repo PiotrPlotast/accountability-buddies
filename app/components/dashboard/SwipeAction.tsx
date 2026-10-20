@@ -11,10 +11,12 @@ const ACTION_GAP = 8;
 // Delete warns, edit is a caution, and a buddy's nudge or cheer takes the
 // accent rather than a warning colour: it is encouragement, not a hazard.
 const TONES = {
-  // Dark on the red: the light text was 3.4:1 at 10px, this is 4.7:1.
+  // The page colour on the red: 6.4:1 in dark mode (light text was 3.4:1 at
+  // 10px), 4.8:1 in light, where `bg` is white and the red is darker. The
+  // accent tile's label is the on-accent colour, dark or white with the fill.
   danger: { tile: "bg-danger", label: "text-bg" },
   warning: { tile: "bg-warning", label: "text-bg" },
-  accent: { tile: "", label: "text-bg" },
+  accent: { tile: "", label: "text-on-accent" },
 } as const;
 
 type Props = {

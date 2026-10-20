@@ -3,7 +3,7 @@ import { TextInput } from "react-native";
 import { render } from "@testing-library/react-native";
 
 import AppTextInput from "@/app/components/ui/AppTextInput";
-import { themeColors } from "@/lib/colors";
+import { schemeColors } from "@/lib/colors";
 
 // The style prop arrives as an array; flatten it the way RN would.
 const styleOf = (node: { props: { style?: unknown } }) =>
@@ -36,7 +36,7 @@ describe("AppTextInput", () => {
   it("defaults the placeholder colour so call sites needn't repeat it", () => {
     const { getByPlaceholderText } = render(<AppTextInput placeholder="hi" />);
     expect(getByPlaceholderText("hi").props.placeholderTextColor).toBe(
-      themeColors.textDim,
+      schemeColors.dark.textDim,
     );
   });
 

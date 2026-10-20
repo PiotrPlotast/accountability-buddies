@@ -12,7 +12,6 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { useOnValueChange } from "@/hooks/useOnValueChange";
-import { themeColors } from "@/lib/colors";
 
 const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
@@ -38,7 +37,7 @@ export default function ProgressRing({
   progress,
   pulseKey = 0,
 }: Props) {
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
   const reduceMotion = useReducedMotion();
   const clamped = Math.max(0, Math.min(1, progress));
   const radius = (size - stroke) / 2;
@@ -100,7 +99,7 @@ export default function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={themeColors.border}
+          stroke={colors.border}
           strokeWidth={stroke}
           fill="none"
         />

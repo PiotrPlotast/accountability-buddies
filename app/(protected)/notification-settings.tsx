@@ -10,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import AppearancePicker from "@/app/components/settings/AppearancePicker";
 import ToggleRow from "@/app/components/settings/ToggleRow";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import ScreenHeader from "@/app/components/ui/ScreenHeader";
@@ -19,7 +20,6 @@ import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
 import { usePushPermission } from "@/hooks/usePushPermission";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useTheme } from "@/hooks/useTheme";
-import { themeColors } from "@/lib/colors";
 import { tapLight } from "@/lib/haptics";
 import { useIsOnline } from "@/lib/onlineStatus";
 import {
@@ -32,14 +32,15 @@ import SectionLabel from "@/app/components/ui/SectionLabel";
 
 /**
  * One settings surface, not two: the notification preferences (per account),
- * the haptics switch (per device, moved off `Profile.tsx`), and sign-out.
+ * the appearance and haptics switch (per device; haptics moved off
+ * `Profile.tsx`), and sign-out.
  */
 export default function NotificationSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { prefs, setPref } = useNotificationPrefs();
   const permission = usePushPermission();
-  const { accent, hapticsEnabled, setHapticsEnabled } = useTheme();
+  const { accent, hapticsEnabled, setHapticsEnabled, colors } = useTheme();
   const { signOut } = useSupabase();
   // The preferences are the account's, read by the server's cron, so they
   // don't queue offline. Haptics is this phone's and works either way.
@@ -126,7 +127,7 @@ export default function NotificationSettingsScreen() {
             >
               <Text
                 className="font-mono-medium text-sm"
-                style={{ color: accent.hex }}
+                style={{ color: accent.text }}
               >
                 Open Settings ›
               </Text>
@@ -202,6 +203,12 @@ export default function NotificationSettingsScreen() {
           ) : null}
         </View>
 
+        <SectionLabel className="mt-8 mb-3">Appearance</SectionLabel>
+        <AppearancePicker />
+        <Text className="text-text-dim font-mono text-xs mt-2">
+          System follows your phone. Stored on this device only.
+        </Text>
+
         <SectionLabel className="mt-8 mb-3">Feedback</SectionLabel>
         <ToggleRow
           label="Haptics"
@@ -224,7 +231,7 @@ export default function NotificationSettingsScreen() {
           <Text className="flex-1 text-text font-mono-medium text-base">
             Show the tour again
           </Text>
-          <Text style={{ fontSize: 18, color: themeColors.textDim }}>›</Text>
+          <Text style={{ fontSize: 18, color: colors.textDim }}>›</Text>
         </Pressable>
 
         <SectionLabel className="mt-8 mb-3">Account</SectionLabel>
@@ -240,7 +247,7 @@ export default function NotificationSettingsScreen() {
           <Text className="flex-1 text-text font-mono-medium text-base">
             Log out
           </Text>
-          <Text style={{ fontSize: 18, color: themeColors.textDim }}>›</Text>
+          <Text style={{ fontSize: 18, color: colors.textDim }}>›</Text>
         </Pressable>
       </ScrollView>
     </View>

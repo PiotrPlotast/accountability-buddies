@@ -6,7 +6,6 @@ import { useIsRestoring } from "@tanstack/react-query";
 import { createAppQueryClient } from "@/lib/queryClient";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { StatusBar } from "expo-status-bar";
-import { themeColors } from "@/lib/colors";
 import {
   useFonts,
   GeistMono_400Regular,
@@ -61,9 +60,6 @@ export default function RootLayout() {
       // if the phone is still offline).
       onSuccess={() => queryClient.resumePausedMutations()}
     >
-      {/* Edge-to-edge is mandatory from SDK 55, so the status bar is always
-          translucent over a transparent background; both props were removed. */}
-      <StatusBar style="light" />
       <SupabaseProvider>
         <ThemeProvider>
           <RootNavigator />
@@ -77,9 +73,10 @@ export default function RootLayout() {
 function RootNavigator() {
   const { isLoaded, session } = useSupabase();
   const isRestoring = useIsRestoring();
-  // `hydrated` keeps the splash up until the stored accent is known, so the
-  // first painted frame is already the user's colour rather than the default.
-  const { hydrated } = useTheme();
+  // `hydrated` keeps the splash up until the stored accent and appearance are
+  // known, so the first painted frame is already the user's colours rather
+  // than the defaults.
+  const { hydrated, colors, scheme } = useTheme();
   const isAppReady = isLoaded && !isRestoring && hydrated;
   useForgetTapsWhileSignedOut();
   useEffect(() => {
@@ -95,22 +92,28 @@ function RootNavigator() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        gestureEnabled: false,
-        animation: "none",
-        animationDuration: 0,
-        contentStyle: { backgroundColor: themeColors.background },
-      }}
-    >
-      <Stack.Protected guard={!!session}>
-        <Stack.Screen name="(protected)" />
-      </Stack.Protected>
+    <>
+      {/* Edge-to-edge is mandatory from SDK 55, so the status bar is always
+          translucent over a transparent background; both props were removed.
+          Its style is the content's colour: light text over the dark theme. */}
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: false,
+          animation: "none",
+          animationDuration: 0,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Protected guard={!!session}>
+          <Stack.Screen name="(protected)" />
+        </Stack.Protected>
 
-      <Stack.Protected guard={!session}>
-        <Stack.Screen name="(public)" />
-      </Stack.Protected>
-    </Stack>
+        <Stack.Protected guard={!session}>
+          <Stack.Screen name="(public)" />
+        </Stack.Protected>
+      </Stack>
+    </>
   );
 }

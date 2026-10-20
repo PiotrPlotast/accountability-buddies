@@ -10,7 +10,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as AppleAuthentication from "expo-apple-authentication";
 
 import { useSignUp } from "@/hooks/useSignUp";
-import { themeColors } from "@/lib/colors";
 import { useTheme } from "@/hooks/useTheme";
 import AppleAuth from "@/app/components/auth/AppleAuth";
 import CredentialFields from "@/app/components/auth/CredentialFields";
@@ -19,7 +18,7 @@ import { getAuthErrorMessage } from "@/lib/authErrors";
 
 export default function Page() {
   const { isLoaded, signUp, verifyOtp } = useSignUp();
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,7 +61,7 @@ export default function Page() {
     return (
       <SafeAreaView
         edges={["left", "right", "bottom"]}
-        style={{ flex: 1, backgroundColor: themeColors.background }}
+        style={{ flex: 1, backgroundColor: colors.background }}
       >
         <ScrollView
           contentContainerStyle={{ padding: 24, gap: 16 }}
@@ -115,7 +114,7 @@ export default function Page() {
   return (
     <SafeAreaView
       edges={["left", "right", "bottom"]}
-      style={{ flex: 1, backgroundColor: themeColors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
     >
       <ScrollView
         contentContainerStyle={{ padding: 24, gap: 16 }}
@@ -166,7 +165,7 @@ export default function Page() {
           </Text>
           <Text
             className="font-mono-medium text-sm"
-            style={{ color: accent.hex }}
+            style={{ color: accent.text }}
             onPress={() => router.replace("/sign-in")}
             accessibilityRole="link"
           >
