@@ -23,14 +23,19 @@ describe("accentsFor", () => {
     });
   });
 
-  // The accent is the app's identity: light mode fills with the same colour,
-  // and only text drawn in it goes darker.
-  it("fills with the same accent in light mode as in dark", () => {
+  // Light mode's accents are the deep shades of the same hues (navy, forest
+  // green ...), not the bright fills of dark mode: a mid-tone read as washed
+  // out on white. 8:1 against white keeps them from drifting back.
+  it("fills with a deep shade of each accent in light mode", () => {
     const dark = accentsFor("dark");
     accentsFor("light").forEach((accent, i) => {
-      expect(accent.hex).toBe(dark[i].hex);
-      expect(accent.dim).toBe(dark[i].dim);
+      expect(accent.hex).not.toBe(dark[i].hex);
+      expect(contrast(accent.hex, "#FFFFFF")).toBeGreaterThanOrEqual(8);
     });
+  });
+
+  it("draws text in the deep fill itself in light mode", () => {
+    accentsFor("light").forEach((a) => expect(a.text).toBe(a.hex));
   });
 
   it("draws text in the fill colour itself in dark mode", () => {

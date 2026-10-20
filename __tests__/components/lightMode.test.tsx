@@ -79,8 +79,8 @@ describe("in light mode", () => {
     );
   });
 
-  // The fill is the bright accent in both schemes, so whatever sits on it is
-  // the dark on-accent colour, never the (white) page colour.
+  // Whatever sits on an accent fill takes the on-accent colour (white on light
+  // mode's deep accents), whichever colour the page is.
   it("spins a busy button's indicator in the on-accent colour", () => {
     const { getByTestId } = render(
       <PrimaryButton label="Save" onPress={jest.fn()} filled busy />,
@@ -90,12 +90,11 @@ describe("in light mode", () => {
     );
   });
 
-  it("draws accent-coloured text in the darker text shade", () => {
+  it("draws accent-coloured text in the text shade", () => {
     const { getByText } = render(<WelcomeScreen />);
     expect(flat(getByText("tiny crew.").props.style).color).toBe(
       lightAccent.text,
     );
-    expect(lightAccent.text).not.toBe(lightAccent.hex);
   });
 
   it("writes Android's reminder time in the accent's text shade", () => {
@@ -143,10 +142,10 @@ describe("in light mode", () => {
   });
 });
 
-// `accent.hex` is a fill. In light mode it is the bright neon, which is
-// invisible as text on white, so text, icons, spinners and pull-to-refresh
-// tints take `accent.text`. A fresh `color: accent.hex` would look fine in
-// dark mode and vanish in light, so it is caught here instead.
+// `accent.hex` is a fill and `accent.text` the accent drawn as text, an icon,
+// a spinner or a tint. They are equal today, but an accent bright enough to
+// be a good fill on white is unreadable as text there, so every text use goes
+// through `accent.text` and a fresh `color: accent.hex` is caught here.
 describe("accent colour as text", () => {
   // No Node types in this project, so the two calls are typed by hand.
   const fs = require("fs") as {

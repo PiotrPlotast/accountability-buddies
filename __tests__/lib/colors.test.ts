@@ -64,12 +64,12 @@ describe("the light palette", () => {
   });
 });
 
-// Every accent fill is bright in both schemes, so the label on it is dark in
-// both: `text-bg` would turn white in light mode and vanish on neon.
+// The label on an accent fill: dark on dark mode's bright accents, white on
+// light mode's deep ones. Its contrast on every accent is in accents.test.ts.
 describe("onAccent", () => {
-  it("is the same dark label in both schemes", () => {
-    expect(schemeColors.light.onAccent).toBe(schemeColors.dark.onAccent);
-    expect(schemeColors.dark.onAccent).toBe(schemeColors.dark.background);
+  it("is dark in dark mode and white in light mode", () => {
+    expect(schemeColors.dark.onAccent).toBe("#18181B");
+    expect(schemeColors.light.onAccent).toBe("#FFFFFF");
   });
 });
 

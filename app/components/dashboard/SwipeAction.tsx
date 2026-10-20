@@ -13,7 +13,7 @@ const ACTION_GAP = 8;
 const TONES = {
   // The page colour on the red: 6.4:1 in dark mode (light text was 3.4:1 at
   // 10px), 4.8:1 in light, where `bg` is white and the red is darker. The
-  // accent tile is bright in both, so its label is the dark on-accent.
+  // accent tile's label is the on-accent colour, dark or white with the fill.
   danger: { tile: "bg-danger", label: "text-bg" },
   warning: { tile: "bg-warning", label: "text-bg" },
   accent: { tile: "", label: "text-on-accent" },

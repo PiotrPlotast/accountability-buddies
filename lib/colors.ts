@@ -18,8 +18,8 @@ export type ThemeColors = {
   textDim: string; // text-dim
   danger: string; // danger
   warning: string; // warning
-  // A label on an accent fill. Every accent is bright, so it is dark in both
-  // schemes; `text-bg` would turn white in light mode and vanish on neon.
+  // A label on an accent fill: dark on dark mode's bright accents, white on
+  // light mode's deep ones.
   onAccent: string; // on-accent
   // Behind a dialog. Not a Tailwind token: only DialogShell paints it.
   backdrop: string;
@@ -42,8 +42,8 @@ const dark: ThemeColors = {
 };
 
 // Plain white, page and cards alike: cards are told apart by their outline.
-// The accents fill with the same bright colour as in dark mode (see
-// `lib/accents.ts`), so the label on a fill stays dark. Signal colours are a
+// The accents are deep shades (see `lib/accents.ts`), so the label on a fill
+// is white. Signal colours are a
 // step darker than their dark-mode twins so that they still read as text,
 // and still carry a `text-bg` label on a swipe tile.
 const light: ThemeColors = {
@@ -58,7 +58,7 @@ const light: ThemeColors = {
   textDim: "#71717A",
   danger: "#DC2626",
   warning: "#B45309",
-  onAccent: "#18181B",
+  onAccent: "#FFFFFF",
   backdrop: "rgba(0,0,0,0.4)",
 };
 
