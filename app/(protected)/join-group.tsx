@@ -17,7 +17,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { usePendingGoalChanges } from "@/hooks/usePendingGoalChanges";
 import { useSupabase } from "@/hooks/useSupabase";
-import { themeColors } from "@/lib/colors";
 import { useTheme } from "@/hooks/useTheme";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import { useIsOnline } from "@/lib/onlineStatus";
@@ -27,7 +26,7 @@ import SectionLabel from "@/app/components/ui/SectionLabel";
 
 export default function JoinGroupScreen() {
   const { supabase, session, signOut } = useSupabase();
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { activeGroupId } = useActiveGroup();
@@ -159,7 +158,7 @@ export default function JoinGroupScreen() {
   const isJoin = mode === "JOIN";
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* The form is vertically centred, so without this the keyboard covers
           the input and the submit button on shorter devices. */}
       <KeyboardAvoidingView
@@ -233,7 +232,7 @@ export default function JoinGroupScreen() {
               }}
             >
               {loading ? (
-                <ActivityIndicator color={themeColors.background} />
+                <ActivityIndicator color={colors.background} />
               ) : (
                 <Text className="text-bg font-mono-bold">
                   {isJoin ? "Join group" : "Create group"}

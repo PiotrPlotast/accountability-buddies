@@ -17,7 +17,6 @@ import Reanimated, {
 import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
-import { themeColors } from "@/lib/colors";
 import GoalCheckbox from "./GoalCheckbox";
 import SwipeAction from "./SwipeAction";
 import WeekStrip, { PULSE_MIN_OPACITY, PULSE_MS } from "./WeekStrip";
@@ -86,7 +85,7 @@ function GoalListContent({
   onNudge,
   onCheer,
 }: ViewProps) {
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
 
   // Jeden zegar na całą listę — `WeekStrip` tylko go czyta. Musi stać przed
   // wcześniejszymi `return`ami niżej, więc żyje tutaj, a nie w `WeekStrip`.
@@ -130,7 +129,7 @@ function GoalListContent({
             key={i}
             style={{
               height: 72,
-              backgroundColor: themeColors.surface,
+              backgroundColor: colors.surface,
               borderRadius: 14,
               opacity: 0.6,
             }}

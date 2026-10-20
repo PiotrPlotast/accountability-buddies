@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "accountabilitybuddies",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "web": {
       "bundler": "metro"
     },
@@ -37,7 +37,10 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#18181B"
+          "backgroundColor": "#FAFAFA",
+          "dark": {
+            "backgroundColor": "#18181B"
+          }
         }
       ],
       "expo-apple-authentication",

@@ -15,7 +15,6 @@ import IconPicker from "@/app/components/habits/IconPicker";
 import NeedsConnection from "@/app/components/ui/NeedsConnection";
 import PrimaryButton from "@/app/components/ui/PrimaryButton";
 import ScreenHeader from "@/app/components/ui/ScreenHeader";
-import { themeColors } from "@/lib/colors";
 import { useIsOnline } from "@/lib/onlineStatus";
 import { MAX_GROUP_NAME_LENGTH } from "@/lib/textLimits";
 import SectionLabel from "@/app/components/ui/SectionLabel";
@@ -24,7 +23,7 @@ export default function GroupSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeGroupId, groupName, groupIcon, inviteCode } = useActiveGroup();
-  const { accent, palette, accentId, setAccent } = useTheme();
+  const { accent, palette, accentId, setAccent, colors } = useTheme();
   const updateGroup = useUpdateGroup();
   // The name and icon are the whole group's, so they don't queue offline. The
   // accent below is this phone's and works either way.
@@ -112,7 +111,7 @@ export default function GroupSettingsScreen() {
           >
             <Text
               className="font-mono-medium text-base"
-              style={{ color: canSave ? accent.hex : themeColors.textDim }}
+              style={{ color: canSave ? accent.hex : colors.textDim }}
             >
               {updateGroup.isPending ? "..." : "Save"}
             </Text>
@@ -197,7 +196,7 @@ export default function GroupSettingsScreen() {
                 style={{
                   backgroundColor: p.hex,
                   borderWidth: active ? 3 : 0,
-                  borderColor: themeColors.text,
+                  borderColor: colors.text,
                 }}
               >
                 {active ? (

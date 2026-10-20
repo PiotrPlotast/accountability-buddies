@@ -5,7 +5,6 @@ import { useRouter, type Href } from "expo-router";
 import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 import { useProfileData } from "@/hooks/useProfileData";
 import { useTheme } from "@/hooks/useTheme";
-import { themeColors } from "@/lib/colors";
 import { useIsOnline } from "@/lib/onlineStatus";
 import Heatmap from "./Heatmap";
 import RenameModal from "./RenameModal";
@@ -35,7 +34,7 @@ export default function Profile() {
     groupName,
     groupMemberCount,
   } = useProfileData();
-  const { accent } = useTheme();
+  const { accent, colors } = useTheme();
   const router = useRouter();
   const checkinsToday = myGoals.filter((g) => g.completed_today).length;
   const groupsCount = groupName ? 1 : 0;
@@ -99,7 +98,7 @@ export default function Profile() {
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
           className="w-9 h-9 items-center justify-center"
         >
-          <GearIcon color={themeColors.textMuted} />
+          <GearIcon color={colors.textMuted} />
         </Pressable>
       </View>
 

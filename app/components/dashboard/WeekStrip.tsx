@@ -5,7 +5,8 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { Goal } from "@/types/dashboardTypes";
 import { getGoalHistory, type HistoryState } from "@/lib/goalHistory";
-import { themeColors } from "@/lib/colors";
+import { useTheme } from "@/hooks/useTheme";
+import type { ThemeColors } from "@/lib/colors";
 
 // Rozmiar kropki trzymamy tutaj, a nie w klasie Tailwinda, bo NativeWind nie
 // obsługuje `className` na `Reanimated.View` — pulsująca kropka i statyczne
@@ -43,12 +44,12 @@ export const PULSE_MIN_OPACITY = 0.55;
 // silently loses a day.
 export const DOT_STYLES: Record<
   HistoryState,
-  (accentHex: string) => ViewStyle
+  (accentHex: string, colors: ThemeColors) => ViewStyle
 > = {
   done: (accentHex) => ({ backgroundColor: accentHex }),
-  pending: () => ({ backgroundColor: themeColors.textMuted }),
-  missed: () => ({ backgroundColor: themeColors.surface2 }),
-  off: () => ({ backgroundColor: themeColors.surface2, opacity: 0.45 }),
+  pending: (_, colors) => ({ backgroundColor: colors.textMuted }),
+  missed: (_, colors) => ({ backgroundColor: colors.surface2 }),
+  off: (_, colors) => ({ backgroundColor: colors.surface2, opacity: 0.45 }),
 };
 
 // Today, still open. Every one of these on screen reads the same `pulse`, so
@@ -80,6 +81,7 @@ export default function WeekStrip({
   pulse: SharedValue<number>;
   reduceMotion: boolean;
 }) {
+  const { colors } = useTheme();
   const cells = getGoalHistory(goal);
   const doneCount = cells.filter((c) => c.state === "done").length;
 
@@ -95,7 +97,7 @@ export default function WeekStrip({
         ) : (
           <View
             key={cell.date}
-            style={[DOT_BASE, DOT_STYLES[cell.state](accentHex)]}
+            style={[DOT_BASE, DOT_STYLES[cell.state](accentHex, colors)]}
           />
         ),
       )}

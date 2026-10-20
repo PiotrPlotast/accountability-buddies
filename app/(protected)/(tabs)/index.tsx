@@ -2,15 +2,16 @@ import "../../../global.css";
 import { View } from "react-native";
 import Dashboard from "@/app/components/dashboard/Dashboard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { themeColors } from "@/lib/colors";
+import { useTheme } from "@/hooks/useTheme";
 export default function Page() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: themeColors.background,
+        backgroundColor: colors.background,
         paddingTop: insets.top,
       }}
     >

@@ -5,16 +5,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        bg: "#18181B",
-        surface: "#27272A",
-        "surface-2": "#3F3F46",
-        border: "#2A2A2E",
-        text: "#F4F4F5",
-        "text-muted": "#9CA3AF",
-        "text-dim": "#8A919E",
+        // Set per scheme by `ThemeProvider` from `lib/colors.ts`, which owns
+        // the values. A token added here needs its variable added there.
+        bg: "var(--color-bg)",
+        surface: "var(--color-surface)",
+        "surface-2": "var(--color-surface-2)",
+        border: "var(--color-border)",
+        text: "var(--color-text)",
+        "text-muted": "var(--color-text-muted)",
+        "text-dim": "var(--color-text-dim)",
         fire: "#F97316",
-        danger: "#EF4444",
-        warning: "#FACC15",
+        danger: "var(--color-danger)",
+        warning: "var(--color-warning)",
         // No accent token here on purpose: the accent is runtime state chosen
         // by the user, so it arrives through `useTheme()` as an inline style.
       },

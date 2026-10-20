@@ -9,7 +9,7 @@ import Reanimated, {
   withTiming,
 } from "react-native-reanimated";
 import { useOnValueChange } from "@/hooks/useOnValueChange";
-import { themeColors } from "@/lib/colors";
+import { useTheme } from "@/hooks/useTheme";
 
 // `rounded-tile` z tailwind.config.js. NativeWind nie obsługuje `className` na
 // `Reanimated.View` (patrz komentarz przy DOT_BASE w WeekStrip.tsx), więc kafelek checkboxa
@@ -47,6 +47,7 @@ export default function GoalCheckbox({
   accentHex,
   reduceMotion,
 }: CheckboxProps) {
+  const { colors } = useTheme();
   // Both start where the goal already is: a habit ticked off hours ago must not
   // spring when you open the app or switch back to your own tab.
   const fill = useSharedValue(done ? 1 : 0);
@@ -74,12 +75,12 @@ export default function GoalCheckbox({
     backgroundColor: interpolateColor(
       fill.value,
       [0, 1],
-      [themeColors.background, accentHex],
+      [colors.background, accentHex],
     ),
     borderColor: interpolateColor(
       fill.value,
       [0, 1],
-      [themeColors.border, accentHex],
+      [colors.border, accentHex],
     ),
   }));
 

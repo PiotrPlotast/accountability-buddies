@@ -3,8 +3,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useNameGate } from "@/hooks/useNameGate";
 import { useNotificationTaps } from "@/hooks/useNotificationTaps";
 import { usePushRegistration } from "@/hooks/usePushRegistration";
+import { useTheme } from "@/hooks/useTheme";
 import { useTourGate, useTourSeenSync } from "@/hooks/useTour";
-import { themeColors } from "@/lib/colors";
 
 export default function ProtectedLayout() {
   // The name gate is a guard, not a redirect. `Stack.Protected` is the same
@@ -30,14 +30,15 @@ export default function ProtectedLayout() {
   const { needsTour } = useTourGate();
   useTourSeenSync();
   const inApp = !needsName && !needsTour;
+  const { colors } = useTheme();
 
   return (
     <GestureHandlerRootView
-      style={{ flex: 1, backgroundColor: themeColors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
     >
       <Stack
         screenOptions={{
-          contentStyle: { backgroundColor: themeColors.background },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Protected guard={needsName}>
