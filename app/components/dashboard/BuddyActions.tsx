@@ -45,7 +45,7 @@ export default function BuddyActions({
       <Text style={{ fontSize: 16 }}>{emoji}</Text>
       <Text
         numberOfLines={1}
-        style={{ color: accent.hex, flexShrink: 1 }}
+        style={{ color: accent.text, flexShrink: 1 }}
         className="font-mono-medium text-sm"
       >
         {label}

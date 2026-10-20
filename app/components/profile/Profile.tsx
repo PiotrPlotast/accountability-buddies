@@ -118,7 +118,10 @@ export default function Profile() {
               contentFit="cover"
             />
           ) : (
-            <Text className="text-bg font-mono-bold" style={{ fontSize: 36 }}>
+            <Text
+              className="text-on-accent font-mono-bold"
+              style={{ fontSize: 36 }}
+            >
               {initial}
             </Text>
           )}
@@ -144,7 +147,7 @@ export default function Profile() {
             >
               {displayName}
             </Text>
-            <PencilIcon color={accent.hex} />
+            <PencilIcon color={accent.text} />
           </Pressable>
           <SectionLabel className="mt-1">
             Member since {formatMemberSince(memberSince)}
@@ -153,13 +156,13 @@ export default function Profile() {
       </View>
 
       <View className="px-5 mt-6 flex-row gap-3">
-        <Stat value={String(groupStreak)} label="Streak" color={accent.hex} />
+        <Stat value={String(groupStreak)} label="Streak" color={accent.text} />
         <Stat
           value={String(checkinsToday)}
           label="Checkins"
-          color={accent.hex}
+          color={accent.text}
         />
-        <Stat value={String(groupsCount)} label="Groups" color={accent.hex} />
+        <Stat value={String(groupsCount)} label="Groups" color={accent.text} />
       </View>
 
       <View className="px-5 mt-8">

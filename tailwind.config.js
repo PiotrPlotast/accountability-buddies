@@ -17,6 +17,7 @@ module.exports = {
         fire: "#F97316",
         danger: "var(--color-danger)",
         warning: "var(--color-warning)",
+        "on-accent": "var(--color-on-accent)",
         // No accent token here on purpose: the accent is runtime state chosen
         // by the user, so it arrives through `useTheme()` as an inline style.
       },

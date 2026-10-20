@@ -94,7 +94,7 @@ export default function Tour({ mode }: Props) {
             {slide.body}
           </Text>
           <Text
-            style={{ color: accent.hex }}
+            style={{ color: accent.text }}
             className="font-mono-medium text-sm mb-5"
           >
             {slide.hint}
@@ -146,7 +146,7 @@ export default function Tour({ mode }: Props) {
             // text, invisible but still tappable.
             style={{ backgroundColor: accent.hex }}
           >
-            <Text className="font-mono-bold text-base text-bg">
+            <Text className="font-mono-bold text-base text-on-accent">
               {isLast ? "Let's go" : "Next"}
             </Text>
           </Pressable>

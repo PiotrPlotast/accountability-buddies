@@ -50,7 +50,7 @@ export default function DayPicker({ value, onChange }: Props) {
           >
             <Text
               className={`font-mono-medium ${
-                selected ? "text-bg" : "text-text-muted"
+                selected ? "text-on-accent" : "text-text-muted"
               }`}
             >
               {label}

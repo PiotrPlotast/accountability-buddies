@@ -123,7 +123,7 @@ function SampleHabits({
           className="self-center mt-4"
         >
           <Text
-            style={{ color: accent.hex }}
+            style={{ color: accent.text }}
             className="font-mono-medium text-sm"
           >
             Bring the samples back
@@ -340,7 +340,7 @@ function StreakDemo() {
       >
         <Text style={{ fontSize: 32 }}>🔥</Text>
         <Text
-          style={{ color: accent.hex }}
+          style={{ color: accent.text }}
           className="font-mono-bold text-3xl mt-1"
         >
           {streak}

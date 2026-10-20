@@ -12,10 +12,11 @@ const ACTION_GAP = 8;
 // accent rather than a warning colour: it is encouragement, not a hazard.
 const TONES = {
   // The page colour on the red: 6.4:1 in dark mode (light text was 3.4:1 at
-  // 10px), 5.7:1 in light, where `bg` is pale and the red is darker.
+  // 10px), 4.8:1 in light, where `bg` is white and the red is darker. The
+  // accent tile is bright in both, so its label is the dark on-accent.
   danger: { tile: "bg-danger", label: "text-bg" },
   warning: { tile: "bg-warning", label: "text-bg" },
-  accent: { tile: "", label: "text-bg" },
+  accent: { tile: "", label: "text-on-accent" },
 } as const;
 
 type Props = {

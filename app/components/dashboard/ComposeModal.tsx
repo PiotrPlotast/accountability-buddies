@@ -127,7 +127,7 @@ export default function ComposeModal({
           className="flex-1 h-12 rounded-tile items-center justify-center"
           style={{ backgroundColor: accent.hex }}
         >
-          <Text className="text-bg font-mono-bold">
+          <Text className="text-on-accent font-mono-bold">
             {isPending ? "Sending…" : "Send"}
           </Text>
         </Pressable>

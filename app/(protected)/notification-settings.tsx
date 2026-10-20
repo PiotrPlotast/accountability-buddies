@@ -127,7 +127,7 @@ export default function NotificationSettingsScreen() {
             >
               <Text
                 className="font-mono-medium text-sm"
-                style={{ color: accent.hex }}
+                style={{ color: accent.text }}
               >
                 Open Settings ›
               </Text>

@@ -166,7 +166,7 @@ export default function Dashboard() {
     <RefreshControl
       refreshing={refreshing}
       onRefresh={fetchData}
-      tintColor={accent.hex}
+      tintColor={accent.text}
       colors={[accent.hex]}
     />
   );

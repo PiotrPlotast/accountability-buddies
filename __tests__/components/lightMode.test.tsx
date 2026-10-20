@@ -10,8 +10,10 @@ import ToggleRow from "@/app/components/settings/ToggleRow";
 import TimePicker from "@/app/components/habits/TimePicker";
 import ProgressRing from "@/app/components/dashboard/ProgressRing";
 import PublicLayout from "@/app/(public)/_layout";
+import WelcomeScreen from "@/app/(public)/welcome";
 import { accentsFor } from "@/lib/accents";
 import { schemeColors } from "@/lib/colors";
+import { formatReminderTime } from "@/lib/reminderTime";
 
 import { setStubScheme } from "../test-utils/theme";
 
@@ -77,12 +79,32 @@ describe("in light mode", () => {
     );
   });
 
-  it("spins a busy button's indicator in the label colour", () => {
+  // The fill is the bright accent in both schemes, so whatever sits on it is
+  // the dark on-accent colour, never the (white) page colour.
+  it("spins a busy button's indicator in the on-accent colour", () => {
     const { getByTestId } = render(
       <PrimaryButton label="Save" onPress={jest.fn()} filled busy />,
     );
     expect(getByTestId("primary-button-spinner").props.color).toBe(
-      light.background,
+      light.onAccent,
+    );
+  });
+
+  it("draws accent-coloured text in the darker text shade", () => {
+    const { getByText } = render(<WelcomeScreen />);
+    expect(flat(getByText("tiny crew.").props.style).color).toBe(
+      lightAccent.text,
+    );
+    expect(lightAccent.text).not.toBe(lightAccent.hex);
+  });
+
+  it("writes Android's reminder time in the accent's text shade", () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    const { getByText } = render(
+      <TimePicker label="Reminder" value="08:30" onChange={jest.fn()} />,
+    );
+    expect(flat(getByText(formatReminderTime("08:30")).props.style).color).toBe(
+      lightAccent.text,
     );
   });
 
@@ -118,5 +140,42 @@ describe("in light mode", () => {
     expect(options.headerStyle.backgroundColor).toBe(light.background);
     expect(options.headerTintColor).toBe(light.text);
     expect(options.contentStyle.backgroundColor).toBe(light.background);
+  });
+});
+
+// `accent.hex` is a fill. In light mode it is the bright neon, which is
+// invisible as text on white, so text, icons, spinners and pull-to-refresh
+// tints take `accent.text`. A fresh `color: accent.hex` would look fine in
+// dark mode and vanish in light, so it is caught here instead.
+describe("accent colour as text", () => {
+  // No Node types in this project, so the two calls are typed by hand.
+  const fs = require("fs") as {
+    readdirSync(
+      dir: string,
+      opts: { withFileTypes: true },
+    ): { name: string; isDirectory(): boolean }[];
+    readFileSync(file: string, encoding: "utf8"): string;
+  };
+  const files: string[] = [];
+  const walk = (dir: string) =>
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+      const p = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(p);
+      else if (p.endsWith(".tsx")) files.push(p);
+    });
+  walk("app");
+
+  it("never paints text, icons or tints with the fill shade", () => {
+    const offenders = files.flatMap((file) =>
+      fs
+        .readFileSync(file, "utf8")
+        .split("\n")
+        .map((line, i) => ({ file, line, n: i + 1 }))
+        .filter(({ line }) =>
+          /(\bcolor(=\{|:\s)|tintColor=\{)[^\n]*accent\.hex/.test(line),
+        )
+        .map(({ file, n }) => `${file}:${n}`),
+    );
+    expect(offenders).toEqual([]);
   });
 });

@@ -49,26 +49,27 @@ describe.each(SCHEMES)("the %s palette's signal colours", (scheme) => {
   });
 });
 
-// Light mode is a warm paper, not a lamp: near-black on pure white (17.7:1)
-// was tiring to read. Body text stays far past AA, but under a glare
-// ceiling, and the cards keep an edge so they don't melt into the page.
-describe("the light palette's comfort", () => {
+// Light mode is plain white, page and cards alike, so the cards are told
+// apart by their outline alone.
+describe("the light palette", () => {
   const c = schemeColors.light;
 
-  it("keeps body text clear but short of glaring", () => {
-    const ratio = contrast(c.text, c.surface);
-    expect(ratio).toBeGreaterThanOrEqual(7);
-    expect(ratio).toBeLessThanOrEqual(15);
+  it("is white", () => {
+    expect(c.background).toBe("#FFFFFF");
+    expect(c.surface).toBe("#FFFFFF");
   });
 
-  it("is not pure white anywhere text sits", () => {
-    expect(c.background).not.toBe("#FFFFFF");
-    expect(c.surface).not.toBe("#FFFFFF");
+  it("gives a card a visible outline on the white page", () => {
+    expect(contrast(c.border, c.surface)).toBeGreaterThanOrEqual(1.2);
   });
+});
 
-  it("gives a card a visible edge against itself and the page", () => {
-    expect(contrast(c.border, c.surface)).toBeGreaterThanOrEqual(1.25);
-    expect(contrast(c.border, c.background)).toBeGreaterThanOrEqual(1.2);
+// Every accent fill is bright in both schemes, so the label on it is dark in
+// both: `text-bg` would turn white in light mode and vanish on neon.
+describe("onAccent", () => {
+  it("is the same dark label in both schemes", () => {
+    expect(schemeColors.light.onAccent).toBe(schemeColors.dark.onAccent);
+    expect(schemeColors.dark.onAccent).toBe(schemeColors.dark.background);
   });
 });
 
@@ -96,7 +97,16 @@ describe("cssVariables", () => {
   });
 
   it("themes the page, cards and text through variables", () => {
-    ["bg", "surface", "surface-2", "border", "text", "text-muted", "text-dim"]
+    [
+      "bg",
+      "surface",
+      "surface-2",
+      "border",
+      "text",
+      "text-muted",
+      "text-dim",
+      "on-accent",
+    ]
       .map((token) => tailwind.theme.extend.colors[token])
       .forEach((value) => expect(value).toMatch(/^var\(--/));
   });

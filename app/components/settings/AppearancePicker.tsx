@@ -40,7 +40,7 @@ export default function AppearancePicker() {
             style={selected ? { backgroundColor: accent.hex } : undefined}
           >
             <Text
-              className={`font-mono-medium text-sm ${selected ? "text-bg" : "text-text-muted"}`}
+              className={`font-mono-medium text-sm ${selected ? "text-on-accent" : "text-text-muted"}`}
             >
               {label}
             </Text>

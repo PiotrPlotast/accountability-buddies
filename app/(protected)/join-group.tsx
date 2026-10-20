@@ -232,9 +232,9 @@ export default function JoinGroupScreen() {
               }}
             >
               {loading ? (
-                <ActivityIndicator color={colors.background} />
+                <ActivityIndicator color={colors.onAccent} />
               ) : (
-                <Text className="text-bg font-mono-bold">
+                <Text className="text-on-accent font-mono-bold">
                   {isJoin ? "Join group" : "Create group"}
                 </Text>
               )}
@@ -249,7 +249,7 @@ export default function JoinGroupScreen() {
           >
             <Text
               className="font-mono-medium text-sm"
-              style={{ color: accent.hex }}
+              style={{ color: accent.text }}
             >
               {isJoin
                 ? "No code? Create a new group"

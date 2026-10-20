@@ -4,7 +4,7 @@ import { useTheme } from "@/hooks/useTheme";
 type Props = {
   label: string;
   onPress: () => void;
-  // The form has what it needs: the accent fill and a `text-bg` label. Unfilled is
+  // The form has what it needs: the accent fill and a `text-on-accent` label. Unfilled is
   // the grey `surface` tile with a dim label, and can't be pressed.
   filled: boolean;
   // A request is in flight. The fill stays (the `bg`-coloured spinner needs it) rather
@@ -48,12 +48,12 @@ export default function PrimaryButton({
       {busy ? (
         <ActivityIndicator
           testID="primary-button-spinner"
-          color={colors.background}
+          color={colors.onAccent}
         />
       ) : (
         <Text
           className={`font-mono-bold ${smallLabel ? "" : "text-base"} ${
-            filled ? "text-bg" : "text-text-dim"
+            filled ? "text-on-accent" : "text-text-dim"
           }`}
         >
           {label}

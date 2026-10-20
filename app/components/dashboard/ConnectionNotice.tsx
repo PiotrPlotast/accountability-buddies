@@ -52,7 +52,7 @@ export function OfflineRetry({ onRetry, retrying }: RetryProps) {
         className="mt-6 h-12 px-8 rounded-tile border items-center justify-center"
       >
         <Text
-          style={{ color: accent.hex }}
+          style={{ color: accent.text }}
           className="font-mono-medium text-sm"
         >
           {retrying ? "Retrying…" : "Retry"}

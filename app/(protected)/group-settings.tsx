@@ -111,7 +111,7 @@ export default function GroupSettingsScreen() {
           >
             <Text
               className="font-mono-medium text-base"
-              style={{ color: canSave ? accent.hex : colors.textDim }}
+              style={{ color: canSave ? accent.text : colors.textDim }}
             >
               {updateGroup.isPending ? "..." : "Save"}
             </Text>
@@ -200,7 +200,7 @@ export default function GroupSettingsScreen() {
                 }}
               >
                 {active ? (
-                  <Text className="text-bg font-mono-bold">✓</Text>
+                  <Text className="text-on-accent font-mono-bold">✓</Text>
                 ) : null}
               </Pressable>
             );

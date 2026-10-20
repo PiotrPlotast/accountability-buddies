@@ -46,7 +46,7 @@ export default function Heatmap({ userId }: Props) {
         accessibilityRole="progressbar"
         accessibilityLabel="Loading activity"
       >
-        <ActivityIndicator color={accent.hex} />
+        <ActivityIndicator color={accent.text} />
       </View>
     );
   }

@@ -87,7 +87,7 @@ export default function GoalCheckbox({
   return (
     <Reanimated.View style={[CHECKBOX_BASE, animatedStyle]}>
       {done ? (
-        <Text className="text-bg font-mono-bold text-base">✓</Text>
+        <Text className="text-on-accent font-mono-bold text-base">✓</Text>
       ) : icon ? (
         <Text style={{ fontSize: 18 }}>{icon}</Text>
       ) : null}

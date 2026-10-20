@@ -13,32 +13,49 @@ describe("accentsFor", () => {
     );
   });
 
-  it("keeps today's dark accents exactly as they were", () => {
+  it("keeps today's dark neon exactly as it was", () => {
     expect(accentsFor("dark")[0]).toEqual({
       id: "neon",
       hex: "#C6F94A",
+      text: "#C6F94A",
       dim: "#8FB732",
       shades: ["#1E1E21", "#3A5F10", "#6E9E22", "#C6F94A"],
     });
   });
 
-  it("gives light mode its own shade of each accent", () => {
+  // The accent is the app's identity: light mode fills with the same colour,
+  // and only text drawn in it goes darker.
+  it("fills with the same accent in light mode as in dark", () => {
     const dark = accentsFor("dark");
     accentsFor("light").forEach((accent, i) => {
-      expect(accent.hex).not.toBe(dark[i].hex);
+      expect(accent.hex).toBe(dark[i].hex);
+      expect(accent.dim).toBe(dark[i].dim);
     });
+  });
+
+  it("draws text in the fill colour itself in dark mode", () => {
+    accentsFor("dark").forEach((a) => expect(a.text).toBe(a.hex));
   });
 });
 
-// The accent is a fill under `text-bg` labels (buttons, the checkbox's tick,
-// the active tab), and the heatmap's steps, in the scheme it is drawn in.
+// The accent is a fill under `text-on-accent` labels (buttons, the checkbox's
+// tick, the active tab), and the heatmap's steps, in the scheme it is drawn in.
 describe.each(SCHEMES)("%s accents", (scheme) => {
   const c = schemeColors[scheme];
 
   it.each(accentsFor(scheme).map((a) => [a.id, a] as const))(
-    "%s carries a text-bg label at 4.5:1",
+    "%s carries a text-on-accent label at 4.5:1",
     (_, accent) => {
-      expect(contrast(c.background, accent.hex)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(c.onAccent, accent.hex)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  // Group settings' Save, the welcome headline, the Android time.
+  it.each(accentsFor(scheme).map((a) => [a.id, a] as const))(
+    "%s reads at 4.5:1 as text on a card and on the page",
+    (_, accent) => {
+      expect(contrast(accent.text, c.surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(accent.text, c.background)).toBeGreaterThanOrEqual(4.5);
     },
   );
 
@@ -52,7 +69,6 @@ describe.each(SCHEMES)("%s accents", (scheme) => {
       for (let i = 1; i < distance.length; i++) {
         expect(distance[i]).toBeGreaterThan(distance[i - 1]);
       }
-      expect(accent.shades[3]).toBe(accent.hex);
     },
   );
 
@@ -60,19 +76,6 @@ describe.each(SCHEMES)("%s accents", (scheme) => {
   it("draws an empty heatmap cell apart from the card", () => {
     accentsFor(scheme).forEach((a) => expect(a.shades[0]).not.toBe(c.surface));
   });
-});
-
-// The accent is text in places (group settings' Save, the Android time).
-describe.each(SCHEMES)("%s accents as text", (scheme) => {
-  const c = schemeColors[scheme];
-
-  it.each(accentsFor(scheme).map((a) => [a.id, a] as const))(
-    "%s reads at 4.5:1 on a card and on the page",
-    (_, accent) => {
-      expect(contrast(accent.hex, c.surface)).toBeGreaterThanOrEqual(4.5);
-      expect(contrast(accent.hex, c.background)).toBeGreaterThanOrEqual(4.5);
-    },
-  );
 });
 
 describe("isAccentId", () => {

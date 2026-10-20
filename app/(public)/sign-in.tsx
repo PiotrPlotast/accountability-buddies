@@ -88,7 +88,7 @@ export default function Page() {
           </Text>
           <Text
             className="font-mono-medium text-sm"
-            style={{ color: accent.hex }}
+            style={{ color: accent.text }}
             onPress={() => router.replace("/sign-up")}
             accessibilityRole="link"
           >

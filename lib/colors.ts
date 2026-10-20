@@ -18,6 +18,9 @@ export type ThemeColors = {
   textDim: string; // text-dim
   danger: string; // danger
   warning: string; // warning
+  // A label on an accent fill. Every accent is bright, so it is dark in both
+  // schemes; `text-bg` would turn white in light mode and vanish on neon.
+  onAccent: string; // on-accent
   // Behind a dialog. Not a Tailwind token: only DialogShell paints it.
   backdrop: string;
 };
@@ -34,27 +37,28 @@ const dark: ThemeColors = {
   // 5.4:1 on surface; #EF4444 was 4.0:1, short of AA for "Leave group".
   danger: "#F87171",
   warning: "#FACC15",
+  onAccent: "#18181B",
   backdrop: "rgba(0,0,0,0.7)",
 };
 
-// Warm paper rather than a lamp: near-black on pure white (17.7:1) was tiring
-// to read, so the page and cards are a warm off-white and the text charcoal,
-// 13.5:1 on a card. Borders are a step darker so cards keep an edge on a page
-// this close to them. Signal colours are a step darker than their dark-mode
-// twins so that they still read as text, and still carry a `text-bg` label on
-// a swipe tile.
+// Plain white, page and cards alike: cards are told apart by their outline.
+// The accents fill with the same bright colour as in dark mode (see
+// `lib/accents.ts`), so the label on a fill stays dark. Signal colours are a
+// step darker than their dark-mode twins so that they still read as text,
+// and still carry a `text-bg` label on a swipe tile.
 const light: ThemeColors = {
-  background: "#F1F0EE",
-  surface: "#F9F8F6",
-  // A switch's off track, a missed day's dot: has to show on a card.
-  surface2: "#E2DFDA",
-  border: "#D9D6D0",
-  text: "#2A2A2E",
-  textMuted: "#55555C",
-  // 5.1:1 on surface, 4.7:1 on bg.
-  textDim: "#6A6A72",
-  danger: "#B91C1C",
-  warning: "#92400E",
+  background: "#FFFFFF",
+  surface: "#FFFFFF",
+  // A switch's off track, a missed day's dot: has to show on a white card.
+  surface2: "#E4E4E7",
+  border: "#E4E4E7",
+  text: "#18181B",
+  textMuted: "#52525B",
+  // 4.8:1 on white.
+  textDim: "#71717A",
+  danger: "#DC2626",
+  warning: "#B45309",
+  onAccent: "#18181B",
   backdrop: "rgba(0,0,0,0.4)",
 };
 
@@ -71,6 +75,7 @@ const CSS_VARIABLES: Record<Exclude<keyof ThemeColors, "backdrop">, string> = {
   textDim: "--color-text-dim",
   danger: "--color-danger",
   warning: "--color-warning",
+  onAccent: "--color-on-accent",
 };
 
 export function cssVariables(colors: ThemeColors): Record<string, string> {

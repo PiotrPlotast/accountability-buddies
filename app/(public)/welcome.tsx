@@ -18,7 +18,7 @@ export default function Page() {
             style={{ fontSize: 40, lineHeight: 44 }}
           >
             Start a{"\n"}
-            <Text style={{ color: accent.hex }}>tiny crew.</Text>
+            <Text style={{ color: accent.text }}>tiny crew.</Text>
           </Text>
           <Text className="text-text-muted font-mono text-base mt-4">
             Stay accountable with your closest friends. Share streaks, ditch the
@@ -33,7 +33,9 @@ export default function Page() {
             onPress={() => router.push("/sign-up")}
             accessibilityRole="button"
           >
-            <Text className="text-bg font-mono-bold">Create account</Text>
+            <Text className="text-on-accent font-mono-bold">
+              Create account
+            </Text>
           </Pressable>
           <Pressable
             className="h-14 rounded-tile items-center justify-center bg-surface border border-border"

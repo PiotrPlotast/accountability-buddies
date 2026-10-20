@@ -4,106 +4,99 @@ export type AccentId = "neon" | "blue" | "purple" | "orange" | "pink" | "teal";
 
 export type Accent = {
   id: AccentId;
+  // The fill: buttons, the checkbox, the active tab, the ring, the week dots.
+  // Whatever sits on it is `onAccent` (`text-on-accent`).
   hex: string;
+  // The accent drawn as text, an icon, a spinner or a tint. The fill itself in
+  // dark mode; a darker shade in light mode, where the bright fill is
+  // unreadable on white.
+  text: string;
   // A Switch's "on" track, under a thumb painted `hex`.
   dim: string;
-  // The heatmap's steps: empty, then a little, more, all done (`hex`).
+  // The heatmap's steps: empty, then a little, more, all done.
   shades: [string, string, string, string];
 };
 
-type Shade = Omit<Accent, "id">;
+type Fill = Pick<Accent, "hex" | "dim">;
+type Scheme = Pick<Accent, "text" | "shades">;
 
-// The stored choice is an id, so every accent exists in both schemes. The
-// dark shades are the originals, but purple, a step lighter: #B45EFF was
-// 4.3:1 as text on a dark card. The light ones are Tailwind 700s (neon an
-// 800, the 700 is 4.4:1 under a label on the warm page), dark enough to read
-// as text and to carry a `text-bg` label; the switch track is the 300, and the
-// heatmap climbs 300 → 500 → 700 off a pale empty cell, so more done always
-// looks darker.
-const ACCENTS: { id: AccentId; dark: Shade; light: Shade }[] = [
+// The stored choice is an id, so every accent exists in both schemes, and it
+// fills with the same bright colour in both: it is the app's identity. Purple
+// is a step lighter than it first was, since #B45EFF was 4.3:1 as text on a
+// dark card. In light mode only the text shade changes, a Tailwind 700 that
+// reads on white, and the heatmap climbs 200 → 400 → 600 off a pale empty
+// cell, so more done always looks darker.
+const ACCENTS: {
+  id: AccentId;
+  fill: Fill;
+  dark: Pick<Accent, "shades">;
+  light: Scheme;
+}[] = [
   {
     id: "neon",
-    dark: {
-      hex: "#C6F94A",
-      dim: "#8FB732",
-      shades: ["#1E1E21", "#3A5F10", "#6E9E22", "#C6F94A"],
-    },
+    fill: { hex: "#C6F94A", dim: "#8FB732" },
+    dark: { shades: ["#1E1E21", "#3A5F10", "#6E9E22", "#C6F94A"] },
     light: {
-      hex: "#3F6212",
-      dim: "#BEF264",
-      shades: ["#E8E6E2", "#BEF264", "#84CC16", "#3F6212"],
+      text: "#4D7C0F",
+      shades: ["#F4F4F5", "#D9F99D", "#A3E635", "#65A30D"],
     },
   },
   {
     id: "blue",
-    dark: {
-      hex: "#4AB8F9",
-      dim: "#2E7AB7",
-      shades: ["#1E1E21", "#103040", "#1F6F9E", "#4AB8F9"],
-    },
+    fill: { hex: "#4AB8F9", dim: "#2E7AB7" },
+    dark: { shades: ["#1E1E21", "#103040", "#1F6F9E", "#4AB8F9"] },
     light: {
-      hex: "#0369A1",
-      dim: "#7DD3FC",
-      shades: ["#E8E6E2", "#7DD3FC", "#0EA5E9", "#0369A1"],
+      text: "#0369A1",
+      shades: ["#F4F4F5", "#BAE6FD", "#38BDF8", "#0284C7"],
     },
   },
   {
     id: "purple",
-    dark: {
-      hex: "#C084FC",
-      dim: "#7E3FB3",
-      shades: ["#1E1E21", "#3A1F4F", "#7E3FB3", "#C084FC"],
-    },
+    fill: { hex: "#C084FC", dim: "#7E3FB3" },
+    dark: { shades: ["#1E1E21", "#3A1F4F", "#7E3FB3", "#C084FC"] },
     light: {
-      hex: "#7E22CE",
-      dim: "#D8B4FE",
-      shades: ["#E8E6E2", "#D8B4FE", "#A855F7", "#7E22CE"],
+      text: "#7E22CE",
+      shades: ["#F4F4F5", "#E9D5FF", "#C084FC", "#9333EA"],
     },
   },
   {
     id: "orange",
-    dark: {
-      hex: "#FF8A3D",
-      dim: "#B85F25",
-      shades: ["#1E1E21", "#4F2A11", "#B85F25", "#FF8A3D"],
-    },
+    fill: { hex: "#FF8A3D", dim: "#B85F25" },
+    dark: { shades: ["#1E1E21", "#4F2A11", "#B85F25", "#FF8A3D"] },
     light: {
-      hex: "#C2410C",
-      dim: "#FDBA74",
-      shades: ["#E8E6E2", "#FDBA74", "#F97316", "#C2410C"],
+      text: "#C2410C",
+      shades: ["#F4F4F5", "#FED7AA", "#FB923C", "#EA580C"],
     },
   },
   {
     id: "pink",
-    dark: {
-      hex: "#FF5E9C",
-      dim: "#B73F70",
-      shades: ["#1E1E21", "#4F1E33", "#B73F70", "#FF5E9C"],
-    },
+    fill: { hex: "#FF5E9C", dim: "#B73F70" },
+    dark: { shades: ["#1E1E21", "#4F1E33", "#B73F70", "#FF5E9C"] },
     light: {
-      hex: "#BE185D",
-      dim: "#F9A8D4",
-      shades: ["#E8E6E2", "#F9A8D4", "#EC4899", "#BE185D"],
+      text: "#BE185D",
+      shades: ["#F4F4F5", "#FBCFE8", "#F472B6", "#DB2777"],
     },
   },
   {
     id: "teal",
-    dark: {
-      hex: "#3DD9C5",
-      dim: "#1F8E80",
-      shades: ["#1E1E21", "#103E38", "#1F8E80", "#3DD9C5"],
-    },
+    fill: { hex: "#3DD9C5", dim: "#1F8E80" },
+    dark: { shades: ["#1E1E21", "#103E38", "#1F8E80", "#3DD9C5"] },
     light: {
-      hex: "#0F766E",
-      dim: "#5EEAD4",
-      shades: ["#E8E6E2", "#5EEAD4", "#14B8A6", "#0F766E"],
+      text: "#0F766E",
+      shades: ["#F4F4F5", "#99F6E4", "#2DD4BF", "#0D9488"],
     },
   },
 ];
 
 const BY_SCHEME: Record<ColorScheme, Accent[]> = {
-  dark: ACCENTS.map(({ id, dark }) => ({ id, ...dark })),
-  light: ACCENTS.map(({ id, light }) => ({ id, ...light })),
+  dark: ACCENTS.map(({ id, fill, dark }) => ({
+    id,
+    hex: fill.hex,
+    text: fill.hex,
+    dim: fill.dim,
+    ...dark,
+  })),
+  light: ACCENTS.map(({ id, fill, light }) => ({ id, ...fill, ...light })),
 };
 
 export const accentsFor = (scheme: ColorScheme): Accent[] => BY_SCHEME[scheme];

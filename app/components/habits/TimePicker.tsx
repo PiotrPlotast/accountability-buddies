@@ -73,7 +73,7 @@ export default function TimePicker({
         >
           <Text
             className="font-mono-medium text-base"
-            style={{ color: accent.hex }}
+            style={{ color: accent.text }}
           >
             {formatReminderTime(value)}
           </Text>
