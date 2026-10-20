@@ -62,12 +62,11 @@ describe.each(SCHEMES)("%s accents", (scheme) => {
   });
 });
 
-// Dark purple predates this check at 4.3:1 on a dark card, so it holds the
-// light accents to the line without moving the dark ones.
-describe("light accents as text", () => {
-  const c = schemeColors.light;
+// The accent is text in places (group settings' Save, the Android time).
+describe.each(SCHEMES)("%s accents as text", (scheme) => {
+  const c = schemeColors[scheme];
 
-  it.each(accentsFor("light").map((a) => [a.id, a] as const))(
+  it.each(accentsFor(scheme).map((a) => [a.id, a] as const))(
     "%s reads at 4.5:1 on a card and on the page",
     (_, accent) => {
       expect(contrast(accent.hex, c.surface)).toBeGreaterThanOrEqual(4.5);

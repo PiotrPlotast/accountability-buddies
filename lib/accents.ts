@@ -14,10 +14,12 @@ export type Accent = {
 type Shade = Omit<Accent, "id">;
 
 // The stored choice is an id, so every accent exists in both schemes. The
-// dark shades are the originals. The light ones are Tailwind 700s, dark
-// enough to read as text on white and to carry a `text-bg` label; the switch
-// track is the 300, and the heatmap climbs 300 → 500 → 700 off a grey empty
-// cell, so more done always looks darker.
+// dark shades are the originals, but purple, a step lighter: #B45EFF was
+// 4.3:1 as text on a dark card. The light ones are Tailwind 700s (neon an
+// 800, the 700 is 4.4:1 under a label on the warm page), dark enough to read
+// as text and to carry a `text-bg` label; the switch track is the 300, and the
+// heatmap climbs 300 → 500 → 700 off a pale empty cell, so more done always
+// looks darker.
 const ACCENTS: { id: AccentId; dark: Shade; light: Shade }[] = [
   {
     id: "neon",
@@ -27,9 +29,9 @@ const ACCENTS: { id: AccentId; dark: Shade; light: Shade }[] = [
       shades: ["#1E1E21", "#3A5F10", "#6E9E22", "#C6F94A"],
     },
     light: {
-      hex: "#4D7C0F",
+      hex: "#3F6212",
       dim: "#BEF264",
-      shades: ["#E4E4E7", "#BEF264", "#84CC16", "#4D7C0F"],
+      shades: ["#E8E6E2", "#BEF264", "#84CC16", "#3F6212"],
     },
   },
   {
@@ -42,20 +44,20 @@ const ACCENTS: { id: AccentId; dark: Shade; light: Shade }[] = [
     light: {
       hex: "#0369A1",
       dim: "#7DD3FC",
-      shades: ["#E4E4E7", "#7DD3FC", "#0EA5E9", "#0369A1"],
+      shades: ["#E8E6E2", "#7DD3FC", "#0EA5E9", "#0369A1"],
     },
   },
   {
     id: "purple",
     dark: {
-      hex: "#B45EFF",
+      hex: "#C084FC",
       dim: "#7E3FB3",
-      shades: ["#1E1E21", "#3A1F4F", "#7E3FB3", "#B45EFF"],
+      shades: ["#1E1E21", "#3A1F4F", "#7E3FB3", "#C084FC"],
     },
     light: {
       hex: "#7E22CE",
       dim: "#D8B4FE",
-      shades: ["#E4E4E7", "#D8B4FE", "#A855F7", "#7E22CE"],
+      shades: ["#E8E6E2", "#D8B4FE", "#A855F7", "#7E22CE"],
     },
   },
   {
@@ -68,7 +70,7 @@ const ACCENTS: { id: AccentId; dark: Shade; light: Shade }[] = [
     light: {
       hex: "#C2410C",
       dim: "#FDBA74",
-      shades: ["#E4E4E7", "#FDBA74", "#F97316", "#C2410C"],
+      shades: ["#E8E6E2", "#FDBA74", "#F97316", "#C2410C"],
     },
   },
   {
@@ -81,7 +83,7 @@ const ACCENTS: { id: AccentId; dark: Shade; light: Shade }[] = [
     light: {
       hex: "#BE185D",
       dim: "#F9A8D4",
-      shades: ["#E4E4E7", "#F9A8D4", "#EC4899", "#BE185D"],
+      shades: ["#E8E6E2", "#F9A8D4", "#EC4899", "#BE185D"],
     },
   },
   {
@@ -94,7 +96,7 @@ const ACCENTS: { id: AccentId; dark: Shade; light: Shade }[] = [
     light: {
       hex: "#0F766E",
       dim: "#5EEAD4",
-      shades: ["#E4E4E7", "#5EEAD4", "#14B8A6", "#0F766E"],
+      shades: ["#E8E6E2", "#5EEAD4", "#14B8A6", "#0F766E"],
     },
   },
 ];

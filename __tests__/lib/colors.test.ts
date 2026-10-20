@@ -31,22 +31,44 @@ describe.each(SCHEMES)("the %s palette", (scheme) => {
   });
 });
 
-// The dark palette predates these checks — its danger red is 4.0:1 on
-// `surface` — so they hold the new palette to the line without moving the old.
-describe("the light palette's signal colours", () => {
-  const c = schemeColors.light;
+// Danger is text on a card (Leave group, Delete account) and a swipe tile
+// under a `text-bg` label; warning is only ever the tile.
+describe.each(SCHEMES)("the %s palette's signal colours", (scheme) => {
+  const c = schemeColors[scheme];
 
   it("reads danger text at 4.5:1 on bg and surface", () => {
     expect(contrast(c.danger, c.background)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(c.danger, c.surface)).toBeGreaterThanOrEqual(4.5);
   });
 
-  // Swipe tiles label themselves `text-bg` on a danger or warning fill.
   it.each([
     ["danger", c.danger],
     ["warning", c.warning],
   ])("reads a text-bg label at 4.5:1 on a %s tile", (_, fill) => {
     expect(contrast(c.background, fill)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+// Light mode is a warm paper, not a lamp: near-black on pure white (17.7:1)
+// was tiring to read. Body text stays far past AA, but under a glare
+// ceiling, and the cards keep an edge so they don't melt into the page.
+describe("the light palette's comfort", () => {
+  const c = schemeColors.light;
+
+  it("keeps body text clear but short of glaring", () => {
+    const ratio = contrast(c.text, c.surface);
+    expect(ratio).toBeGreaterThanOrEqual(7);
+    expect(ratio).toBeLessThanOrEqual(15);
+  });
+
+  it("is not pure white anywhere text sits", () => {
+    expect(c.background).not.toBe("#FFFFFF");
+    expect(c.surface).not.toBe("#FFFFFF");
+  });
+
+  it("gives a card a visible edge against itself and the page", () => {
+    expect(contrast(c.border, c.surface)).toBeGreaterThanOrEqual(1.25);
+    expect(contrast(c.border, c.background)).toBeGreaterThanOrEqual(1.2);
   });
 });
 

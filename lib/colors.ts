@@ -31,26 +31,30 @@ const dark: ThemeColors = {
   textMuted: "#9CA3AF",
   // 4.7:1 on surface, 5.6:1 on bg.
   textDim: "#8A919E",
-  danger: "#EF4444",
+  // 5.4:1 on surface; #EF4444 was 4.0:1, short of AA for "Leave group".
+  danger: "#F87171",
   warning: "#FACC15",
   backdrop: "rgba(0,0,0,0.7)",
 };
 
-// The zinc scale mirrored: an off-white page with white cards. Signal colours
-// are a step darker than their dark-mode twins so that they still read as
-// text, and still carry a `text-bg` label on a swipe tile.
+// Warm paper rather than a lamp: near-black on pure white (17.7:1) was tiring
+// to read, so the page and cards are a warm off-white and the text charcoal,
+// 13.5:1 on a card. Borders are a step darker so cards keep an edge on a page
+// this close to them. Signal colours are a step darker than their dark-mode
+// twins so that they still read as text, and still carry a `text-bg` label on
+// a swipe tile.
 const light: ThemeColors = {
-  background: "#FAFAFA",
-  surface: "#FFFFFF",
-  // A switch's off track, a missed day's dot: has to show on a white card.
-  surface2: "#E4E4E7",
-  border: "#E4E4E7",
-  text: "#18181B",
-  textMuted: "#52525B",
-  // 4.8:1 on surface, 4.6:1 on bg.
-  textDim: "#71717A",
-  danger: "#DC2626",
-  warning: "#B45309",
+  background: "#F1F0EE",
+  surface: "#F9F8F6",
+  // A switch's off track, a missed day's dot: has to show on a card.
+  surface2: "#E2DFDA",
+  border: "#D9D6D0",
+  text: "#2A2A2E",
+  textMuted: "#55555C",
+  // 5.1:1 on surface, 4.7:1 on bg.
+  textDim: "#6A6A72",
+  danger: "#B91C1C",
+  warning: "#92400E",
   backdrop: "rgba(0,0,0,0.4)",
 };
 
