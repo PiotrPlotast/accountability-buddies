@@ -46,8 +46,8 @@ export const TOUR_SLIDES: readonly TourSlide[] = [
   {
     id: "streak",
     title: "Keep the streak alive",
-    body: "Your group's streak grows on every day that everyone finishes what's due. Invite friends with your group's code, then join a group or start your own.",
-    hint: "Try it: finish today and watch the streak go up.",
+    body: "Your group's streak grows on every day that everyone ticks at least one habit that's due. Invite friends with your group's code, then join a group or start your own.",
+    hint: "Try it: tick a habit and watch the streak go up.",
   },
 ];
 

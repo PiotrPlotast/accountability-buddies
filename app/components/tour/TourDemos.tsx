@@ -18,7 +18,7 @@ import {
   toggleDone,
   toggleUndone,
 } from "@/lib/haptics";
-import { isDayComplete } from "@/lib/isDayComplete";
+import { countsForStreak } from "@/lib/isDayComplete";
 import { firstName, habitNudgeMessage } from "@/lib/nudge";
 import { DEFAULT_REMINDER_TIME, formatReminderTime } from "@/lib/reminderTime";
 import { filterGoalsForToday } from "@/lib/repeatDays";
@@ -327,9 +327,9 @@ function RemindersDemo() {
 function StreakDemo() {
   const { today, goals, setGoals, reset } = useSampleGoals();
   const { accent } = useTheme();
-  // Derived, the way the server takes a day back when its closing tick is
-  // undone: finishing the sample day adds one, unticking removes it again.
-  const streak = DEMO_STREAK + (isDayComplete(goals) ? 1 : 0);
+  // Derived, the way the server takes a day back when its last tick is
+  // undone: the first ticked habit adds one, unticking them all removes it.
+  const streak = DEMO_STREAK + (countsForStreak(goals) ? 1 : 0);
 
   return (
     <View>

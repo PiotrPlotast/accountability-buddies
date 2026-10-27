@@ -1,4 +1,4 @@
-import { isDayComplete } from "@/lib/isDayComplete";
+import { countsForStreak, isDayComplete } from "@/lib/isDayComplete";
 import { getTodayDayIndex } from "@/lib/repeatDays";
 import { Goal } from "@/types/dashboardTypes";
 
@@ -59,5 +59,46 @@ describe("isDayComplete", () => {
   it("is false when nothing is scheduled for today", () => {
     expect(isDayComplete([])).toBe(false);
     expect(isDayComplete([goal({ repeat_days: [notToday] })])).toBe(false);
+  });
+});
+
+describe("countsForStreak", () => {
+  it("is true once one goal scheduled for today is done", () => {
+    expect(
+      countsForStreak([
+        goal({ id: "a", completed_today: true }),
+        goal({ id: "b", completed_today: false }),
+      ]),
+    ).toBe(true);
+  });
+
+  it("is false while nothing scheduled for today is done", () => {
+    expect(
+      countsForStreak([
+        goal({ id: "a", completed_today: false }),
+        goal({ id: "b", completed_today: false }),
+      ]),
+    ).toBe(false);
+  });
+
+  // The server agrees: a tick on a habit that isn't due doesn't keep the
+  // streak (supabase/tests/group_streak.sql, case 1b).
+  it("ignores a done goal that is not scheduled for today", () => {
+    expect(
+      countsForStreak([
+        goal({ id: "a", completed_today: false }),
+        goal({ id: "b", completed_today: true, repeat_days: [notToday] }),
+      ]),
+    ).toBe(false);
+  });
+
+  it("treats an empty repeat_days as due every day", () => {
+    expect(
+      countsForStreak([goal({ repeat_days: [], completed_today: true })]),
+    ).toBe(true);
+  });
+
+  it("is false when nothing is scheduled for today", () => {
+    expect(countsForStreak([])).toBe(false);
   });
 });
