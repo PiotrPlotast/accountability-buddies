@@ -312,15 +312,29 @@ describe("Tour demos", () => {
     ).toBeTruthy();
   });
 
-  it("streak: closing the sample day moves the group streak up one", () => {
+  it("streak: one ticked habit moves the group streak up one, and only one", () => {
     const utils = renderTour();
     goToSlide(utils, "streak");
     expect(utils.getByLabelText("Group streak, 4 days")).toBeTruthy();
 
     fireEvent.press(utils.getByLabelText("Read 10 pages"));
-    fireEvent.press(utils.getByLabelText("Go for a run"));
-
     expect(utils.getByLabelText("Group streak, 5 days")).toBeTruthy();
+
+    fireEvent.press(utils.getByLabelText("Go for a run"));
+    expect(utils.getByLabelText("Group streak, 5 days")).toBeTruthy();
+  });
+
+  it("streak: unticking the last ticked habit takes the day back", () => {
+    const utils = renderTour();
+    goToSlide(utils, "streak");
+
+    fireEvent.press(utils.getByLabelText("Read 10 pages"));
+    fireEvent.press(utils.getByLabelText("Go for a run"));
+    fireEvent.press(utils.getByLabelText("Read 10 pages"));
+    expect(utils.getByLabelText("Group streak, 5 days")).toBeTruthy();
+
+    fireEvent.press(utils.getByLabelText("Go for a run"));
+    expect(utils.getByLabelText("Group streak, 4 days")).toBeTruthy();
   });
 
   it("saves nothing a demo did", async () => {

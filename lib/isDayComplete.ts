@@ -18,3 +18,11 @@ export function isDayComplete(goals: DayCompletable[]): boolean {
   if (dueToday.length === 0) return false;
   return dueToday.every((goal) => goal.completed_today);
 }
+
+// Dzień, który liczy się do serii grupy — wystarczy jeden dzisiejszy nawyk
+// odhaczony. Łagodniejsze niż `isDayComplete`: świętowanie i `buddy_done` dalej
+// czekają na wszystkie. Po stronie SQL to `group_day_counts`, która żąda tego
+// od każdego członka grupy, który ma coś na dziś.
+export function countsForStreak(goals: DayCompletable[]): boolean {
+  return filterGoalsForToday(goals).some((goal) => goal.completed_today);
+}

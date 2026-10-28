@@ -1,8 +1,10 @@
--- Group streak rule (2026-10-05): the streak counts a day only when every
--- habit due that day, for every member of the group, has been ticked — the
--- SQL side of `lib/isDayComplete.ts`. Members with nothing due are skipped, a
--- day on which nobody has anything due neither counts nor breaks the streak,
--- and unticking the check-in that closed the day takes the day back.
+-- Group streak rule (2026-10-27): the streak counts a day once every member
+-- with something due that day has ticked at least one of their due habits.
+-- Members with nothing due are skipped, a tick on a habit that isn't due that
+-- day doesn't count, a day on which nobody has anything due neither counts nor
+-- breaks the streak, and unticking the check-in that made the day count takes
+-- the day back. (Before 2026-10-27 every due habit had to be ticked — the rule
+-- `lib/isDayComplete.ts` still uses for the celebration and `buddy_done`.)
 --
 -- Run against a database with every migration applied (e.g. `supabase start`):
 --   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/group_streak.sql
@@ -57,16 +59,31 @@ begin
   end if;
 end $$;
 
--- 1. One tick is not a closed day: every habit due today has to be ticked.
+-- 1. One due habit ticked per member counts the day; the rest can stay
+--    unticked. Every member with something due has to tick one.
 do $$
 declare g uuid := pg_temp.mk_group(); a uuid := pg_temp.mk_member(g); b uuid := pg_temp.mk_member(g);
         a_run uuid := pg_temp.mk_goal(a, g); a_read uuid := pg_temp.mk_goal(a, g); b_run uuid := pg_temp.mk_goal(b, g);
 begin
   perform pg_temp.tick(a_run, '2026-10-05');
+  perform pg_temp.expect(g, 0, null, 'a member with nothing ticked holds the day open');
   perform pg_temp.tick(b_run, '2026-10-05');
-  perform pg_temp.expect(g, 0, null, 'partial day does not count');
+  perform pg_temp.expect(g, 1, '2026-10-05', 'one habit each counts the day');
   perform pg_temp.tick(a_read, '2026-10-05');
-  perform pg_temp.expect(g, 1, '2026-10-05', 'last due habit closes the day');
+  perform pg_temp.expect(g, 1, '2026-10-05', 'a second habit does not count the day twice');
+end $$;
+
+-- 1b. A tick on a habit that isn't due doesn't stand in for a due one.
+do $$
+declare g uuid := pg_temp.mk_group(); a uuid := pg_temp.mk_member(g); b uuid := pg_temp.mk_member(g);
+        a_run uuid := pg_temp.mk_goal(a, g); b_run uuid := pg_temp.mk_goal(b, g);
+        b_gym uuid := pg_temp.mk_goal(b, g, array[2]); -- Wednesday only
+begin
+  perform pg_temp.tick(a_run, '2026-10-05');
+  perform pg_temp.tick(b_gym, '2026-10-05');
+  perform pg_temp.expect(g, 0, null, 'not-due tick does not count');
+  perform pg_temp.tick(b_run, '2026-10-05');
+  perform pg_temp.expect(g, 1, '2026-10-05', 'due tick counts');
 end $$;
 
 -- 2. A member with nothing due today is skipped, not waited for.
@@ -126,7 +143,7 @@ begin
   perform pg_temp.expect(g, 1, '2026-10-05', 'goal-less member skipped');
 end $$;
 
--- 8. Unticking the check-in that closed the day takes the day back, to the
+-- 8. Unticking the check-in that counted the day takes the day back, to the
 --    exact state before it; ticking again counts it once more.
 do $$
 declare g uuid := pg_temp.mk_group(3, '2026-10-04'); a uuid := pg_temp.mk_member(g);
@@ -138,6 +155,21 @@ begin
   perform pg_temp.expect(g, 3, '2026-10-04', 'untick: taken back');
   perform pg_temp.tick(a_run, '2026-10-05');
   perform pg_temp.expect(g, 4, '2026-10-05', 'untick: re-ticked');
+end $$;
+
+-- 8b. With two habits ticked, unticking one leaves the day counted; unticking
+--     the last one takes it back.
+do $$
+declare g uuid := pg_temp.mk_group(3, '2026-10-04'); a uuid := pg_temp.mk_member(g);
+        a_run uuid := pg_temp.mk_goal(a, g); a_read uuid := pg_temp.mk_goal(a, g);
+begin
+  perform pg_temp.tick(a_run, '2026-10-05');
+  perform pg_temp.tick(a_read, '2026-10-05');
+  perform pg_temp.expect(g, 4, '2026-10-05', 'two ticks: counted once');
+  perform pg_temp.untick(a_run, '2026-10-05');
+  perform pg_temp.expect(g, 4, '2026-10-05', 'one tick left: still counted');
+  perform pg_temp.untick(a_read, '2026-10-05');
+  perform pg_temp.expect(g, 3, '2026-10-04', 'last tick gone: taken back');
 end $$;
 
 -- 9. Taking back a streak's first day leaves it at 0 and re-ticking starts it
@@ -170,7 +202,7 @@ begin
   perform pg_temp.expect(g, 1, '2026-10-05', 'untick of a habit not due');
 end $$;
 
--- 11. A habit added after the day closed does not take the day back, and
+-- 11. A habit added after the day counted does not take the day back, and
 --     ticking it does not count the day twice.
 do $$
 declare g uuid := pg_temp.mk_group(); a uuid := pg_temp.mk_member(g);
