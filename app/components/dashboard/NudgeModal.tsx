@@ -4,7 +4,7 @@ import { MAX_NUDGE_LENGTH } from "@/lib/nudge";
 
 export const NUDGE_PRESETS = [
   "How's it going today?",
-  "Don't break the streak!",
+  "Just one habit keeps the streak!",
   "You've got this 💪",
   "Let's finish the day together",
 ] as const;
