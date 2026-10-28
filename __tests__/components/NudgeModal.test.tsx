@@ -75,14 +75,14 @@ describe("NudgeModal", () => {
     const { getByText, getByLabelText } = renderModal();
     expect(NUDGE_PRESETS).toEqual([
       "How's it going today?",
-      "Don't break the streak!",
+      "Just one habit keeps the streak!",
       "You've got this 💪",
       "Let's finish the day together",
     ]);
 
-    fireEvent.press(getByText("Don't break the streak!"));
+    fireEvent.press(getByText("Just one habit keeps the streak!"));
     expect(getByLabelText("Nudge message").props.value).toBe(
-      "Don't break the streak!",
+      "Just one habit keeps the streak!",
     );
   });
 
