@@ -13,6 +13,21 @@ export type Goal = {
   // `"HH:MM"` in the owner's timezone, or null for no reminder. Optional so
   // cached entries written before reminders existed still parse.
   reminder_time?: string | null;
+  // Today's photo of this habit, as far as the server lets the viewer see it
+  // (`habit_photo_is_visible`): a buddy's only while it is live, your own
+  // also once removed, because the day's photo is used up either way.
+  // Optional so cached entries written before photos existed still parse.
+  photo?: HabitPhoto | null;
+};
+
+export type HabitPhoto = {
+  id: string;
+  // In the `habit-photos` bucket; what a signed URL is made from.
+  path: string;
+  createdAt: string;
+  // Deleted by its owner or unticked away. Kept so the app knows the habit's
+  // photo for the day is used: a photo is final.
+  removed: boolean;
 };
 
 export type Member = {

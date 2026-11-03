@@ -1,6 +1,12 @@
 import React from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 
 import Tour from "@/app/components/tour/Tour";
 import * as haptics from "@/lib/haptics";
@@ -286,7 +292,7 @@ describe("Tour demos", () => {
 
     const rows = utils.UNSAFE_getAllByProps({ friction: 2 });
     const openRowIndex = rows.findIndex(
-      (r) => r.props.children.props.accessibilityLabel === "Run",
+      (r) => within(r).queryByLabelText("Run") !== null,
     );
     pressSwipeAction(utils, openRowIndex, "renderRightActions");
 

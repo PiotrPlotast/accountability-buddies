@@ -9,6 +9,8 @@
 --     (`notification_prefs.timezone`), whatever the viewer's timezone.
 --   * No tick, no photo: unticking hides it for good.
 --   * Only the poster and their group-mates can see the row or the file.
+--     The poster also sees their own removed or not-yet-ticked row for
+--     today, which is how the app knows the day's photo is used up.
 --
 -- Its own table rather than a column on `logs`: an untick deletes the log row,
 -- which would lose track of the file, and a photo may be attached before a
@@ -68,22 +70,27 @@ as $function$
       from public.habit_photos p
       left join public.notification_prefs np on np.user_id = p.user_id
      where p.id = p_id
-       and p.removed_at is null
        -- Until the end of the poster's day.
        and p.day = to_char(now() at time zone coalesce(np.timezone, 'UTC'), 'YYYY-MM-DD')
-       -- No tick, no photo.
-       and exists (
-         select 1 from public.logs l
-          where l.goal_id = p.goal_id and l.user_id = p.user_id and l.date = p.day
-       )
        and (
+         -- The poster sees their own row for today whatever its state: a
+         -- removed photo, or one whose tick hasn't landed, still uses up the
+         -- day's photo, and the app needs to know that to hide the camera.
          p.user_id = (select auth.uid())
-         or exists (
-           select 1
-             from public.group_members mine
-             join public.group_members theirs on theirs.group_id = mine.group_id
-            where mine.user_id = (select auth.uid())
-              and theirs.user_id = p.user_id
+         or (
+           p.removed_at is null
+           -- No tick, no photo.
+           and exists (
+             select 1 from public.logs l
+              where l.goal_id = p.goal_id and l.user_id = p.user_id and l.date = p.day
+           )
+           and exists (
+             select 1
+               from public.group_members mine
+               join public.group_members theirs on theirs.group_id = mine.group_id
+              where mine.user_id = (select auth.uid())
+                and theirs.user_id = p.user_id
+           )
          )
        )
   )

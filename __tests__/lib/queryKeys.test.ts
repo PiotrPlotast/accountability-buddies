@@ -47,6 +47,15 @@ describe("queryKeys", () => {
     expect(queryKeys.profile("u-9")).toEqual(["profile", "u-9"]);
   });
 
+  // Sorted, so the same set of photos is one cache entry whatever order the
+  // members arrived in.
+  it("habitPhotoUrls is keyed by the sorted paths", () => {
+    expect(queryKeys.habitPhotoUrls(["b.jpg", "a.jpg"])).toEqual([
+      "habitPhotoUrls",
+      ["a.jpg", "b.jpg"],
+    ]);
+  });
+
   it("notificationPrefs includes the user id", () => {
     // Built through the helper rather than written inline at the call site,
     // unlike the `heatmap` precedent.

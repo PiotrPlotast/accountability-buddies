@@ -171,6 +171,87 @@ describe("useGroupMembers", () => {
   });
 });
 
+describe("useGroupMembers habit photos", () => {
+  async function renderWithPhotos(photos: unknown[] | undefined) {
+    const membersQB = makeQueryBuilder({
+      data: [{ user_id: "user-1", profiles: { full_name: "Ada" } }],
+      error: null,
+    });
+    const goalsQB = makeQueryBuilder({
+      data: [
+        {
+          id: "g-1",
+          user_id: "user-1",
+          title: "Run",
+          group_id: "group-1",
+          icon: null,
+          repeat_days: [],
+          logs: [],
+          habit_photos: photos,
+        },
+      ],
+      error: null,
+    });
+    const fromImpl = jest.fn((table: string) =>
+      table === "group_members" ? membersQB : goalsQB,
+    );
+    const { Wrapper } = buildWrapper({
+      supabase: buildFakeSupabase({ fromImpl }),
+    });
+    const utils = await renderHookWithSession(
+      () => useGroupMembers({ groupId: "group-1" }),
+      Wrapper,
+    );
+    await waitFor(() => expect(utils.result.current.value.data).toBeTruthy());
+    return { goal: utils.result.current.value.data![0].goals[0], goalsQB };
+  }
+
+  // The server decides what is visible (the poster's day, the tick, the
+  // group), so the read asks for the rows and filters nothing by date.
+  it("reads each habit's photo row alongside its logs", async () => {
+    const { goalsQB } = await renderWithPhotos([]);
+    expect(goalsQB.select).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "habit_photos(id,storage_path,created_at,removed_at)",
+      ),
+    );
+  });
+
+  it("maps a visible row to the habit's photo", async () => {
+    const { goal } = await renderWithPhotos([
+      {
+        id: "p-1",
+        storage_path: "user-1/g-1/2026-11-03/a.jpg",
+        created_at: "2026-11-03T08:00:00Z",
+        removed_at: null,
+      },
+    ]);
+    expect(goal.photo).toEqual({
+      id: "p-1",
+      path: "user-1/g-1/2026-11-03/a.jpg",
+      createdAt: "2026-11-03T08:00:00Z",
+      removed: false,
+    });
+  });
+
+  it("keeps a removed row, marked removed, so the day's photo stays used", async () => {
+    const { goal } = await renderWithPhotos([
+      {
+        id: "p-1",
+        storage_path: "user-1/g-1/2026-11-03/a.jpg",
+        created_at: "2026-11-03T08:00:00Z",
+        removed_at: "2026-11-03T09:00:00Z",
+      },
+    ]);
+    expect(goal.photo).toEqual(expect.objectContaining({ removed: true }));
+  });
+
+  it("is null for a habit with no photo", async () => {
+    expect((await renderWithPhotos([])).goal.photo).toBeNull();
+    expect((await renderWithPhotos(undefined)).goal.photo).toBeNull();
+  });
+});
+
 describe("useGroupMembers across midnight", () => {
   const ticked: Goal = {
     id: "g-1",
@@ -238,6 +319,35 @@ describe("useGroupMembers across midnight", () => {
     expect(utils.result.current.value.data?.[0].goals[0].completed_today).toBe(
       true,
     );
+  });
+
+  it("drops yesterday's photos at midnight with the ticks", async () => {
+    const withPhoto: Member[] = [
+      {
+        ...yesterdaysMembers[0],
+        goals: [
+          {
+            ...ticked,
+            photo: {
+              id: "p-1",
+              path: "user-1/g-1/2026-10-05/a.jpg",
+              createdAt: "2026-10-05T20:00:00Z",
+              removed: false,
+            },
+          },
+        ],
+      },
+    ];
+    const { utils } = await renderSeeded(withPhoto);
+    act(() => {
+      jest.advanceTimersByTime(60_000);
+    });
+    await waitFor(() =>
+      expect(
+        utils.result.current.value.data?.[0].goals[0].completed_today,
+      ).toBe(false),
+    );
+    expect(utils.result.current.value.data?.[0].goals[0].photo).toBeNull();
   });
 
   it("clears the ticks at midnight without waiting for the network", async () => {

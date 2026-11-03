@@ -9,6 +9,9 @@
 --     before its tick has synced shows once the tick lands.
 --   * Only group-mates (and the poster) can see the row or the file.
 --   * The owner may delete their photo; nobody else can.
+--   * The poster sees their own row for today even once it is removed or
+--     before its tick lands, so the app knows the habit's photo is used up.
+--     Group-mates only ever see a live photo.
 --
 -- Run against a database with every migration applied (e.g. `supabase start`):
 --   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/habit_photos.sql
@@ -190,7 +193,8 @@ end $$;
 
 
 -- 2. No tick, no photo: a photo attached before its tick has synced is
---    accepted but shows nobody anything until the tick lands.
+--    accepted but shows group-mates nothing until the tick lands. The poster
+--    sees their own row (the app shows it only on a ticked habit).
 do $$
 declare g uuid := pg_temp.mk_group(); ada uuid := pg_temp.mk_user('Ada'); bo uuid := pg_temp.mk_user('Bo');
         run uuid; day text; path text;
@@ -200,7 +204,7 @@ begin
   path := pg_temp.upload(ada, run, day);
   perform pg_temp.expect_ok(pg_temp.attach(ada, run, day, path), 'attach before tick');
   perform pg_temp.expect_eq(pg_temp.sees_row(bo, run), 0, 'hidden without a tick (mate)');
-  perform pg_temp.expect_eq(pg_temp.sees_row(ada, run), 0, 'hidden without a tick (poster)');
+  perform pg_temp.expect_eq(pg_temp.sees_row(ada, run), 1, 'the poster sees their own row');
   perform pg_temp.expect_eq(pg_temp.sees_file(bo, path), 0, 'file hidden without a tick');
 
   perform pg_temp.tick(ada, run, day);
@@ -227,6 +231,9 @@ begin
     raise exception 'untick: photo not marked removed';
   end if;
   perform pg_temp.expect_eq(pg_temp.sees_row(bo, run), 0, 'hidden after untick');
+  perform pg_temp.expect_eq(pg_temp.scalar_as(ada, format(
+    'select count(*) from public.habit_photos where goal_id = %L and removed_at is not null', run))::int,
+    1, 'the poster sees it as removed');
 
   perform pg_temp.tick(ada, run, day);
   perform pg_temp.expect_eq(pg_temp.sees_row(bo, run), 0, 'still hidden after re-tick');
@@ -276,7 +283,9 @@ begin
     raise exception 'owner delete refused';
   end if;
   perform pg_temp.expect_eq(pg_temp.sees_row(bo, run), 0, 'hidden after delete');
-  perform pg_temp.expect_eq(pg_temp.sees_row(ada, run), 0, 'hidden from the owner too');
+  perform pg_temp.expect_eq(pg_temp.scalar_as(ada, format(
+    'select count(*) from public.habit_photos where goal_id = %L and removed_at is not null', run))::int,
+    1, 'the owner sees it as removed, so the app hides the camera');
   if (pg_temp.remove(ada, photo)->>'success')::boolean is not true then
     raise exception 'second delete should be a no-op success';
   end if;
