@@ -28,7 +28,7 @@ module.exports = defineConfig([
     // `jest.mock` factories are hoisted above every import, so `require` is the
     // only way to reach a module from inside one — and the same goes for
     // reading back a mock a factory built (`__router`, the push helpers).
-    files: ["__tests__/**", "jest.setup.js"],
+    files: ["__tests__/**", "jest.setup.js", "jest.resolver.js"],
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
 ]);

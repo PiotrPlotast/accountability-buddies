@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import { TextInput } from "react-native";
+import type { TextInputInstance } from "react-native";
 import { render } from "@testing-library/react-native";
 
 import AppTextInput from "@/app/components/ui/AppTextInput";
@@ -69,7 +69,7 @@ describe("AppTextInput", () => {
   // sign-in and sign-up chain email -> password via `onSubmitEditing`, which
   // needs a real TextInput instance behind the ref.
   it("forwards its ref so field chaining still works", () => {
-    const ref = createRef<TextInput>();
+    const ref = createRef<TextInputInstance>();
     render(<AppTextInput placeholder="hi" ref={ref} />);
     expect(ref.current).not.toBeNull();
     expect(typeof ref.current?.focus).toBe("function");

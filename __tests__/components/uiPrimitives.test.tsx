@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import { Text, TextInput } from "react-native";
+import { Text, type TextInputInstance } from "react-native";
 import { fireEvent, render } from "@testing-library/react-native";
 import { useRouter } from "expo-router";
 
@@ -122,7 +122,7 @@ describe("DialogShell", () => {
 describe("AuthField", () => {
   it("labels the input and forwards its props and ref", () => {
     const onChangeText = jest.fn();
-    const ref = createRef<TextInput>();
+    const ref = createRef<TextInputInstance>();
     const { getByText, getByPlaceholderText } = render(
       <AuthField
         ref={ref}
