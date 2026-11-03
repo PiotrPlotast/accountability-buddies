@@ -230,7 +230,7 @@ describe("useDashboardActions", () => {
         Wrapper,
       );
 
-      act(() => {
+      await act(() => {
         void utils.result.current.value.addGoal("Run", {
           reminderTime: "08:30",
         });

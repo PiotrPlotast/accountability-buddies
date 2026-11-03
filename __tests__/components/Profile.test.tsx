@@ -47,20 +47,20 @@ function pressAlertButton(label: string) {
 }
 
 describe("Profile", () => {
-  it("shows the single name column", () => {
+  it("shows the single name column", async () => {
     const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
-    const { getByText } = render(<Profile />, { wrapper: Wrapper });
+    const { getByText } = await render(<Profile />, { wrapper: Wrapper });
 
     expect(getByText("Piotr")).toBeTruthy();
   });
 
   it("opens the rename modal seeded with the current name", async () => {
     const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
-    const { getByLabelText, getByPlaceholderText } = render(<Profile />, {
+    const { getByLabelText, getByPlaceholderText } = await render(<Profile />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByLabelText("Change your name"));
+    await fireEvent.press(getByLabelText("Change your name"));
 
     await waitFor(() => {
       expect(getByPlaceholderText("Your name").props.value).toBe("Piotr");
@@ -69,14 +69,14 @@ describe("Profile", () => {
 
   it("renames through the modal", async () => {
     const { qb, Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
-    const { getByLabelText, getByPlaceholderText, getByText } = render(
+    const { getByLabelText, getByPlaceholderText, getByText } = await render(
       <Profile />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.press(getByLabelText("Change your name"));
-    fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.press(getByLabelText("Change your name"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => {
       expect(qb.update).toHaveBeenCalledWith({ full_name: "Zofia" });
@@ -90,34 +90,34 @@ describe("Profile danger zone", () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  it("offers account deletion away from the sign-out control", () => {
+  it("offers account deletion away from the sign-out control", async () => {
     const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
-    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+    const { getByLabelText } = await render(<Profile />, { wrapper: Wrapper });
 
     expect(getByLabelText("Delete account")).toBeTruthy();
   });
 
-  it("deletes nothing on the first tap", () => {
+  it("deletes nothing on the first tap", async () => {
     const { rpcImpl, Wrapper } = setup({
       full_name: "Piotr",
       avatar_url: null,
     });
-    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+    const { getByLabelText } = await render(<Profile />, { wrapper: Wrapper });
 
-    fireEvent.press(getByLabelText("Delete account"));
+    await fireEvent.press(getByLabelText("Delete account"));
 
     expect(Alert.alert).toHaveBeenCalled();
     expect(deleteCalls(rpcImpl)).toBe(0);
   });
 
-  it("deletes nothing after only the first confirmation", () => {
+  it("deletes nothing after only the first confirmation", async () => {
     const { rpcImpl, Wrapper } = setup({
       full_name: "Piotr",
       avatar_url: null,
     });
-    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+    const { getByLabelText } = await render(<Profile />, { wrapper: Wrapper });
 
-    fireEvent.press(getByLabelText("Delete account"));
+    await fireEvent.press(getByLabelText("Delete account"));
     pressAlertButton("Delete");
 
     // The second alert is the point of the two-step: one destructive tap on a
@@ -131,9 +131,9 @@ describe("Profile danger zone", () => {
       full_name: "Piotr",
       avatar_url: null,
     });
-    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+    const { getByLabelText } = await render(<Profile />, { wrapper: Wrapper });
 
-    fireEvent.press(getByLabelText("Delete account"));
+    await fireEvent.press(getByLabelText("Delete account"));
     pressAlertButton("Delete");
     pressAlertButton("Delete forever");
 
@@ -142,14 +142,14 @@ describe("Profile danger zone", () => {
     });
   });
 
-  it("deletes nothing when the second step is cancelled", () => {
+  it("deletes nothing when the second step is cancelled", async () => {
     const { rpcImpl, Wrapper } = setup({
       full_name: "Piotr",
       avatar_url: null,
     });
-    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+    const { getByLabelText } = await render(<Profile />, { wrapper: Wrapper });
 
-    fireEvent.press(getByLabelText("Delete account"));
+    await fireEvent.press(getByLabelText("Delete account"));
     pressAlertButton("Delete");
     pressAlertButton("Cancel");
 
@@ -158,29 +158,33 @@ describe("Profile danger zone", () => {
 });
 
 describe("Profile header", () => {
-  it("opens settings from the gear", () => {
+  it("opens settings from the gear", async () => {
     const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
-    const { getByLabelText } = render(<Profile />, { wrapper: Wrapper });
+    const { getByLabelText } = await render(<Profile />, { wrapper: Wrapper });
 
-    fireEvent.press(getByLabelText("Settings"));
+    await fireEvent.press(getByLabelText("Settings"));
 
     expect(__router.push).toHaveBeenCalledWith("/notification-settings");
   });
 
-  it("no longer signs out from the header", () => {
+  it("no longer signs out from the header", async () => {
     // Sign-out moved onto the settings screen in E3: one settings surface, and
     // the header's only action stops being the one you cannot undo by tapping
     // again.
     const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
-    const { queryByLabelText } = render(<Profile />, { wrapper: Wrapper });
+    const { queryByLabelText } = await render(<Profile />, {
+      wrapper: Wrapper,
+    });
 
     expect(queryByLabelText("Log out")).toBeNull();
   });
 
-  it("no longer carries the haptics switch", () => {
+  it("no longer carries the haptics switch", async () => {
     // It lives beside the notification switches now.
     const { Wrapper } = setup({ full_name: "Piotr", avatar_url: null });
-    const { queryByLabelText } = render(<Profile />, { wrapper: Wrapper });
+    const { queryByLabelText } = await render(<Profile />, {
+      wrapper: Wrapper,
+    });
 
     expect(queryByLabelText("Haptics")).toBeNull();
   });

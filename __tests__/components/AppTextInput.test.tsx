@@ -12,36 +12,40 @@ const styleOf = (node: { props: { style?: unknown } }) =>
 describe("AppTextInput", () => {
   // NativeWind's `font-mono` never reached a TextInput's text, which is why
   // every call site used to carry this inline.
-  it("applies the mono font every input needs", () => {
-    const { getByPlaceholderText } = render(<AppTextInput placeholder="hi" />);
+  it("applies the mono font every input needs", async () => {
+    const { getByPlaceholderText } = await render(
+      <AppTextInput placeholder="hi" />,
+    );
     expect(styleOf(getByPlaceholderText("hi"))).toMatchObject({
       fontFamily: "GeistMono_400Regular",
     });
   });
 
-  it("supports the heavier weights", () => {
-    const { getByPlaceholderText, rerender } = render(
+  it("supports the heavier weights", async () => {
+    const { getByPlaceholderText, rerender } = await render(
       <AppTextInput placeholder="hi" weight="bold" />,
     );
     expect(styleOf(getByPlaceholderText("hi"))).toMatchObject({
       fontFamily: "GeistMono_700Bold",
     });
 
-    rerender(<AppTextInput placeholder="hi" weight="medium" />);
+    await rerender(<AppTextInput placeholder="hi" weight="medium" />);
     expect(styleOf(getByPlaceholderText("hi"))).toMatchObject({
       fontFamily: "GeistMono_500Medium",
     });
   });
 
-  it("defaults the placeholder colour so call sites needn't repeat it", () => {
-    const { getByPlaceholderText } = render(<AppTextInput placeholder="hi" />);
+  it("defaults the placeholder colour so call sites needn't repeat it", async () => {
+    const { getByPlaceholderText } = await render(
+      <AppTextInput placeholder="hi" />,
+    );
     expect(getByPlaceholderText("hi").props.placeholderTextColor).toBe(
       themeColors.textDim,
     );
   });
 
-  it("lets a caller override the placeholder colour", () => {
-    const { getByPlaceholderText } = render(
+  it("lets a caller override the placeholder colour", async () => {
+    const { getByPlaceholderText } = await render(
       <AppTextInput placeholder="hi" placeholderTextColor="#FF0000" />,
     );
     expect(getByPlaceholderText("hi").props.placeholderTextColor).toBe(
@@ -49,8 +53,8 @@ describe("AppTextInput", () => {
     );
   });
 
-  it("keeps a caller's own style, layered over the font", () => {
-    const { getByPlaceholderText } = render(
+  it("keeps a caller's own style, layered over the font", async () => {
+    const { getByPlaceholderText } = await render(
       <AppTextInput placeholder="hi" style={{ letterSpacing: 4 }} />,
     );
     expect(styleOf(getByPlaceholderText("hi"))).toMatchObject({
@@ -59,8 +63,8 @@ describe("AppTextInput", () => {
     });
   });
 
-  it("passes other props through untouched", () => {
-    const { getByPlaceholderText } = render(
+  it("passes other props through untouched", async () => {
+    const { getByPlaceholderText } = await render(
       <AppTextInput placeholder="hi" autoCapitalize="characters" />,
     );
     expect(getByPlaceholderText("hi").props.autoCapitalize).toBe("characters");
@@ -68,9 +72,9 @@ describe("AppTextInput", () => {
 
   // sign-in and sign-up chain email -> password via `onSubmitEditing`, which
   // needs a real TextInput instance behind the ref.
-  it("forwards its ref so field chaining still works", () => {
+  it("forwards its ref so field chaining still works", async () => {
     const ref = createRef<TextInputInstance>();
-    render(<AppTextInput placeholder="hi" ref={ref} />);
+    await render(<AppTextInput placeholder="hi" ref={ref} />);
     expect(ref.current).not.toBeNull();
     expect(typeof ref.current?.focus).toBe("function");
   });

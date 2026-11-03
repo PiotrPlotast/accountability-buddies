@@ -19,8 +19,8 @@ function Probe() {
   );
 }
 
-const renderProvider = () =>
-  render(
+const renderProvider = async () =>
+  await render(
     <ThemeProvider>
       <Probe />
     </ThemeProvider>,
@@ -32,15 +32,15 @@ describe("ThemeProvider hydration", () => {
     (AsyncStorage.getItem as jest.Mock).mockReset?.();
   });
 
-  it("starts un-hydrated so the splash can wait for the stored accent", () => {
+  it("starts un-hydrated so the splash can wait for the stored accent", async () => {
     (AsyncStorage.getItem as jest.Mock).mockReturnValue(new Promise(() => {}));
-    const { getByTestId } = renderProvider();
+    const { getByTestId } = await renderProvider();
     expect(getByTestId("probe").props.children).toBe("neon:waiting");
   });
 
   it("adopts the stored accent before reporting hydrated", async () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue("purple");
-    const { getByTestId } = renderProvider();
+    const { getByTestId } = await renderProvider();
 
     await waitFor(() =>
       expect(getByTestId("probe").props.children).toBe("purple:ready"),
@@ -49,7 +49,7 @@ describe("ThemeProvider hydration", () => {
 
   it("hydrates on the default when nothing is stored", async () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
-    const { getByTestId } = renderProvider();
+    const { getByTestId } = await renderProvider();
 
     await waitFor(() =>
       expect(getByTestId("probe").props.children).toBe("neon:ready"),
@@ -58,7 +58,7 @@ describe("ThemeProvider hydration", () => {
 
   it("ignores a stored value that is no longer a real accent", async () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue("chartreuse");
-    const { getByTestId } = renderProvider();
+    const { getByTestId } = await renderProvider();
 
     await waitFor(() =>
       expect(getByTestId("probe").props.children).toBe("neon:ready"),
@@ -68,7 +68,7 @@ describe("ThemeProvider hydration", () => {
   // A failed read must not strand the app on the splash screen.
   it("still hydrates when the read rejects", async () => {
     (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error("nope"));
-    const { getByTestId } = renderProvider();
+    const { getByTestId } = await renderProvider();
 
     await waitFor(() =>
       expect(getByTestId("probe").props.children).toBe("neon:ready"),
@@ -95,8 +95,8 @@ describe("ThemeProvider haptics flag", () => {
     );
   }
 
-  const renderIt = () =>
-    render(
+  const renderIt = async () =>
+    await render(
       <ThemeProvider>
         <HapticsProbe />
       </ThemeProvider>,
@@ -115,7 +115,7 @@ describe("ThemeProvider haptics flag", () => {
 
   it("defaults to enabled when nothing is stored", async () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
-    const { getByTestId } = renderIt();
+    const { getByTestId } = await renderIt();
 
     await waitFor(() =>
       expect(getByTestId("haptics").props.children).toBe("true:ready"),
@@ -127,7 +127,7 @@ describe("ThemeProvider haptics flag", () => {
     (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
       Promise.resolve(key === "theme.haptics.v1" ? "false" : null),
     );
-    const { getByTestId } = renderIt();
+    const { getByTestId } = await renderIt();
 
     await waitFor(() =>
       expect(getByTestId("haptics").props.children).toBe("false:ready"),
@@ -138,7 +138,7 @@ describe("ThemeProvider haptics flag", () => {
   it("writes storage and the module when the switch is flipped", async () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
-    const { getByTestId } = renderIt();
+    const { getByTestId } = await renderIt();
 
     await waitFor(() => expect(ctx?.hydrated).toBe(true));
 
@@ -157,7 +157,7 @@ describe("ThemeProvider haptics flag", () => {
   // Losing the preference is a nuisance; a silent app is a bug report.
   it("leaves haptics on when the read rejects", async () => {
     (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error("nope"));
-    const { getByTestId } = renderIt();
+    const { getByTestId } = await renderIt();
 
     await waitFor(() =>
       expect(getByTestId("haptics").props.children).toBe("true:ready"),

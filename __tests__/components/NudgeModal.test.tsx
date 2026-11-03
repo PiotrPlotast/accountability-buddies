@@ -8,7 +8,7 @@ import * as haptics from "@/lib/haptics";
 
 import { buildFakeSupabase, buildWrapper } from "../test-utils/render";
 
-function renderModal(
+async function renderModal(
   opts: {
     invoke?: jest.Mock;
     initialMessage?: string;
@@ -27,7 +27,7 @@ function renderModal(
   const { Wrapper } = buildWrapper({
     supabase: buildFakeSupabase({ functionsImpl: invoke }),
   });
-  const utils = render(
+  const utils = await render(
     <NudgeModal
       recipient={{ userId: "user-2", name: "Ada" }}
       initialMessage={opts.initialMessage}
@@ -50,8 +50,8 @@ describe("NudgeModal", () => {
     jest.restoreAllMocks();
   });
 
-  it("names the buddy and starts from the prefilled message", () => {
-    const { getByText, getByLabelText } = renderModal({
+  it("names the buddy and starts from the prefilled message", async () => {
+    const { getByText, getByLabelText } = await renderModal({
       initialMessage: "Ada, what about your run?",
     });
     expect(getByText("Nudge Ada")).toBeTruthy();
@@ -61,18 +61,18 @@ describe("NudgeModal", () => {
     expect(getByText("25/140")).toBeTruthy();
   });
 
-  it("caps the message at 140 characters and counts as you type", () => {
-    const { getByLabelText, getByText } = renderModal();
+  it("caps the message at 140 characters and counts as you type", async () => {
+    const { getByLabelText, getByText } = await renderModal();
     const input = getByLabelText("Nudge message");
     expect(input.props.maxLength).toBe(140);
     expect(getByText("0/140")).toBeTruthy();
 
-    fireEvent.changeText(input, "Hello");
+    await fireEvent.changeText(input, "Hello");
     expect(getByText("5/140")).toBeTruthy();
   });
 
-  it("offers the four presets, and tapping one fills the message", () => {
-    const { getByText, getByLabelText } = renderModal();
+  it("offers the four presets, and tapping one fills the message", async () => {
+    const { getByText, getByLabelText } = await renderModal();
     expect(NUDGE_PRESETS).toEqual([
       "How's it going today?",
       "Just one habit keeps the streak!",
@@ -80,7 +80,7 @@ describe("NudgeModal", () => {
       "Let's finish the day together",
     ]);
 
-    fireEvent.press(getByText("Just one habit keeps the streak!"));
+    await fireEvent.press(getByText("Just one habit keeps the streak!"));
     expect(getByLabelText("Nudge message").props.value).toBe(
       "Just one habit keeps the streak!",
     );
@@ -88,11 +88,11 @@ describe("NudgeModal", () => {
 
   it("sends what is in the box, then reports the buddy and closes", async () => {
     const { getByText, getByLabelText, invoke, onSent, onClose } =
-      renderModal();
-    fireEvent.changeText(getByLabelText("Nudge message"), "Run time!");
+      await renderModal();
+    await fireEvent.changeText(getByLabelText("Nudge message"), "Run time!");
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     expect(invoke).toHaveBeenCalledWith("send-nudge", {
@@ -103,10 +103,10 @@ describe("NudgeModal", () => {
   });
 
   it("sends an empty message, which the server turns into its default line", async () => {
-    const { getByText, invoke, onSent } = renderModal();
+    const { getByText, invoke, onSent } = await renderModal();
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     expect(invoke).toHaveBeenCalledWith("send-nudge", {
@@ -122,13 +122,13 @@ describe("NudgeModal", () => {
         error: null,
       }),
     );
-    const { getByText, getByLabelText, onSent, onClose } = renderModal({
+    const { getByText, getByLabelText, onSent, onClose } = await renderModal({
       invoke,
     });
-    fireEvent.changeText(getByLabelText("Nudge message"), "Run time!");
+    await fireEvent.changeText(getByLabelText("Nudge message"), "Run time!");
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     await waitFor(() =>
@@ -150,16 +150,19 @@ describe("NudgeModal", () => {
           finish = resolve;
         }),
     );
-    const { getByText, onSent } = renderModal({ invoke });
+    const { getByText, onSent } = await renderModal({ invoke });
 
-    fireEvent.press(getByText("Send"));
+    // Not awaited: RNTL 14's press waits for the handler, and this send
+    // stays in flight until `finish` below.
+    const firstSend = fireEvent.press(getByText("Send"));
     await waitFor(() => expect(getByText("Sending…")).toBeTruthy());
-    fireEvent.press(getByText("Sending…"));
-    fireEvent.press(getByText("Sending…"));
+    await fireEvent.press(getByText("Sending…"));
+    await fireEvent.press(getByText("Sending…"));
 
     await act(async () => {
       finish({ data: { success: true, message: "Nudge sent" }, error: null });
     });
+    await firstSend;
 
     expect(invoke).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(onSent).toHaveBeenCalledTimes(1));
@@ -180,7 +183,7 @@ describe("NudgeModal with its own onSend", () => {
     const onSend = jest.fn(() => Promise.resolve());
     const onSent = jest.fn();
     const onClose = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <NudgeModal
         recipient={{ userId: "tour-ada", name: "Ada" }}
         initialMessage="Ada, what about your run?"
@@ -193,7 +196,7 @@ describe("NudgeModal with its own onSend", () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     expect(onSend).toHaveBeenCalledWith("Ada, what about your run?");

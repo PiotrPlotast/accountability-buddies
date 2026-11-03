@@ -30,10 +30,10 @@ function optionsFor(name: string) {
   return { ...(stackProps[0]?.screenOptions as object), ...screen?.options };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   stackProps.length = 0;
   screenProps.length = 0;
-  render(<PublicLayout />);
+  await render(<PublicLayout />);
 });
 
 describe("the signed-out stack", () => {

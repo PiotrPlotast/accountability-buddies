@@ -99,7 +99,7 @@ describe("useNotificationPrefs", () => {
         }) as never,
     );
 
-    act(() => {
+    await act(() => {
       utils.result.current.value.setPref({ social_enabled: false });
     });
 
