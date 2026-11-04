@@ -32,9 +32,9 @@ describe("RenameModal", () => {
     (Alert.alert as jest.Mock).mockRestore();
   });
 
-  it("opens seeded with the current name", () => {
+  it("opens seeded with the current name", async () => {
     const { Wrapper } = setup(ok);
-    const { getByPlaceholderText } = render(
+    const { getByPlaceholderText } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={jest.fn()} />,
       { wrapper: Wrapper },
     );
@@ -42,25 +42,27 @@ describe("RenameModal", () => {
     expect(getByPlaceholderText("Your name").props.value).toBe("Piotr");
   });
 
-  it("re-seeds when it is reopened after a name change", () => {
+  it("re-seeds when it is reopened after a name change", async () => {
     const { Wrapper } = setup(ok);
-    const { getByPlaceholderText, rerender } = render(
+    const { getByPlaceholderText, rerender } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={jest.fn()} />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "scratch");
-    rerender(
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "scratch");
+    await rerender(
       <RenameModal isVisible={false} currentName="Piotr" onClose={jest.fn()} />,
     );
-    rerender(<RenameModal isVisible currentName="Zofia" onClose={jest.fn()} />);
+    await rerender(
+      <RenameModal isVisible currentName="Zofia" onClose={jest.fn()} />,
+    );
 
     expect(getByPlaceholderText("Your name").props.value).toBe("Zofia");
   });
 
-  it("caps what can be typed at the maximum length", () => {
+  it("caps what can be typed at the maximum length", async () => {
     const { Wrapper } = setup(ok);
-    const { getByPlaceholderText } = render(
+    const { getByPlaceholderText } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={jest.fn()} />,
       { wrapper: Wrapper },
     );
@@ -73,13 +75,13 @@ describe("RenameModal", () => {
   it("saves the trimmed name and closes", async () => {
     const { qb, Wrapper } = setup(ok);
     const onClose = jest.fn();
-    const { getByPlaceholderText, getByText } = render(
+    const { getByPlaceholderText, getByText } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={onClose} />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "  Zofia  ");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "  Zofia  ");
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => {
       expect(qb.update).toHaveBeenCalledWith({ full_name: "Zofia" });
@@ -92,12 +94,12 @@ describe("RenameModal", () => {
   it("does nothing when the name is unchanged", async () => {
     const { fromImpl, Wrapper } = setup(ok);
     const onClose = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={onClose} />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.press(getByText("Save"));
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => {
       expect(fromImpl).not.toHaveBeenCalled();
@@ -106,13 +108,13 @@ describe("RenameModal", () => {
 
   it("does not let the name be cleared", async () => {
     const { fromImpl, Wrapper } = setup(ok);
-    const { getByPlaceholderText, getByText } = render(
+    const { getByPlaceholderText, getByText } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={jest.fn()} />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "   ");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "   ");
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => {
       expect(fromImpl).not.toHaveBeenCalled();
@@ -122,13 +124,13 @@ describe("RenameModal", () => {
   it("stays open when the save fails, so the edit is not lost", async () => {
     const { Wrapper } = setup({ data: null, error: { message: "offline" } });
     const onClose = jest.fn();
-    const { getByPlaceholderText, getByText } = render(
+    const { getByPlaceholderText, getByText } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={onClose} />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalled();
@@ -136,16 +138,16 @@ describe("RenameModal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("cancels without saving", () => {
+  it("cancels without saving", async () => {
     const { fromImpl, Wrapper } = setup(ok);
     const onClose = jest.fn();
-    const { getByPlaceholderText, getByText } = render(
+    const { getByPlaceholderText, getByText } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={onClose} />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
-    fireEvent.press(getByText("Cancel"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
+    await fireEvent.press(getByText("Cancel"));
 
     expect(onClose).toHaveBeenCalled();
     expect(fromImpl).not.toHaveBeenCalled();

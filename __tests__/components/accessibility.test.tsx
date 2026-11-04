@@ -39,20 +39,20 @@ const goal: Goal = {
   repeat_days: [],
 };
 
-function withWrapper(ui: React.ReactElement) {
+async function withWrapper(ui: React.ReactElement) {
   const { Wrapper } = buildWrapper({
     supabase: buildFakeSupabase({}),
     queryClient: makeQueryClient(),
   });
-  return render(ui, { wrapper: Wrapper });
+  return await render(ui, { wrapper: Wrapper });
 }
 
 // On iOS an accessible view hides everything inside it from VoiceOver, and a
 // Pressable is accessible by default. A card nested in the backdrop button
 // was one "Cancel" element: no field, no confirm button.
 describe("DialogShell", () => {
-  it("keeps the card out of the backdrop button", () => {
-    const { getByRole } = render(
+  it("keeps the card out of the backdrop button", async () => {
+    const { getByRole } = await render(
       <DialogShell
         isVisible
         onRequestClose={jest.fn()}
@@ -67,8 +67,8 @@ describe("DialogShell", () => {
     expect(within(backdrop).queryByText("Inside the card")).toBeNull();
   });
 
-  it("keeps the card out of a backdrop that does nothing", () => {
-    const { getByText, UNSAFE_root } = render(
+  it("keeps the card out of a backdrop that does nothing", async () => {
+    const { getByText, container } = await render(
       <DialogShell isVisible onRequestClose={jest.fn()} backdropLabel="Close">
         <Text>Inside the card</Text>
       </DialogShell>,
@@ -76,16 +76,16 @@ describe("DialogShell", () => {
 
     // No ancestor of the card's text may be an accessibility element.
     let node = getByText("Inside the card").parent;
-    while (node && node !== UNSAFE_root) {
+    while (node && node !== container) {
       expect(node.props.accessible).not.toBe(true);
       node = node.parent;
     }
   });
 
   // VoiceOver's two-finger scrub is the screen reader's tap outside.
-  it("closes on the escape gesture the way the backdrop does", () => {
+  it("closes on the escape gesture the way the backdrop does", async () => {
     const onBackdropPress = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <DialogShell
         isVisible
         onRequestClose={jest.fn()}
@@ -96,14 +96,14 @@ describe("DialogShell", () => {
       </DialogShell>,
     );
 
-    fireEvent(getByTestId("dialog-shell"), "accessibilityEscape");
+    await fireEvent(getByTestId("dialog-shell"), "accessibilityEscape");
 
     expect(onBackdropPress).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to the close handler when the backdrop does nothing", () => {
+  it("falls back to the close handler when the backdrop does nothing", async () => {
     const onRequestClose = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <DialogShell
         isVisible
         onRequestClose={onRequestClose}
@@ -113,27 +113,27 @@ describe("DialogShell", () => {
       </DialogShell>,
     );
 
-    fireEvent(getByTestId("dialog-shell"), "accessibilityEscape");
+    await fireEvent(getByTestId("dialog-shell"), "accessibilityEscape");
 
     expect(onRequestClose).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores the escape gesture while nothing may close it", () => {
-    const { getByTestId } = render(
+  it("ignores the escape gesture while nothing may close it", async () => {
+    const { getByTestId } = await render(
       <DialogShell isVisible onRequestClose={undefined} backdropLabel="Close">
         <Text>Card</Text>
       </DialogShell>,
     );
 
-    expect(() =>
+    await expect(
       fireEvent(getByTestId("dialog-shell"), "accessibilityEscape"),
-    ).not.toThrow();
+    ).resolves.toBeUndefined();
   });
 });
 
 describe("Delete habit dialog", () => {
-  it("announces Cancel and Delete as buttons", () => {
-    const { getAllByRole, getByRole } = withWrapper(
+  it("announces Cancel and Delete as buttons", async () => {
+    const { getAllByRole, getByRole } = await withWrapper(
       <DeleteGoalModal goal={goal} isVisible onClose={jest.fn()} />,
     );
 
@@ -142,8 +142,8 @@ describe("Delete habit dialog", () => {
     expect(getAllByRole("button", { name: "Cancel" })).toHaveLength(2);
   });
 
-  it("marks its title as a heading", () => {
-    const { getByRole } = withWrapper(
+  it("marks its title as a heading", async () => {
+    const { getByRole } = await withWrapper(
       <DeleteGoalModal goal={goal} isVisible onClose={jest.fn()} />,
     );
 
@@ -152,8 +152,8 @@ describe("Delete habit dialog", () => {
 });
 
 describe("Compose dialog", () => {
-  function renderCompose() {
-    return render(
+  async function renderCompose() {
+    return await render(
       <ComposeModal
         title="Nudge Ada"
         presets={["You got this!"]}
@@ -167,22 +167,22 @@ describe("Compose dialog", () => {
     );
   }
 
-  it("announces presets, Cancel and Send as buttons", () => {
-    const { getByRole, getAllByRole } = renderCompose();
+  it("announces presets, Cancel and Send as buttons", async () => {
+    const { getByRole, getAllByRole } = await renderCompose();
 
     expect(getByRole("button", { name: "You got this!" })).toBeTruthy();
     expect(getByRole("button", { name: "Send" })).toBeTruthy();
     expect(getAllByRole("button", { name: "Cancel" })).toHaveLength(2);
   });
 
-  it("reads the counter as words, not a fraction", () => {
-    const { getByLabelText } = renderCompose();
+  it("reads the counter as words, not a fraction", async () => {
+    const { getByLabelText } = await renderCompose();
 
     expect(getByLabelText("0 of 140 characters")).toBeTruthy();
   });
 
-  it("marks its title as a heading", () => {
-    const { getByRole } = renderCompose();
+  it("marks its title as a heading", async () => {
+    const { getByRole } = await renderCompose();
 
     expect(getByRole("header", { name: "Nudge Ada" })).toBeTruthy();
   });
@@ -193,31 +193,33 @@ describe("Compose dialog", () => {
 // A ticked row is dimmed by its background alone, never by opacity: a faded
 // row took its text down with it, to about 1.9:1. `text-dim` on `bg` is 5.6:1.
 describe("Ticked habit rows", () => {
-  const rowClass = (completed_today: boolean) =>
-    render(
-      <GoalListView
-        goals={[{ ...goal, completed_today }]}
-        loading={false}
-        canEdit
-        onToggle={jest.fn()}
-        onEdit={jest.fn()}
-        onDelete={jest.fn()}
-      />,
-      { wrapper: GestureRoot },
+  const rowClass = async (completed_today: boolean) =>
+    (
+      await render(
+        <GoalListView
+          goals={[{ ...goal, completed_today }]}
+          loading={false}
+          canEdit
+          onToggle={jest.fn()}
+          onEdit={jest.fn()}
+          onDelete={jest.fn()}
+        />,
+        { wrapper: GestureRoot },
+      )
     ).getByLabelText("Read").props.className as string;
 
-  it("sits on the darker background when ticked", () => {
-    expect(rowClass(true)).toMatch(/\bbg-bg\b/);
-    expect(rowClass(true)).not.toMatch(/opacity-/);
+  it("sits on the darker background when ticked", async () => {
+    expect(await rowClass(true)).toMatch(/\bbg-bg\b/);
+    expect(await rowClass(true)).not.toMatch(/opacity-/);
   });
 
-  it("keeps the card colour when not ticked", () => {
-    expect(rowClass(false)).toMatch(/\bbg-surface\b/);
+  it("keeps the card colour when not ticked", async () => {
+    expect(await rowClass(false)).toMatch(/\bbg-surface\b/);
   });
 });
 
 describe("Habit row actions", () => {
-  function renderRow(props: Partial<Parameters<typeof GoalListView>[0]>) {
+  async function renderRow(props: Partial<Parameters<typeof GoalListView>[0]>) {
     const handlers = {
       onToggle: jest.fn(),
       onEdit: jest.fn(),
@@ -225,7 +227,7 @@ describe("Habit row actions", () => {
       onNudge: jest.fn(),
       onCheer: jest.fn(),
     };
-    const utils = render(
+    const utils = await render(
       <GoalListView
         goals={[goal]}
         loading={false}
@@ -243,16 +245,16 @@ describe("Habit row actions", () => {
       (a) => a.name,
     );
 
-  it("offers edit and delete on your own habit", () => {
-    const { getByLabelText, onEdit, onDelete } = renderRow({});
+  it("offers edit and delete on your own habit", async () => {
+    const { getByLabelText, onEdit, onDelete } = await renderRow({});
     const row = getByLabelText("Read");
 
     expect(actionNames(row)).toEqual(["edit", "delete"]);
 
-    fireEvent(row, "accessibilityAction", {
+    await fireEvent(row, "accessibilityAction", {
       nativeEvent: { actionName: "edit" },
     });
-    fireEvent(row, "accessibilityAction", {
+    await fireEvent(row, "accessibilityAction", {
       nativeEvent: { actionName: "delete" },
     });
 
@@ -260,23 +262,23 @@ describe("Habit row actions", () => {
     expect(onDelete).toHaveBeenCalledWith(goal);
   });
 
-  it("offers a nudge on a buddy's unticked habit", () => {
-    const { getByLabelText, onNudge } = renderRow({ canEdit: false });
+  it("offers a nudge on a buddy's unticked habit", async () => {
+    const { getByLabelText, onNudge } = await renderRow({ canEdit: false });
     const row = getByLabelText("Read");
 
     expect(actionNames(row)).toEqual(["nudge"]);
 
     // Called directly: a buddy's row is disabled for taps, which stops the
     // test renderer's events, but an accessibility action is no tap.
-    act(() =>
+    await act(() =>
       row.props.onAccessibilityAction({ nativeEvent: { actionName: "nudge" } }),
     );
     expect(onNudge).toHaveBeenCalledWith(goal);
   });
 
-  it("offers a cheer on a buddy's ticked habit", () => {
+  it("offers a cheer on a buddy's ticked habit", async () => {
     const ticked = { ...goal, completed_today: true };
-    const { getByLabelText, onCheer } = renderRow({
+    const { getByLabelText, onCheer } = await renderRow({
       canEdit: false,
       goals: [ticked],
     });
@@ -286,14 +288,14 @@ describe("Habit row actions", () => {
 
     // Called directly: a buddy's row is disabled for taps, which stops the
     // test renderer's events, but an accessibility action is no tap.
-    act(() =>
+    await act(() =>
       row.props.onAccessibilityAction({ nativeEvent: { actionName: "cheer" } }),
     );
     expect(onCheer).toHaveBeenCalledWith(ticked);
   });
 
-  it("offers nothing on a buddy's habit when there is no swipe either", () => {
-    const { getByLabelText } = renderRow({
+  it("offers nothing on a buddy's habit when there is no swipe either", async () => {
+    const { getByLabelText } = await renderRow({
       canEdit: false,
       onNudge: undefined,
       onCheer: undefined,
@@ -302,8 +304,8 @@ describe("Habit row actions", () => {
     expect(actionNames(getByLabelText("Read"))).toEqual([]);
   });
 
-  it("names each action for the screen reader", () => {
-    const { getByLabelText } = renderRow({});
+  it("names each action for the screen reader", async () => {
+    const { getByLabelText } = await renderRow({});
     const actions = getByLabelText("Read").props.accessibilityActions as {
       label: string;
     }[];
@@ -313,8 +315,8 @@ describe("Habit row actions", () => {
 });
 
 describe("Swipe action tile", () => {
-  it("is a button named by its label, not its emoji", () => {
-    const { getByRole } = render(
+  it("is a button named by its label, not its emoji", async () => {
+    const { getByRole } = await render(
       <SwipeAction
         drag={{ value: 0 } as never}
         side="right"
@@ -330,14 +332,14 @@ describe("Swipe action tile", () => {
 });
 
 describe("Dashboard buttons", () => {
-  it("announces Add a new habit as a button", () => {
-    const { getByRole } = render(<AddGoalInput />);
+  it("announces Add a new habit as a button", async () => {
+    const { getByRole } = await render(<AddGoalInput />);
 
     expect(getByRole("button", { name: "Add a new habit" })).toBeTruthy();
   });
 
-  it("names the buddy buttons without their emoji", () => {
-    const { getByRole } = render(
+  it("names the buddy buttons without their emoji", async () => {
+    const { getByRole } = await render(
       <BuddyActions
         name="Ada"
         onNudge={jest.fn()}
@@ -350,8 +352,8 @@ describe("Dashboard buttons", () => {
     expect(getByRole("button", { name: "Cheer Ada" })).toBeTruthy();
   });
 
-  it("announces the habit list's Done as a button and its title as a heading", () => {
-    const { getByRole } = withWrapper(
+  it("announces the habit list's Done as a button and its title as a heading", async () => {
+    const { getByRole } = await withWrapper(
       <HabitManagerModal
         isVisible
         onClose={jest.fn()}
@@ -368,16 +370,16 @@ describe("Dashboard buttons", () => {
 });
 
 describe("Text fields carry their visible label", () => {
-  it("labels an auth field with its caption", () => {
-    const { getByLabelText } = render(
+  it("labels an auth field with its caption", async () => {
+    const { getByLabelText } = await render(
       <AuthField label="Email" placeholder="you@example.com" />,
     );
 
     expect(getByLabelText("Email").props.placeholder).toBe("you@example.com");
   });
 
-  it("labels the habit name field", () => {
-    const { getByLabelText } = withWrapper(
+  it("labels the habit name field", async () => {
+    const { getByLabelText } = await withWrapper(
       <HabitFormFields
         title=""
         onTitleChange={jest.fn()}
@@ -396,41 +398,43 @@ describe("Text fields carry their visible label", () => {
     );
   });
 
-  it("labels the invite code and the new group's name", () => {
-    const { getByLabelText, getByRole } = withWrapper(<JoinGroupScreen />);
+  it("labels the invite code and the new group's name", async () => {
+    const { getByLabelText, getByRole } = await withWrapper(
+      <JoinGroupScreen />,
+    );
 
     expect(getByLabelText("Invite code").props.placeholder).toBe("A1B2C3D4E5");
 
-    fireEvent.press(
+    await fireEvent.press(
       getByRole("button", { name: "No code? Create a new group" }),
     );
 
     expect(getByLabelText("Group name").props.placeholder).toBe("Swole Mates");
   });
 
-  it("labels the group name in group settings", () => {
-    const { getByLabelText } = withWrapper(<GroupSettingsScreen />);
+  it("labels the group name in group settings", async () => {
+    const { getByLabelText } = await withWrapper(<GroupSettingsScreen />);
 
     expect(getByLabelText("Group name").props.placeholder).toBe("Swole Mates");
   });
 });
 
 describe("Group settings controls", () => {
-  it("names the accent swatches and marks the selected one", () => {
-    const { getByRole } = withWrapper(<GroupSettingsScreen />);
+  it("names the accent swatches and marks the selected one", async () => {
+    const { getByRole } = await withWrapper(<GroupSettingsScreen />);
 
     const swatch = getByRole("button", { name: "Neon accent" });
     expect(swatch.props.accessibilityState).toMatchObject({ selected: true });
   });
 
-  it("announces the invite code tile as a copy button", () => {
-    const { getByRole } = withWrapper(<GroupSettingsScreen />);
+  it("announces the invite code tile as a copy button", async () => {
+    const { getByRole } = await withWrapper(<GroupSettingsScreen />);
 
     expect(getByRole("button", { name: /^Copy invite code/ })).toBeTruthy();
   });
 
-  it("announces the header's Save as a button", () => {
-    const { getByRole } = withWrapper(<GroupSettingsScreen />);
+  it("announces the header's Save as a button", async () => {
+    const { getByRole } = await withWrapper(<GroupSettingsScreen />);
 
     // The bottom one is "Save changes".
     expect(getByRole("button", { name: "Save" })).toBeTruthy();
@@ -438,8 +442,8 @@ describe("Group settings controls", () => {
 });
 
 describe("Headings", () => {
-  it("marks a modal screen's title as a heading", () => {
-    const { getByRole } = render(<ScreenHeader title="New habit" />);
+  it("marks a modal screen's title as a heading", async () => {
+    const { getByRole } = await render(<ScreenHeader title="New habit" />);
 
     expect(getByRole("header", { name: "New habit" })).toBeTruthy();
   });
@@ -447,35 +451,35 @@ describe("Headings", () => {
   it.each([
     ["sign-in", SignInScreen, "Sign in"],
     ["sign-up", SignUpScreen, "Create account"],
-  ])("marks the %s title as a heading", (_, Screen, title) => {
-    const { getByRole } = withWrapper(<Screen />);
+  ])("marks the %s title as a heading", async (_, Screen, title) => {
+    const { getByRole } = await withWrapper(<Screen />);
 
     expect(getByRole("header", { name: title })).toBeTruthy();
   });
 
-  it("marks the join-group title as a heading", () => {
-    const { getByRole } = withWrapper(<JoinGroupScreen />);
+  it("marks the join-group title as a heading", async () => {
+    const { getByRole } = await withWrapper(<JoinGroupScreen />);
 
     expect(getByRole("header", { name: "Join a crew." })).toBeTruthy();
   });
 });
 
 describe("Auth screens", () => {
-  it("announces the welcome buttons as buttons", () => {
-    const { getByRole } = render(<WelcomeScreen />);
+  it("announces the welcome buttons as buttons", async () => {
+    const { getByRole } = await render(<WelcomeScreen />);
 
     expect(getByRole("button", { name: "Create account" })).toBeTruthy();
     expect(getByRole("button", { name: "I have an account" })).toBeTruthy();
   });
 
-  it("announces the switch to sign-up as a link", () => {
-    const { getByRole } = withWrapper(<SignInScreen />);
+  it("announces the switch to sign-up as a link", async () => {
+    const { getByRole } = await withWrapper(<SignInScreen />);
 
     expect(getByRole("link", { name: "Sign up" })).toBeTruthy();
   });
 
-  it("announces the switch to sign-in as a link", () => {
-    const { getByRole } = withWrapper(<SignUpScreen />);
+  it("announces the switch to sign-in as a link", async () => {
+    const { getByRole } = await withWrapper(<SignUpScreen />);
 
     expect(getByRole("link", { name: "Sign in" })).toBeTruthy();
   });

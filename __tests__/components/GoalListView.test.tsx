@@ -17,13 +17,15 @@ const goal: Goal = {
   repeat_days: [],
 };
 
-function renderView(props: Partial<Parameters<typeof GoalListView>[0]> = {}) {
+async function renderView(
+  props: Partial<Parameters<typeof GoalListView>[0]> = {},
+) {
   const handlers = {
     onToggle: jest.fn(),
     onEdit: jest.fn(),
     onDelete: jest.fn(),
   };
-  const utils = render(
+  const utils = await render(
     <GoalListView
       goals={[goal]}
       loading={false}
@@ -37,25 +39,25 @@ function renderView(props: Partial<Parameters<typeof GoalListView>[0]> = {}) {
 }
 
 describe("GoalListView", () => {
-  it("hands a tapped habit to onToggle", () => {
-    const { getByLabelText, onToggle } = renderView();
+  it("hands a tapped habit to onToggle", async () => {
+    const { getByLabelText, onToggle } = await renderView();
 
-    fireEvent.press(getByLabelText("Read"));
+    await fireEvent.press(getByLabelText("Read"));
 
     expect(onToggle).toHaveBeenCalledWith(goal);
   });
 
-  it("does not toggle someone else's habits", () => {
-    const { getByLabelText, onToggle } = renderView({ canEdit: false });
+  it("does not toggle someone else's habits", async () => {
+    const { getByLabelText, onToggle } = await renderView({ canEdit: false });
 
-    fireEvent.press(getByLabelText("Read"));
+    await fireEvent.press(getByLabelText("Read"));
 
     expect(onToggle).not.toHaveBeenCalled();
     expect(getByLabelText("Read").props.accessibilityState.disabled).toBe(true);
   });
 
-  it("shows the skeleton while loading", () => {
-    const { getByTestId } = renderView({ loading: true });
+  it("shows the skeleton while loading", async () => {
+    const { getByTestId } = await renderView({ loading: true });
 
     expect(getByTestId("goal-list-skeleton")).toBeTruthy();
   });

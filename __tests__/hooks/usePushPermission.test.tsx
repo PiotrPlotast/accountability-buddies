@@ -125,7 +125,7 @@ describe("usePushPermission", () => {
     const { utils } = await renderIt();
     await waitFor(() => expect(addListenerSpy).toHaveBeenCalled());
 
-    utils.unmount();
+    await utils.unmount();
 
     expect(remove).toHaveBeenCalled();
   });

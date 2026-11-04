@@ -4,7 +4,6 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 import GoalList from "@/app/components/dashboard/GoalList";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
-import Reanimated, { LayoutAnimationConfig } from "react-native-reanimated";
 
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
 
@@ -14,6 +13,13 @@ import {
   makeQueryBuilder,
   makeQueryClient,
 } from "../test-utils/render";
+import { swipeableClose } from "../test-utils/swipeableStub";
+
+// The swipe can't run under Jest: the stand-in draws each row's actions as
+// they look swiped open, and takes the drag callbacks as events.
+jest.mock("react-native-gesture-handler/ReanimatedSwipeable", () =>
+  require("../test-utils/swipeableStub"),
+);
 
 const stats: GroupResult = {
   group_id: "group-1",
@@ -27,7 +33,10 @@ const stats: GroupResult = {
 
 const members: Member[] = [{ user_id: "user-1", full_name: "Me", goals: [] }];
 
-function renderList(selectedTabId: string | null, opts: { seed: boolean }) {
+async function renderList(
+  selectedTabId: string | null,
+  opts: { seed: boolean },
+) {
   const queryClient = makeQueryClient();
   if (opts.seed) {
     queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
@@ -42,7 +51,7 @@ function renderList(selectedTabId: string | null, opts: { seed: boolean }) {
     supabase: buildFakeSupabase({ rpcImpl }),
     queryClient,
   });
-  return render(
+  return await render(
     <GoalList
       selectedTabId={selectedTabId}
       goals={[]}
@@ -54,21 +63,25 @@ function renderList(selectedTabId: string | null, opts: { seed: boolean }) {
 }
 
 describe("GoalList skeleton", () => {
-  it("shows the skeleton while the group is loading", () => {
-    const { getByTestId } = renderList("user-1", { seed: false });
+  it("shows the skeleton while the group is loading", async () => {
+    const { getByTestId } = await renderList("user-1", { seed: false });
     expect(getByTestId("goal-list-skeleton")).toBeTruthy();
   });
 
   // A selected member missing from a loaded list is not "loading" — it used
   // to pin the skeleton on screen for good once the viewed member left.
-  it("does not show the skeleton for a member missing from a loaded list", () => {
-    const { queryByTestId, getByText } = renderList("gone", { seed: true });
+  it("does not show the skeleton for a member missing from a loaded list", async () => {
+    const { queryByTestId, getByText } = await renderList("gone", {
+      seed: true,
+    });
     expect(queryByTestId("goal-list-skeleton")).toBeNull();
     expect(getByText("Nothing here for today.")).toBeTruthy();
   });
 
-  it("shows the empty state for your own empty day", () => {
-    const { queryByTestId, getByText } = renderList("user-1", { seed: true });
+  it("shows the empty state for your own empty day", async () => {
+    const { queryByTestId, getByText } = await renderList("user-1", {
+      seed: true,
+    });
     expect(queryByTestId("goal-list-skeleton")).toBeNull();
     expect(getByText(/No habits for today/)).toBeTruthy();
   });
@@ -85,7 +98,7 @@ describe("GoalList swipe actions", () => {
     repeat_days: [],
   };
 
-  function renderWithGoal(
+  async function renderWithGoal(
     selectedTabId: string,
     handlers: {
       onNudge?: jest.Mock;
@@ -104,7 +117,7 @@ describe("GoalList swipe actions", () => {
       supabase: buildFakeSupabase(),
       queryClient,
     });
-    const utils = render(
+    const utils = await render(
       <GoalList
         selectedTabId={selectedTabId}
         goals={[
@@ -117,28 +130,19 @@ describe("GoalList swipe actions", () => {
       />,
       { wrapper: Wrapper },
     );
-    const swipeable = utils.UNSAFE_getByProps({ friction: 2 });
-    return { ...utils, swipeable };
+    return utils;
   }
 
-  // The swipe reveals what the right-hand action renders; render it directly
-  // rather than simulating the gesture.
-  const renderAction = (fn: unknown, close: jest.Mock = jest.fn()) =>
-    render(
-      (fn as (p: unknown, d: unknown, m: unknown) => React.ReactElement)(
-        { value: 0 },
-        { value: 0 },
-        { close },
-      ),
-    );
+  beforeEach(() => swipeableClose.mockClear());
 
-  it("offers a nudge for a buddy's habit, carrying that habit", () => {
+  it("offers a nudge for a buddy's habit, carrying that habit", async () => {
     const onNudge = jest.fn();
-    const { swipeable } = renderWithGoal("user-2", { onNudge });
-    expect(swipeable.props.renderLeftActions).toBeUndefined();
+    const { queryByTestId, getByLabelText } = await renderWithGoal("user-2", {
+      onNudge,
+    });
+    expect(queryByTestId("swipe-left-actions")).toBeNull();
 
-    const action = renderAction(swipeable.props.renderRightActions);
-    fireEvent.press(action.getByText("Nudge"));
+    await fireEvent.press(getByLabelText("Nudge"));
     expect(onNudge).toHaveBeenCalledWith(
       expect.objectContaining({ id: "g-2", title: "Run" }),
     );
@@ -146,49 +150,53 @@ describe("GoalList swipe actions", () => {
 
   // The row stays where it is under the nudge box, so it shouldn't sit there
   // swiped open once the box closes.
-  it("closes the swiped row as it opens the nudge", () => {
-    const close = jest.fn();
-    const { swipeable } = renderWithGoal("user-2", { onNudge: jest.fn() });
+  it("closes the swiped row as it opens the nudge", async () => {
+    const { getByLabelText } = await renderWithGoal("user-2", {
+      onNudge: jest.fn(),
+    });
 
-    const action = renderAction(swipeable.props.renderRightActions, close);
-    fireEvent.press(action.getByText("Nudge"));
-    expect(close).toHaveBeenCalled();
+    await fireEvent.press(getByLabelText("Nudge"));
+    expect(swipeableClose).toHaveBeenCalled();
   });
 
   // A ticked habit is something to cheer, not to nudge about.
-  it("offers a cheer instead of a nudge for a buddy's ticked habit", () => {
+  it("offers a cheer instead of a nudge for a buddy's ticked habit", async () => {
     const onNudge = jest.fn();
     const onCheer = jest.fn();
-    const close = jest.fn();
-    const { swipeable } = renderWithGoal("user-2", { onNudge, onCheer }, true);
+    const { queryByLabelText, getByLabelText } = await renderWithGoal(
+      "user-2",
+      { onNudge, onCheer },
+      true,
+    );
 
-    const action = renderAction(swipeable.props.renderRightActions, close);
-    expect(action.queryByText("Nudge")).toBeNull();
-    fireEvent.press(action.getByText("Cheer"));
+    expect(queryByLabelText("Nudge")).toBeNull();
+    await fireEvent.press(getByLabelText("Cheer"));
     expect(onCheer).toHaveBeenCalledWith(
       expect.objectContaining({ id: "g-2", title: "Run" }),
     );
     expect(onNudge).not.toHaveBeenCalled();
-    expect(close).toHaveBeenCalled();
+    expect(swipeableClose).toHaveBeenCalled();
   });
 
-  it("offers no swipe on a ticked habit when cheering isn't available", () => {
-    const { swipeable } = renderWithGoal(
+  it("offers no swipe on a ticked habit when cheering isn't available", async () => {
+    const { queryByTestId } = await renderWithGoal(
       "user-2",
       { onNudge: jest.fn() },
       true,
     );
-    expect(swipeable.props.renderRightActions).toBeUndefined();
+    expect(queryByTestId("swipe-right-actions")).toBeNull();
   });
 
-  it("keeps delete, not nudge, on your own habits", () => {
+  it("keeps delete, not nudge, on your own habits", async () => {
     const onNudge = jest.fn();
     const onDelete = jest.fn();
-    const { swipeable } = renderWithGoal("user-1", { onNudge, onDelete });
+    const { queryByLabelText, getByLabelText } = await renderWithGoal(
+      "user-1",
+      { onNudge, onDelete },
+    );
 
-    const action = renderAction(swipeable.props.renderRightActions);
-    expect(action.queryByText("Nudge")).toBeNull();
-    fireEvent.press(action.getByText("Delete"));
+    expect(queryByLabelText("Nudge")).toBeNull();
+    await fireEvent.press(getByLabelText("Delete"));
     expect(onDelete).toHaveBeenCalled();
     expect(onNudge).not.toHaveBeenCalled();
   });
@@ -196,9 +204,9 @@ describe("GoalList swipe actions", () => {
 
 // A swipe starts with a touch on the row, so the row's own press used to fire
 // when the finger lifted and tick (or untick) the habit being swiped to edit or
-// delete. The gesture itself can't run here; the Swipeable's drag callback is
-// called directly, between the touch going down and coming up, the order the
-// app sees them in.
+// delete. The gesture itself can't run here; the swipe stand-in takes the
+// drag as an event, fired between the touch going down and coming up, the
+// order the app sees them in.
 describe("GoalList swipe versus tap", () => {
   const myGoal: Goal = {
     id: "g-1",
@@ -210,7 +218,7 @@ describe("GoalList swipe versus tap", () => {
     repeat_days: [],
   };
 
-  function renderMine() {
+  async function renderMine() {
     const queryClient = makeQueryClient();
     queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
     queryClient.setQueryData(
@@ -224,7 +232,7 @@ describe("GoalList swipe versus tap", () => {
       supabase: buildFakeSupabase({ fromImpl }),
       queryClient,
     });
-    const utils = render(
+    const utils = await render(
       <GoalList
         selectedTabId="user-1"
         goals={[myGoal]}
@@ -234,23 +242,23 @@ describe("GoalList swipe versus tap", () => {
       { wrapper: Wrapper },
     );
     const row = utils.getByRole("checkbox", { name: "Read" });
-    const swipeable = utils.UNSAFE_getByProps({ friction: 2 });
+    const swipeable = utils.getByTestId("swipeable-row");
     const logWrites = () =>
       fromImpl.mock.calls.filter((call: unknown[]) => call[0] === "logs");
     return { row, swipeable, logWrites };
   }
 
   // The toggle writes after awaiting a cache cancel, so let that run out.
-  const settle = () =>
-    act(async () => {
+  const settle = async () =>
+    await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
   it("ticks the habit on a plain tap", async () => {
-    const { row, logWrites } = renderMine();
+    const { row, logWrites } = await renderMine();
 
-    fireEvent(row, "pressIn");
-    fireEvent.press(row);
+    await fireEvent(row, "pressIn");
+    await fireEvent.press(row);
     await settle();
 
     expect(logWrites()).toHaveLength(1);
@@ -260,22 +268,22 @@ describe("GoalList swipe versus tap", () => {
     ["right, towards edit", "right"],
     ["left, towards delete", "left"],
   ])("does not tick the habit when swiped %s", async (_label, direction) => {
-    const { row, swipeable, logWrites } = renderMine();
+    const { row, swipeable, logWrites } = await renderMine();
 
-    fireEvent(row, "pressIn");
-    act(() => swipeable.props.onSwipeableOpenStartDrag(direction));
-    fireEvent.press(row);
+    await fireEvent(row, "pressIn");
+    await fireEvent(swipeable, "swipeableOpenStartDrag", direction);
+    await fireEvent.press(row);
     await settle();
 
     expect(logWrites()).toHaveLength(0);
   });
 
   it("does not tick the habit when dragged back closed", async () => {
-    const { row, swipeable, logWrites } = renderMine();
+    const { row, swipeable, logWrites } = await renderMine();
 
-    fireEvent(row, "pressIn");
-    act(() => swipeable.props.onSwipeableCloseStartDrag("left"));
-    fireEvent.press(row);
+    await fireEvent(row, "pressIn");
+    await fireEvent(swipeable, "swipeableCloseStartDrag", "left");
+    await fireEvent.press(row);
     await settle();
 
     expect(logWrites()).toHaveLength(0);
@@ -283,14 +291,14 @@ describe("GoalList swipe versus tap", () => {
 
   // The swipe is forgotten once the finger lifts: the next touch is a tap.
   it("ticks the habit on a tap after a swipe", async () => {
-    const { row, swipeable, logWrites } = renderMine();
+    const { row, swipeable, logWrites } = await renderMine();
 
-    fireEvent(row, "pressIn");
-    act(() => swipeable.props.onSwipeableOpenStartDrag("right"));
-    fireEvent.press(row);
+    await fireEvent(row, "pressIn");
+    await fireEvent(swipeable, "swipeableOpenStartDrag", "right");
+    await fireEvent.press(row);
 
-    fireEvent(row, "pressIn");
-    fireEvent.press(row);
+    await fireEvent(row, "pressIn");
+    await fireEvent.press(row);
     await settle();
 
     expect(logWrites()).toHaveLength(1);
@@ -312,7 +320,7 @@ describe("GoalList first paint", () => {
     repeat_days: [],
   });
 
-  function renderLive(goals: Goal[], opts: { seed: boolean }) {
+  async function renderLive(goals: Goal[], opts: { seed: boolean }) {
     const queryClient = makeQueryClient();
     if (opts.seed) {
       queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
@@ -336,49 +344,55 @@ describe("GoalList first paint", () => {
         onDelete={jest.fn()}
       />
     );
-    const utils = render(list(goals), { wrapper: Wrapper });
+    const utils = await render(list(goals), { wrapper: Wrapper });
     return {
       ...utils,
       queryClient,
-      rerenderWith: (g: Goal[]) => utils.rerender(list(g)),
+      rerenderWith: async (g: Goal[]) => await utils.rerender(list(g)),
     };
   }
 
-  it("skips the entering fade for the rows on screen when it mounts", () => {
-    const { UNSAFE_getByType } = renderLive([habit("Run")], { seed: true });
+  it("skips the entering fade for the rows on screen when it mounts", async () => {
+    const { getByTestId } = await renderLive([habit("Run")], {
+      seed: true,
+    });
 
-    expect(UNSAFE_getByType(LayoutAnimationConfig).props.skipEntering).toBe(
+    expect(getByTestId("layout-animation-config").props.skipEntering).toBe(
       true,
     );
   });
 
-  it("gives every row an entering fade for rows added later", () => {
-    const { UNSAFE_queryAllByType, rerenderWith } = renderLive([habit("Run")], {
+  it("gives every row an entering fade for rows added later", async () => {
+    const { container, rerenderWith } = await renderLive([habit("Run")], {
       seed: true,
     });
 
-    rerenderWith([habit("Run"), habit("Swim")]);
+    await rerenderWith([habit("Run"), habit("Swim")]);
 
-    const rows = UNSAFE_queryAllByType(Reanimated.View).filter(
-      (view) => view.props.exiting !== undefined,
-    );
+    // A row is the animated view with an exit (the native View under
+    // Reanimated.View keeps its props).
+    const rows = container.queryAll((view) => view.props.exiting !== undefined);
     expect(rows).toHaveLength(2);
     rows.forEach((row) => expect(row.props.entering).toBeDefined());
   });
 
-  it("keeps one config mounted from the empty state to the first habit", () => {
-    const { UNSAFE_getByType, rerenderWith } = renderLive([], { seed: true });
-    const before = UNSAFE_getByType(LayoutAnimationConfig);
+  it("keeps one config mounted from the empty state to the first habit", async () => {
+    const { getByTestId, rerenderWith } = await renderLive([], {
+      seed: true,
+    });
+    const before = getByTestId("layout-animation-config");
 
-    rerenderWith([habit("Run")]);
+    await rerenderWith([habit("Run")]);
 
-    expect(UNSAFE_getByType(LayoutAnimationConfig)).toBe(before);
+    expect(getByTestId("layout-animation-config")).toBe(before);
   });
 
-  it("wraps the skeleton too, so rows that land after loading still fade in", () => {
-    const { UNSAFE_getByType, getByTestId } = renderLive([], { seed: false });
+  it("wraps the skeleton too, so rows that land after loading still fade in", async () => {
+    const { getByTestId } = await renderLive([], {
+      seed: false,
+    });
 
     expect(getByTestId("goal-list-skeleton")).toBeTruthy();
-    expect(UNSAFE_getByType(LayoutAnimationConfig)).toBeTruthy();
+    expect(getByTestId("layout-animation-config")).toBeTruthy();
   });
 });

@@ -9,17 +9,20 @@ import {
 } from "../test-utils/render";
 
 describe("Join group", () => {
-  it("stops a new group's name at 40 characters, the server's limit", () => {
+  it("stops a new group's name at 40 characters, the server's limit", async () => {
     const supabase = buildFakeSupabase({});
     const { Wrapper } = buildWrapper({
       supabase,
       queryClient: makeQueryClient(),
     });
-    const { getByText, getByPlaceholderText } = render(<JoinGroupScreen />, {
-      wrapper: Wrapper,
-    });
+    const { getByText, getByPlaceholderText } = await render(
+      <JoinGroupScreen />,
+      {
+        wrapper: Wrapper,
+      },
+    );
 
-    fireEvent.press(getByText("No code? Create a new group"));
+    await fireEvent.press(getByText("No code? Create a new group"));
 
     expect(getByPlaceholderText("Swole Mates").props.maxLength).toBe(40);
   });
@@ -49,7 +52,7 @@ describe("Join group, once you're in", () => {
   };
 
   // `inGroup`: what the server says right now about your group.
-  function setup({ inGroup }: { inGroup: () => boolean }) {
+  async function setup({ inGroup }: { inGroup: () => boolean }) {
     const queryClient = makeQueryClient();
     queryClient.setQueryData(queryKeys.groupStats("user-1"), null);
     const rpcImpl = jest.fn((name: string) => {
@@ -69,7 +72,7 @@ describe("Join group, once you're in", () => {
     );
     const supabase = buildFakeSupabase({ rpcImpl, fromImpl });
     const { Wrapper } = buildWrapper({ supabase, queryClient });
-    const utils = render(<JoinGroupScreen />, { wrapper: Wrapper });
+    const utils = await render(<JoinGroupScreen />, { wrapper: Wrapper });
     return { ...utils, supabase, queryClient };
   }
 
@@ -81,14 +84,17 @@ describe("Join group, once you're in", () => {
 
   it("goes back to the dashboard after joining", async () => {
     let joined = false;
-    const { getByPlaceholderText, getByText, queryClient } = setup({
+    const { getByPlaceholderText, getByText, queryClient } = await setup({
       inGroup: () => joined,
     });
     expect(router.dismissTo).not.toHaveBeenCalled();
 
     joined = true;
-    fireEvent.changeText(getByPlaceholderText("A1B2C3D4E5"), "ABCDEF0123");
-    await act(async () => fireEvent.press(getByText("Join group")));
+    await fireEvent.changeText(
+      getByPlaceholderText("A1B2C3D4E5"),
+      "ABCDEF0123",
+    );
+    await act(async () => await fireEvent.press(getByText("Join group")));
 
     await waitFor(() => expect(router.dismissTo).toHaveBeenCalledWith("/"));
     expect(router.replace).not.toHaveBeenCalled();
@@ -101,27 +107,30 @@ describe("Join group, once you're in", () => {
 
   it("goes back to the dashboard after creating", async () => {
     let created = false;
-    const { getByPlaceholderText, getByText } = setup({
+    const { getByPlaceholderText, getByText } = await setup({
       inGroup: () => created,
     });
 
     created = true;
-    fireEvent.press(getByText("No code? Create a new group"));
-    fireEvent.changeText(getByPlaceholderText("Swole Mates"), "Night Owls");
-    await act(async () => fireEvent.press(getByText("Create group")));
+    await fireEvent.press(getByText("No code? Create a new group"));
+    await fireEvent.changeText(
+      getByPlaceholderText("Swole Mates"),
+      "Night Owls",
+    );
+    await act(async () => await fireEvent.press(getByText("Create group")));
 
     await waitFor(() => expect(router.dismissTo).toHaveBeenCalledWith("/"));
   });
 
   it("asks again when it opens, and leaves if you're already in a group", async () => {
     // Sent here on a cached "no group" from before you joined.
-    setup({ inGroup: () => true });
+    await setup({ inGroup: () => true });
 
     await waitFor(() => expect(router.dismissTo).toHaveBeenCalledWith("/"));
   });
 
   it("stays while you really have no group", async () => {
-    const { findByText } = setup({ inGroup: () => false });
+    const { findByText } = await setup({ inGroup: () => false });
 
     await findByText("Join group");
     await act(async () => {});
@@ -130,9 +139,9 @@ describe("Join group, once you're in", () => {
 
   it("lets you log out, after confirming", async () => {
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
-    const { getByText, supabase } = setup({ inGroup: () => false });
+    const { getByText, supabase } = await setup({ inGroup: () => false });
 
-    fireEvent.press(getByText("Log out"));
+    await fireEvent.press(getByText("Log out"));
     expect(supabase.auth.signOut).not.toHaveBeenCalled();
 
     const buttons = alert.mock.calls[0][2] as {

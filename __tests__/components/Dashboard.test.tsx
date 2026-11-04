@@ -2,10 +2,6 @@ import { AccessibilityInfo, AppState, Platform } from "react-native";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import Dashboard from "@/app/components/dashboard/Dashboard";
-import DeleteGoalModal from "@/app/components/dashboard/DeleteGoalModal";
-import EditGoalModal from "@/app/components/dashboard/EditGoalModal";
-import HabitManagerModal from "@/app/components/dashboard/HabitsManagerModal";
-import CheerModal from "@/app/components/dashboard/CheerModal";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 import { Goal, GroupResult, Member } from "@/types/dashboardTypes";
@@ -19,6 +15,36 @@ import {
   makeQueryBuilder,
   makeQueryClient,
 } from "../test-utils/render";
+
+// The swipe can't run under Jest: the stand-in draws a row's actions as they
+// look swiped open, so a test presses "Nudge" or "Cheer" where a swipe would
+// uncover it.
+jest.mock("react-native-gesture-handler/ReanimatedSwipeable", () =>
+  require("../test-utils/swipeableStub"),
+);
+
+// iOS reports a sheet gone (`onDismiss`) only once it has stopped drawing
+// it. React Native's own mock renders nothing at all for a hidden Modal,
+// which leaves nothing to deliver that to, so this one keeps the hidden
+// sheet's host element, without its contents.
+jest.mock("react-native/Libraries/Modal/Modal", () => {
+  const React = require("react");
+  function Modal({
+    children,
+    visible = true,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    visible?: boolean;
+  }) {
+    return React.createElement(
+      "Modal",
+      { ...props, visible },
+      visible ? children : null,
+    );
+  }
+  return { __esModule: true, default: Modal };
+});
 
 const stats: GroupResult = {
   group_id: "group-1",
@@ -51,7 +77,7 @@ const buddy: Member = {
   goals: [goal("Buddy habit", "user-2")],
 };
 
-function renderDashboard(
+async function renderDashboard(
   members: Member[] = [me, buddy],
   functionsImpl?: jest.Mock,
 ) {
@@ -70,48 +96,51 @@ function renderDashboard(
     supabase: buildFakeSupabase(functionsImpl ? { functionsImpl } : {}),
     queryClient,
   });
-  return { queryClient, ...render(<Dashboard />, { wrapper: Wrapper }) };
+  return {
+    queryClient,
+    ...(await render(<Dashboard />, { wrapper: Wrapper })),
+  };
 }
 
 describe("Dashboard member tabs", () => {
-  it("opens on your own tab", () => {
-    const { getByText, queryByText } = renderDashboard();
+  it("opens on your own tab", async () => {
+    const { getByText, queryByText } = await renderDashboard();
     expect(getByText("My habit")).toBeTruthy();
     expect(queryByText("Buddy habit")).toBeNull();
   });
 
-  it("shows the buddy's habits once their tab is picked", () => {
-    const { getByLabelText, getByText } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("shows the buddy's habits once their tab is picked", async () => {
+    const { getByLabelText, getByText } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
     expect(getByText("Buddy habit")).toBeTruthy();
   });
 
   // A tapped nudge asks you to do your habits, which only your own tab can.
-  it("goes back to your own tab when a nudge is tapped", () => {
-    const { getByLabelText, getByText, queryByText } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("goes back to your own tab when a nudge is tapped", async () => {
+    const { getByLabelText, getByText, queryByText } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
     expect(getByText("Buddy habit")).toBeTruthy();
 
-    act(() => emitShowTab(null));
+    await act(() => emitShowTab(null));
 
     expect(getByText("My habit")).toBeTruthy();
     expect(queryByText("Buddy habit")).toBeNull();
   });
 
   // A tapped buddy event opens the buddy it is about.
-  it("opens a buddy's tab when a notification about them is tapped", () => {
-    const { getByText, queryByText } = renderDashboard();
+  it("opens a buddy's tab when a notification about them is tapped", async () => {
+    const { getByText, queryByText } = await renderDashboard();
 
-    act(() => emitShowTab("user-2"));
+    await act(() => emitShowTab("user-2"));
 
     expect(getByText("Buddy habit")).toBeTruthy();
     expect(queryByText("My habit")).toBeNull();
   });
 
-  it("stays on your tab when the buddy tapped about is not in the group", () => {
-    const { getByText } = renderDashboard();
+  it("stays on your tab when the buddy tapped about is not in the group", async () => {
+    const { getByText } = await renderDashboard();
 
-    act(() => emitShowTab("someone-else"));
+    await act(() => emitShowTab("someone-else"));
 
     expect(getByText("My habit")).toBeTruthy();
   });
@@ -119,10 +148,10 @@ describe("Dashboard member tabs", () => {
   // The viewed member leaving used to pin the skeleton on screen for good.
   it("falls back to your tab when the viewed member leaves", async () => {
     const { queryClient, getByLabelText, getByText, queryByTestId } =
-      renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+      await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
 
-    act(() => {
+    await act(() => {
       queryClient.setQueryData(
         queryKeys.groupMembers("group-1", getTodayLocalDate()),
         [me],
@@ -184,7 +213,7 @@ describe("Dashboard across midnight", () => {
       }),
       queryClient,
     });
-    const { getByText, queryByText } = render(<Dashboard />, {
+    const { getByText, queryByText } = await render(<Dashboard />, {
       wrapper: Wrapper,
     });
     expect(getByText("Mondays only")).toBeTruthy();
@@ -207,38 +236,33 @@ describe("Dashboard nudges", () => {
     jest.restoreAllMocks();
   });
 
-  it("offers no nudge on your own tab", () => {
-    const { queryByText } = renderDashboard();
+  it("offers no nudge on your own tab", async () => {
+    const { queryByText } = await renderDashboard();
     expect(queryByText(/^Nudge /)).toBeNull();
   });
 
-  it("shows a nudge button on a buddy's tab, where your add-habit button sits", () => {
-    const { getByLabelText, getByText, queryByText } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("shows a nudge button on a buddy's tab, where your add-habit button sits", async () => {
+    const { getByLabelText, getByText, queryByText } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
     expect(getByText("Nudge Buddy")).toBeTruthy();
     expect(queryByText("Add a new habit")).toBeNull();
   });
 
-  it("opens an empty nudge box from the button", () => {
-    const { getByLabelText, getByText, queryByLabelText } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("opens an empty nudge box from the button", async () => {
+    const { getByLabelText, getByText, queryByLabelText } =
+      await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
     expect(queryByLabelText("Nudge message")).toBeNull();
 
-    fireEvent.press(getByText("Nudge Buddy"));
+    await fireEvent.press(getByText("Nudge Buddy"));
     expect(getByLabelText("Nudge message").props.value).toBe("");
   });
 
-  it("opens the box prefilled with the habit from a swipe", () => {
-    const { getByLabelText, UNSAFE_getByProps } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("opens the box prefilled with the habit from a swipe", async () => {
+    const { getByLabelText } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
 
-    const swipeable = UNSAFE_getByProps({ friction: 2 });
-    const action = render(
-      swipeable.props.renderRightActions({ value: 0 }, { value: 0 }),
-    );
-    act(() => {
-      fireEvent.press(action.getByText("Nudge"));
-    });
+    await fireEvent.press(getByLabelText("Nudge"));
 
     expect(getByLabelText("Nudge message").props.value).toBe(
       "Buddy, what about your buddy habit?",
@@ -250,12 +274,12 @@ describe("Dashboard nudges", () => {
     const announce = jest
       .spyOn(AccessibilityInfo, "announceForAccessibility")
       .mockImplementation(() => {});
-    const { getByLabelText, getByText } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
-    fireEvent.press(getByText("Nudge Buddy"));
+    const { getByLabelText, getByText } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    await fireEvent.press(getByText("Nudge Buddy"));
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     await waitFor(() =>
@@ -266,12 +290,12 @@ describe("Dashboard nudges", () => {
 
   it("confirms under the button after a send, for a few seconds", async () => {
     jest.useFakeTimers();
-    const { getByLabelText, getByText, queryByText } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
-    fireEvent.press(getByText("Nudge Buddy"));
+    const { getByLabelText, getByText, queryByText } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    await fireEvent.press(getByText("Nudge Buddy"));
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     await waitFor(() => expect(getByText("Nudge sent to Buddy")).toBeTruthy());
@@ -305,27 +329,30 @@ describe("Dashboard cheers", () => {
     jest.restoreAllMocks();
   });
 
-  it("offers no cheer on your own tab", () => {
-    const { queryByText } = renderDashboard();
+  it("offers no cheer on your own tab", async () => {
+    const { queryByText } = await renderDashboard();
     expect(queryByText(/^Cheer /)).toBeNull();
   });
 
-  it("puts a cheer button beside the nudge on a buddy's tab", () => {
-    const { getByLabelText, getByText } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("puts a cheer button beside the nudge on a buddy's tab", async () => {
+    const { getByLabelText, getByText } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
     expect(getByText("Nudge Buddy")).toBeTruthy();
     expect(getByText("Cheer Buddy")).toBeTruthy();
   });
 
   it("cheers the buddy's day from the button, dated today", async () => {
     const invoke = cheerSent();
-    const { getByLabelText, getByText } = renderDashboard([me, buddy], invoke);
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
-    fireEvent.press(getByText("Cheer Buddy"));
+    const { getByLabelText, getByText } = await renderDashboard(
+      [me, buddy],
+      invoke,
+    );
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    await fireEvent.press(getByText("Cheer Buddy"));
     expect(getByText("Cheer Buddy's day")).toBeTruthy();
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     expect(invoke).toHaveBeenCalledWith("send-cheer", {
@@ -339,37 +366,32 @@ describe("Dashboard cheers", () => {
     await waitFor(() => expect(getByText("Cheer sent to Buddy")).toBeTruthy());
   });
 
-  it("cheers a ticked habit from its swipe, where an unticked one nudges", () => {
-    const { getByLabelText, getByText, UNSAFE_getByProps, UNSAFE_getByType } =
-      renderDashboard([me, doneBuddy]);
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("cheers a ticked habit from its swipe, where an unticked one nudges", async () => {
+    const invoke = cheerSent();
+    const { getByLabelText, getByText, queryByLabelText } =
+      await renderDashboard([me, doneBuddy], invoke);
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
 
-    const swipeable = UNSAFE_getByProps({ friction: 2 });
-    const action = render(
-      swipeable.props.renderRightActions({ value: 0 }, { value: 0 }),
-    );
-    expect(action.queryByText("Nudge")).toBeNull();
-    act(() => {
-      fireEvent.press(action.getByText("Cheer"));
-    });
+    expect(queryByLabelText("Nudge")).toBeNull();
+    await fireEvent.press(getByLabelText("Cheer"));
 
-    // What it sends is CheerModal's to test: once a second root has been
-    // rendered (the action, above), presses in the first no longer reach
-    // their handlers, so Send can't be pressed here.
     expect(getByText("Cheer Buddy for Done habit")).toBeTruthy();
-    expect(UNSAFE_getByType(CheerModal).props).toEqual(
-      expect.objectContaining({
-        recipient: { userId: "user-2", name: "Buddy" },
-        goal: { id: "Done habit", title: "Done habit" },
+    await fireEvent.press(getByText("Send"));
+
+    expect(invoke).toHaveBeenCalledWith("send-cheer", {
+      body: {
+        recipient_id: "user-2",
+        message: "",
+        goal_id: "Done habit",
         day: getTodayLocalDate(),
-      }),
-    );
+      },
+    });
   });
 
-  it("opens the cheer a tapped push asks for, on that buddy's tab", () => {
-    const { getByText } = renderDashboard();
+  it("opens the cheer a tapped push asks for, on that buddy's tab", async () => {
+    const { getByText } = await renderDashboard();
 
-    act(() => {
+    await act(() => {
       emitShowTab("user-2");
       requestCheer({
         buddyId: "user-2",
@@ -382,23 +404,24 @@ describe("Dashboard cheers", () => {
     expect(getByText("Cheer Buddy for Run")).toBeTruthy();
   });
 
-  it("opens no cheer for someone who is no longer in the group", () => {
-    const { queryByLabelText } = renderDashboard();
+  it("opens no cheer for someone who is no longer in the group", async () => {
+    const { queryByLabelText } = await renderDashboard();
 
-    act(() => {
+    await act(() => {
       requestCheer({ buddyId: "someone-else", goal: null, day: null });
     });
 
     expect(queryByLabelText("Cheer message")).toBeNull();
   });
 
-  it("offline, disables the button and opens no cheer from a tap", () => {
-    const { getByLabelText, getByText, queryByLabelText } = renderDashboard();
-    act(() => onlineManager.setOnline(false));
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("offline, disables the button and opens no cheer from a tap", async () => {
+    const { getByLabelText, getByText, queryByLabelText } =
+      await renderDashboard();
+    await act(() => onlineManager.setOnline(false));
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
 
-    fireEvent.press(getByText("Cheer Buddy"));
-    act(() => {
+    await fireEvent.press(getByText("Cheer Buddy"));
+    await act(() => {
       requestCheer({ buddyId: "user-2", goal: null, day: null });
     });
 
@@ -410,68 +433,77 @@ describe("Dashboard cheers", () => {
 // once the manager's sheet is gone: on iOS from its `onDismiss`, elsewhere as
 // soon as the manager closes.
 describe("Dashboard habit manager hand-off", () => {
-  const openFromManager = (
-    utils: ReturnType<typeof renderDashboard>,
+  // Which sheet is open, read off the screen: the manager by its heading,
+  // edit by its title field (which also says which habit), delete by its
+  // heading and line.
+  const managerOpen = (utils: Awaited<ReturnType<typeof renderDashboard>>) =>
+    utils.queryByText("All Habits") !== null;
+  const editingTitle = (utils: Awaited<ReturnType<typeof renderDashboard>>) =>
+    utils.queryByPlaceholderText("Habit name")?.props.value ?? null;
+  // iOS reports the manager's sheet gone (`onDismiss`) after it has stopped
+  // drawing it; this delivers that event to the hidden sheet.
+  const sheetDismissed = (utils: Awaited<ReturnType<typeof renderDashboard>>) =>
+    fireEvent(
+      utils.container.queryAll(
+        (n) => n.type === "Modal" && n.props.presentationStyle === "pageSheet",
+      )[0],
+      "dismiss",
+    );
+
+  const openFromManager = async (
+    utils: Awaited<ReturnType<typeof renderDashboard>>,
     label: string,
   ) => {
-    fireEvent.press(utils.getByLabelText("Habits"));
-    fireEvent.press(utils.getByLabelText(label));
+    await fireEvent.press(utils.getByLabelText("Habits"));
+    await fireEvent.press(utils.getByLabelText(label));
   };
 
-  it("on iOS, waits for the manager to finish dismissing before opening edit", () => {
+  it("on iOS, waits for the manager to finish dismissing before opening edit", async () => {
     jest.replaceProperty(Platform, "OS", "ios");
-    const utils = renderDashboard();
+    const utils = await renderDashboard();
 
-    openFromManager(utils, "Edit My habit");
+    await openFromManager(utils, "Edit My habit");
 
-    expect(utils.UNSAFE_getByType(HabitManagerModal).props.isVisible).toBe(
-      false,
-    );
-    expect(utils.UNSAFE_getByType(EditGoalModal).props.isVisible).toBe(false);
+    expect(managerOpen(utils)).toBe(false);
+    expect(editingTitle(utils)).toBeNull();
 
-    act(() => utils.UNSAFE_getByType(HabitManagerModal).props.onDismiss());
+    await sheetDismissed(utils);
 
-    const edit = utils.UNSAFE_getByType(EditGoalModal);
-    expect(edit.props.isVisible).toBe(true);
-    expect(edit.props.goal.id).toBe("My habit");
+    expect(editingTitle(utils)).toBe("My habit");
   });
 
-  it("on Android, opens edit as the manager closes", () => {
+  it("on Android, opens edit as the manager closes", async () => {
     jest.replaceProperty(Platform, "OS", "android");
-    const utils = renderDashboard();
+    const utils = await renderDashboard();
 
-    openFromManager(utils, "Edit My habit");
+    await openFromManager(utils, "Edit My habit");
 
-    expect(utils.UNSAFE_getByType(HabitManagerModal).props.isVisible).toBe(
-      false,
-    );
-    const edit = utils.UNSAFE_getByType(EditGoalModal);
-    expect(edit.props.isVisible).toBe(true);
-    expect(edit.props.goal.id).toBe("My habit");
+    expect(managerOpen(utils)).toBe(false);
+    expect(editingTitle(utils)).toBe("My habit");
   });
 
-  it("on Android, opens delete as the manager closes", () => {
+  it("on Android, opens delete as the manager closes", async () => {
     jest.replaceProperty(Platform, "OS", "android");
-    const utils = renderDashboard();
+    const utils = await renderDashboard();
 
-    openFromManager(utils, "Delete My habit");
+    await openFromManager(utils, "Delete My habit");
 
-    const del = utils.UNSAFE_getByType(DeleteGoalModal);
-    expect(del.props.isVisible).toBe(true);
-    expect(del.props.goal.id).toBe("My habit");
-    expect(utils.UNSAFE_getByType(EditGoalModal).props.isVisible).toBe(false);
+    expect(utils.getByText("Delete habit?")).toBeTruthy();
+    expect(utils.getByText('"My habit" will be removed.')).toBeTruthy();
+    expect(editingTitle(utils)).toBeNull();
   });
 
-  it("opens nothing when the manager is closed without a request", () => {
+  it("opens nothing when the manager is closed without a request", async () => {
     jest.replaceProperty(Platform, "OS", "ios");
-    const utils = renderDashboard();
+    const utils = await renderDashboard();
 
-    fireEvent.press(utils.getByLabelText("Habits"));
-    act(() => utils.UNSAFE_getByType(HabitManagerModal).props.onClose());
-    act(() => utils.UNSAFE_getByType(HabitManagerModal).props.onDismiss());
+    await fireEvent.press(utils.getByLabelText("Habits"));
+    await fireEvent.press(utils.getByText("Done"));
+    expect(managerOpen(utils)).toBe(false);
+    await sheetDismissed(utils);
 
-    expect(utils.UNSAFE_getByType(EditGoalModal).props.isVisible).toBe(false);
-    expect(utils.UNSAFE_getByType(DeleteGoalModal).props.isVisible).toBe(false);
+    expect(editingTitle(utils)).toBeNull();
+    expect(utils.queryByText("Delete habit?")).toBeNull();
   });
 });
 
@@ -506,7 +538,7 @@ describe("Dashboard without a connection", () => {
       }),
       queryClient,
     });
-    const { findByText, getByText, queryByText } = render(<Dashboard />, {
+    const { findByText, getByText, queryByText } = await render(<Dashboard />, {
       wrapper: Wrapper,
     });
     expect(queryByText("Offline. Showing your last update.")).toBeNull();
@@ -534,7 +566,7 @@ describe("Dashboard without a connection", () => {
       supabase: buildFakeSupabase({ rpcImpl, fromImpl }),
       queryClient,
     });
-    const { findByText, queryByText } = render(<Dashboard />, {
+    const { findByText, queryByText } = await render(<Dashboard />, {
       wrapper: Wrapper,
     });
     await act(async () => {
@@ -562,7 +594,7 @@ describe("Dashboard without a connection", () => {
       }),
       queryClient,
     });
-    const { findByText, getByText, queryByText } = render(<Dashboard />, {
+    const { findByText, getByText, queryByText } = await render(<Dashboard />, {
       wrapper: Wrapper,
     });
 
@@ -585,14 +617,17 @@ describe("Dashboard without a connection", () => {
       supabase: buildFakeSupabase({ rpcImpl, fromImpl }),
       queryClient,
     });
-    const { findByText, findByRole, queryByText } = render(<Dashboard />, {
-      wrapper: Wrapper,
-    });
+    const { findByText, findByRole, queryByText } = await render(
+      <Dashboard />,
+      {
+        wrapper: Wrapper,
+      },
+    );
     await findByText("Can't reach Habit Pals");
     const callsBefore = rpcImpl.mock.calls.length;
 
     rpcImpl.mockImplementation(ok(stats));
-    fireEvent.press(await findByRole("button", { name: "Retry" }));
+    await fireEvent.press(await findByRole("button", { name: "Retry" }));
 
     expect(await findByText("My habit")).toBeTruthy();
     expect(rpcImpl.mock.calls.length).toBeGreaterThan(callsBefore);
@@ -606,7 +641,7 @@ describe("Dashboard without a connection", () => {
       supabase: buildFakeSupabase({ rpcImpl, fromImpl: jest.fn(failed) }),
       queryClient,
     });
-    const { findByText, findByRole } = render(<Dashboard />, {
+    const { findByText, findByRole } = await render(<Dashboard />, {
       wrapper: Wrapper,
     });
     await findByText("Can't reach Habit Pals");
@@ -618,7 +653,9 @@ describe("Dashboard without a connection", () => {
           maybeSingle: () => new Promise(() => {}),
         }) as never,
     );
-    fireEvent.press(await findByRole("button", { name: "Retry" }));
+    // Not awaited: RNTL 14's press waits for the handler, and this retry
+    // never finishes.
+    void fireEvent.press(await findByRole("button", { name: "Retry" }));
 
     const button = await findByRole("button", { name: "Retrying…" });
     expect(button.props.accessibilityState).toMatchObject({ disabled: true });

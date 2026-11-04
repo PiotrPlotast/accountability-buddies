@@ -12,11 +12,11 @@ type Row = { name: string; icon: string };
 const KEY = ["row", "1"] as const;
 const STORED: Row = { name: "Swole Mates", icon: "💪" };
 
-function setup(mutationFn: (vars: Partial<Row>) => Promise<void>) {
+async function setup(mutationFn: (vars: Partial<Row>) => Promise<void>) {
   const { Wrapper, queryClient } = buildWrapper();
   queryClient.setQueryData(KEY, STORED);
   const invalidate = jest.spyOn(queryClient, "invalidateQueries");
-  const { result } = renderHook(
+  const { result } = await renderHook(
     () =>
       useMutation({
         mutationFn,
@@ -44,11 +44,11 @@ afterEach(() => jest.restoreAllMocks());
 describe("optimisticPatchOptions", () => {
   it("patches the cache before the request settles", async () => {
     let finish!: () => void;
-    const { result, queryClient } = setup(
+    const { result, queryClient } = await setup(
       () => new Promise<void>((resolve) => (finish = resolve)),
     );
 
-    act(() => {
+    await act(() => {
       result.current.mutate({ name: "Lift Club" });
     });
 
@@ -63,7 +63,7 @@ describe("optimisticPatchOptions", () => {
 
   it("leaves the cache alone when the patch returns nothing", async () => {
     const { Wrapper, queryClient } = buildWrapper();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMutation({
           mutationFn: async () => {},
@@ -84,7 +84,7 @@ describe("optimisticPatchOptions", () => {
   });
 
   it("rolls back, buzzes and alerts with the shared title on failure", async () => {
-    const { result, queryClient } = setup(() =>
+    const { result, queryClient } = await setup(() =>
       Promise.reject({ message: "Name too long", code: "23514" }),
     );
 
@@ -98,7 +98,7 @@ describe("optimisticPatchOptions", () => {
   });
 
   it("falls back to its own line when the error carries no message", async () => {
-    const { result } = setup(() => Promise.reject({}));
+    const { result } = await setup(() => Promise.reject({}));
 
     await act(async () => {
       await result.current.mutateAsync({ name: "x" }).catch(() => {});
@@ -111,7 +111,7 @@ describe("optimisticPatchOptions", () => {
   });
 
   it("invalidates the key once the mutation settles", async () => {
-    const { result, invalidate } = setup(async () => {});
+    const { result, invalidate } = await setup(async () => {});
 
     await act(async () => {
       await result.current.mutateAsync({ icon: "🏋️" });

@@ -201,7 +201,7 @@ export async function renderHookWithSession<T>(
   hookFactory: () => T,
   Wrapper: React.ComponentType<WrapperProps>,
 ): Promise<RenderHookResult<{ session: unknown; value: T }, unknown>> {
-  const utils = renderHook(
+  const utils = await renderHook(
     () => ({ session: useSupabase().session, value: hookFactory() }),
     { wrapper: Wrapper },
   );

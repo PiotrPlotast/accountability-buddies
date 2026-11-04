@@ -16,8 +16,8 @@ jest.mock("react-native-worklets", () =>
 // ("ADD ME IF NEEDED" in its source). Components that degrade for Reduce Motion
 // would throw without it. Default to false — the ordinary path is what tests
 // assert; a test wanting the degraded path spies on this export.
-// `LayoutAnimationConfig` is another "ADD ME IF NEEDED": a pass-through keeps
-// its children rendering and its props readable from a test.
+// `LayoutAnimationConfig` is another "ADD ME IF NEEDED": a View keeps its
+// children rendering and its props readable from a test.
 //
 // Since gesture-handler 3 (SDK 58) a gesture subscribes to the shared values
 // in its config (`addListener` / `removeListener`), which the mock's shared
@@ -44,18 +44,35 @@ jest.mock("react-native-reanimated", () => {
     useSharedValue,
     default: { ...mock.default, useSharedValue },
     useReducedMotion: () => false,
-    LayoutAnimationConfig: function LayoutAnimationConfig({ children }) {
-      return children;
+    // A host View carrying its props, so a test can read them
+    // (`getByTestId("layout-animation-config").props.skipEntering`): RNTL 14
+    // renders native elements only, so a bare pass-through can't be found.
+    LayoutAnimationConfig: function LayoutAnimationConfig({
+      children,
+      ...props
+    }) {
+      const React = require("react");
+      const { View } = require("react-native");
+      return React.createElement(
+        View,
+        { testID: "layout-animation-config", ...props },
+        children,
+      );
     },
   };
 });
 
-// The native time picker renders nothing under Jest; tests find it by type and
-// call its `onChange` the way the OS would.
+// The native time picker, as a host View carrying its props: a test reads
+// the time it shows (`getByTestId("date-time-picker").props.value`) and
+// delivers the OS's answer as an event,
+// `fireEvent(picker, "change", { type: "set" }, date)`. RNTL 14 renders
+// native elements only, so a mock that rendered nothing couldn't be found.
 jest.mock("@react-native-community/datetimepicker", () => ({
   __esModule: true,
-  default: function DateTimePicker() {
-    return null;
+  default: function DateTimePicker(props) {
+    const React = require("react");
+    const { View } = require("react-native");
+    return React.createElement(View, { testID: "date-time-picker", ...props });
   },
 }));
 
