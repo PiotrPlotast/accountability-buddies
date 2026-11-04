@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { act, render, fireEvent, waitFor } from "@testing-library/react-native";
 import { Platform } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 
@@ -153,4 +153,54 @@ describe("AppleAuth", () => {
     });
     release({ identityToken: "id-token" });
   });
+
+  // Two taps landing in the same frame, before React has re-rendered: a
+  // guard kept in state reads the old `false` for both and opens two Apple
+  // sheets. Pressed inside one `act`, nothing re-renders in between.
+  it("ignores a second tap in the same frame as the first", async () => {
+    let release: (v: unknown) => void = () => {};
+    signInAsync.mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    const { Wrapper } = setup();
+    const { getByText } = render(<AppleAuth onError={jest.fn()} />, {
+      wrapper: Wrapper,
+    });
+    const button = getByText("Sign in with Apple");
+
+    act(() => {
+      fireEvent.press(button);
+      fireEvent.press(button);
+    });
+
+    await waitFor(() => expect(signInAsync).toHaveBeenCalled());
+    expect(signInAsync).toHaveBeenCalledTimes(1);
+    release({ identityToken: "id-token" });
+  });
+
+  // The guard lifts as soon as an attempt settles, so a failed or cancelled
+  // sign-in can be tried again straight away.
+  it.each([
+    ["failed", () => Promise.reject(new Error("Apple is down"))],
+    ["was cancelled", () => Promise.reject({ code: "ERR_REQUEST_CANCELED" })],
+  ])(
+    "can be tried again at once after an attempt that %s",
+    async (_label, first) => {
+      signInAsync.mockImplementationOnce(first);
+      const { Wrapper } = setup();
+      const { getByText } = render(<AppleAuth onError={jest.fn()} />, {
+        wrapper: Wrapper,
+      });
+
+      fireEvent.press(getByText("Sign in with Apple"));
+      await waitFor(() => expect(signInAsync).toHaveBeenCalledTimes(1));
+      // Let the first attempt settle.
+      await act(async () => {});
+
+      fireEvent.press(getByText("Sign in with Apple"));
+      await waitFor(() => expect(signInAsync).toHaveBeenCalledTimes(2));
+    },
+  );
 });

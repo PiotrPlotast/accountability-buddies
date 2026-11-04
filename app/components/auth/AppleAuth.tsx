@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef } from "react";
 import { Platform, Text, View } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 
@@ -28,13 +28,17 @@ type Props = {
  */
 export default function AppleAuth({ onError, buttonType }: Props) {
   const { signInWithApple } = useAppleSignIn();
-  const [busy, setBusy] = useState(false);
+  // A ref, not state: two taps can land in the same frame, before React
+  // re-renders, and a guard kept in state reads the old `false` for both and
+  // opens two Apple sheets. A ref is set by the first tap and seen by the
+  // second at once.
+  const inFlight = useRef(false);
 
   if (Platform.OS !== "ios") return null;
 
   const onPress = async () => {
-    if (busy) return;
-    setBusy(true);
+    if (inFlight.current) return;
+    inFlight.current = true;
     onError(null);
     try {
       await signInWithApple();
@@ -43,7 +47,8 @@ export default function AppleAuth({ onError, buttonType }: Props) {
     } catch (err) {
       onError(getAuthErrorMessage(err));
     } finally {
-      setBusy(false);
+      // Lifted however the attempt ended, so it can be tried again at once.
+      inFlight.current = false;
     }
   };
 
