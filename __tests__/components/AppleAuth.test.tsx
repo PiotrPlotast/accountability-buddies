@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { act, render, fireEvent, waitFor } from "@testing-library/react-native";
 import { Platform } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 
@@ -157,4 +157,66 @@ describe("AppleAuth", () => {
     release({ identityToken: "id-token" });
     await firstPress;
   });
+
+  // Two taps landing in the same frame, before React has re-rendered: a
+  // guard kept in state reads the old `false` for both and opens two Apple
+  // sheets.
+  it("ignores a second tap in the same frame as the first", async () => {
+    let release: (v: unknown) => void = () => {};
+    signInAsync.mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    const { Wrapper } = setup();
+    const { getByText } = await render(<AppleAuth onError={jest.fn()} />, {
+      wrapper: Wrapper,
+    });
+    const button = getByText("Sign in with Apple");
+
+    // Both taps inside one `act`, so React can't re-render between them. The
+    // handler is called directly: two `fireEvent.press` calls in flight at
+    // once would overlap two act scopes, which React doesn't support, and
+    // the handler is the button's own `onPress`, reached through
+    // test-renderer's fiber since RNTL 14 renders native elements only.
+    let fiber = button.unstable_fiber;
+    while (fiber && typeof fiber.memoizedProps?.onPress !== "function") {
+      fiber = fiber.return;
+    }
+    const onPress = fiber?.memoizedProps.onPress as () => Promise<void>;
+    let taps: Promise<void>[] = [];
+    await act(async () => {
+      taps = [onPress(), onPress()];
+    });
+
+    expect(signInAsync).toHaveBeenCalledTimes(1);
+    release({ identityToken: "id-token" });
+    await act(async () => {
+      await Promise.all(taps);
+    });
+  });
+
+  // The guard lifts as soon as an attempt settles, so a failed or cancelled
+  // sign-in can be tried again straight away.
+  it.each([
+    ["failed", () => Promise.reject(new Error("Apple is down"))],
+    ["was cancelled", () => Promise.reject({ code: "ERR_REQUEST_CANCELED" })],
+  ])(
+    "can be tried again at once after an attempt that %s",
+    async (_label, first) => {
+      signInAsync.mockImplementationOnce(first);
+      const { Wrapper } = setup();
+      const { getByText } = await render(<AppleAuth onError={jest.fn()} />, {
+        wrapper: Wrapper,
+      });
+
+      await fireEvent.press(getByText("Sign in with Apple"));
+      await waitFor(() => expect(signInAsync).toHaveBeenCalledTimes(1));
+      // Let the first attempt settle.
+      await act(async () => {});
+
+      await fireEvent.press(getByText("Sign in with Apple"));
+      await waitFor(() => expect(signInAsync).toHaveBeenCalledTimes(2));
+    },
+  );
 });
