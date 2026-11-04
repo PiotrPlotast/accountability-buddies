@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- top crossing: lime passes over white, so white is cut around lime -->
+    <mask id="cutWhite" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="672" cy="512" r="220" fill="none" stroke="#000" stroke-width="108" clip-path="url(#top)"/>
+    </mask>
+    <!-- bottom crossing: white passes over lime -->
+    <mask id="cutLime" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="352" cy="512" r="220" fill="none" stroke="#000" stroke-width="108" clip-path="url(#bottom)"/>
+    </mask>
+    <clipPath id="top"><rect x="0" y="0" width="1024" height="512"/></clipPath>
+    <clipPath id="bottom"><rect x="0" y="512" width="1024" height="512"/></clipPath>
+  </defs>
+  
+  <g transform="translate(512 512) scale(1) translate(-512 -512)">
+    <circle cx="352" cy="512" r="220" fill="none" stroke="#F4F4F5" stroke-width="64" mask="url(#cutWhite)"/>
+    <circle cx="672" cy="512" r="220" fill="none" stroke="#C6F94A" stroke-width="64" mask="url(#cutLime)"/>
+    <path d="M 676 518 L 728 570 L 822 462" fill="none" stroke="#C6F94A" stroke-width="51.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
