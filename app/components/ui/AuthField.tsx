@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { TextInput, TextInputProps, View } from "react-native";
+import { TextInputProps, View, type TextInputInstance } from "react-native";
 import AppTextInput from "./AppTextInput";
 import SectionLabel from "./SectionLabel";
 
@@ -9,7 +9,7 @@ type Props = TextInputProps & { label: string };
  * A labelled text field on the auth screens: email, password, the sign-up
  * code. Forwards its ref so a screen can chain fields with `focus()`.
  */
-const AuthField = forwardRef<TextInput, Props>(function AuthField(
+const AuthField = forwardRef<TextInputInstance, Props>(function AuthField(
   { label, ...input },
   ref,
 ) {

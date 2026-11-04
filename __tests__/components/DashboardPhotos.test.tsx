@@ -3,9 +3,6 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { onlineManager } from "@tanstack/react-query";
 
 import Dashboard from "@/app/components/dashboard/Dashboard";
-import CameraModal from "@/app/components/dashboard/CameraModal";
-import CheerModal from "@/app/components/dashboard/CheerModal";
-import PhotoViewerModal from "@/app/components/dashboard/PhotoViewerModal";
 import { getTodayLocalDate } from "@/lib/date";
 import * as haptics from "@/lib/haptics";
 import { queryKeys } from "@/lib/queryKeys";
@@ -62,7 +59,7 @@ const buddyWithPhoto: Member = {
   ],
 };
 
-function renderDashboard(members: Member[] = [me, buddyWithPhoto]) {
+async function renderDashboard(members: Member[] = [me, buddyWithPhoto]) {
   const queryClient = makeQueryClient();
   queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
   queryClient.setQueryData(
@@ -85,7 +82,7 @@ function renderDashboard(members: Member[] = [me, buddyWithPhoto]) {
   return {
     queryClient,
     supabase,
-    ...render(<Dashboard />, { wrapper: Wrapper }),
+    ...(await render(<Dashboard />, { wrapper: Wrapper })),
   };
 }
 
@@ -102,7 +99,7 @@ describe("Dashboard habit photos", () => {
   });
 
   it("shows today's group photos above the tabs, signed for viewing", async () => {
-    const { getByLabelText, supabase } = renderDashboard();
+    const { getByLabelText, supabase } = await renderDashboard();
 
     expect(getByLabelText("Buddy's photo of Run")).toBeTruthy();
     await waitFor(() =>
@@ -110,118 +107,130 @@ describe("Dashboard habit photos", () => {
     );
   });
 
-  it("shows no strip when nobody has posted", () => {
-    const { queryByText } = renderDashboard([me]);
+  it("shows no strip when nobody has posted", async () => {
+    const { queryByText } = await renderDashboard([me]);
     expect(queryByText("Today's photos")).toBeNull();
   });
 
-  it("opens the viewer on the photo tapped in the strip", () => {
-    const { getByLabelText, UNSAFE_getByType } = renderDashboard();
+  // The viewer is open when its photo is on screen: an image (the strip's
+  // thumbnail of it is a button), named for its poster and habit.
+  it("opens the viewer on the photo tapped in the strip", async () => {
+    const { getByLabelText, getByRole } = await renderDashboard();
 
-    fireEvent.press(getByLabelText("Buddy's photo of Run"));
+    await fireEvent.press(getByLabelText("Buddy's photo of Run"));
 
-    const viewer = UNSAFE_getByType(PhotoViewerModal);
-    expect(viewer.props.initialIndex).toBe(0);
-    expect(viewer.props.items[0].photo.id).toBe("p-2");
+    expect(getByRole("image", { name: "Buddy's photo of Run" })).toBeTruthy();
+    expect(getByRole("header", { name: "Buddy" })).toBeTruthy();
   });
 
-  it("opens the same viewer from the photo on a buddy's habit row", () => {
-    const { getByLabelText, UNSAFE_getByType } = renderDashboard();
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+  it("opens the same viewer from the photo on a buddy's habit row", async () => {
+    const { getByLabelText, getByRole } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
 
-    fireEvent.press(getByLabelText("Photo of Run"));
+    await fireEvent.press(getByLabelText("Photo of Run"));
 
-    expect(UNSAFE_getByType(PhotoViewerModal).props.items[0].photo.id).toBe(
-      "p-2",
-    );
+    expect(getByRole("image", { name: "Buddy's photo of Run" })).toBeTruthy();
   });
 
-  it("cheers a buddy's habit from their photo", () => {
-    const { getByLabelText, UNSAFE_getByType } = renderDashboard();
-    fireEvent.press(getByLabelText("Buddy's photo of Run"));
+  it("cheers a buddy's habit from their photo", async () => {
+    const { getByLabelText, getByText, supabase } = await renderDashboard();
+    await fireEvent.press(getByLabelText("Buddy's photo of Run"));
 
-    act(() => {
-      UNSAFE_getByType(PhotoViewerModal).props.onCheer(
-        UNSAFE_getByType(PhotoViewerModal).props.items[0],
-      );
-    });
+    await fireEvent.press(getByLabelText("Cheer Buddy"));
+    expect(getByText("Cheer Buddy for Run")).toBeTruthy();
+    await fireEvent.press(getByText("Send"));
 
-    expect(UNSAFE_getByType(CheerModal).props).toEqual(
-      expect.objectContaining({
-        recipient: { userId: "user-2", name: "Buddy" },
-        goal: { id: "Run", title: "Run" },
+    expect(supabase.functions.invoke).toHaveBeenCalledWith("send-cheer", {
+      body: {
+        recipient_id: "user-2",
+        message: "",
+        goal_id: "Run",
         day: getTodayLocalDate(),
-      }),
-    );
+      },
+    });
   });
 
+  // The camera opens on the habit just ticked, dated the day it was ticked:
+  // what it posts says both.
   it("offers a photo right after a tick, and opens the camera from it", async () => {
-    const { getByLabelText, getByText, UNSAFE_queryByType } = renderDashboard();
+    const { getByLabelText, getByText, queryByTestId, supabase } =
+      await renderDashboard();
 
     await act(async () => {
-      fireEvent.press(getByLabelText("My habit"));
+      await fireEvent.press(getByLabelText("My habit"));
     });
 
     expect(getByText("Add a photo of My habit?")).toBeTruthy();
-    expect(UNSAFE_queryByType(CameraModal)).toBeNull();
+    expect(queryByTestId("camera-view")).toBeNull();
 
-    fireEvent.press(getByLabelText("Add photo"));
+    await fireEvent.press(getByLabelText("Add photo"));
 
-    const cameraModal = UNSAFE_queryByType(CameraModal);
-    expect(cameraModal?.props.goal.id).toBe("My habit");
-    expect(cameraModal?.props.day).toBe(getTodayLocalDate());
+    expect(getByText("Photo of My habit")).toBeTruthy();
+    await fireEvent.press(getByLabelText("Take photo"));
+    await fireEvent.press(getByLabelText("Post photo"));
+
+    await waitFor(() =>
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        "attach_habit_photo",
+        expect.objectContaining({
+          p_goal: "My habit",
+          p_day: getTodayLocalDate(),
+        }),
+      ),
+    );
   });
 
   it("lets the offer go on Not now", async () => {
-    const { getByLabelText, queryByText } = renderDashboard();
+    const { getByLabelText, queryByText } = await renderDashboard();
 
     await act(async () => {
-      fireEvent.press(getByLabelText("My habit"));
+      await fireEvent.press(getByLabelText("My habit"));
     });
-    fireEvent.press(getByLabelText("Not now"));
+    await fireEvent.press(getByLabelText("Not now"));
 
     expect(queryByText("Add a photo of My habit?")).toBeNull();
   });
 
   it("lets the offer go by itself after a few seconds", async () => {
     jest.useFakeTimers();
-    const { getByLabelText, queryByText } = renderDashboard();
+    const { getByLabelText, queryByText } = await renderDashboard();
 
     await act(async () => {
-      fireEvent.press(getByLabelText("My habit"));
+      await fireEvent.press(getByLabelText("My habit"));
     });
     expect(queryByText("Add a photo of My habit?")).toBeTruthy();
 
-    act(() => jest.advanceTimersByTime(6000));
+    await act(() => jest.advanceTimersByTime(6000));
     expect(queryByText("Add a photo of My habit?")).toBeNull();
   });
 
   it("offers no photo after a tick offline", async () => {
-    const { getByLabelText, queryByText } = renderDashboard();
-    act(() => onlineManager.setOnline(false));
+    const { getByLabelText, queryByText } = await renderDashboard();
+    await act(() => onlineManager.setOnline(false));
 
     await act(async () => {
-      fireEvent.press(getByLabelText("My habit"));
+      await fireEvent.press(getByLabelText("My habit"));
     });
 
     expect(queryByText("Add a photo of My habit?")).toBeNull();
   });
 
-  it("opens the camera from the row of a ticked habit with no photo", () => {
+  it("opens the camera from the row of a ticked habit with no photo", async () => {
     const ticked: Member = {
       ...me,
       goals: [
         goal("My habit", "user-1", { completed_today: true, photo: null }),
       ],
     };
-    const { getByLabelText, UNSAFE_queryByType } = renderDashboard([
+    const { getByLabelText, getByText, getByTestId } = await renderDashboard([
       ticked,
       buddyWithPhoto,
     ]);
 
-    fireEvent.press(getByLabelText("Add a photo of My habit"));
+    await fireEvent.press(getByLabelText("Add a photo of My habit"));
 
-    expect(UNSAFE_queryByType(CameraModal)?.props.goal.id).toBe("My habit");
+    expect(getByText("Photo of My habit")).toBeTruthy();
+    expect(getByTestId("camera-view")).toBeTruthy();
   });
 
   it("deletes your own photo from the viewer", async () => {
@@ -234,20 +243,24 @@ describe("Dashboard habit photos", () => {
         }),
       ],
     };
-    const { getByLabelText, UNSAFE_getByType, UNSAFE_queryByType, supabase } =
-      renderDashboard([mine, buddyWithPhoto]);
-    fireEvent.press(getByLabelText("Photo of My habit"));
-    const viewer = UNSAFE_getByType(PhotoViewerModal);
+    const { getByLabelText, getByRole, queryByRole, supabase } =
+      await renderDashboard([mine, buddyWithPhoto]);
+    await fireEvent.press(getByLabelText("Photo of My habit"));
+    expect(getByRole("image", { name: "Your photo of My habit" })).toBeTruthy();
 
+    await fireEvent.press(getByLabelText("Delete photo"));
+    const buttons = (Alert.alert as jest.Mock).mock.calls.at(-1)?.[2];
     await act(async () => {
-      viewer.props.onDelete(viewer.props.items[viewer.props.initialIndex]);
+      buttons.find((b: { text: string }) => b.text === "Delete").onPress();
     });
 
     expect(supabase.rpc).toHaveBeenCalledWith("remove_habit_photo", {
       p_id: "p-1",
     });
     await waitFor(() =>
-      expect(UNSAFE_queryByType(PhotoViewerModal)).toBeNull(),
+      expect(
+        queryByRole("image", { name: "Your photo of My habit" }),
+      ).toBeNull(),
     );
   });
 });

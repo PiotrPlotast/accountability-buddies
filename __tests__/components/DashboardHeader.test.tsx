@@ -33,7 +33,7 @@ const members: Member[] = [
   { user_id: "user-1", full_name: "Me", goals: todayGoals },
 ];
 
-function renderHeader(overrides?: {
+async function renderHeader(overrides?: {
   todayGoals?: Goal[];
   onOpenHabitManager?: () => void;
   seedStats?: boolean;
@@ -48,7 +48,7 @@ function renderHeader(overrides?: {
   );
   const { Wrapper } = buildWrapper({ queryClient });
 
-  return render(
+  return await render(
     <DashboardHeader
       todayGoals={overrides?.todayGoals ?? todayGoals}
       onOpenHabitManager={overrides?.onOpenHabitManager ?? jest.fn()}
@@ -59,7 +59,7 @@ function renderHeader(overrides?: {
 
 describe("DashboardHeader", () => {
   it("renders group name, member count and today's progress", async () => {
-    const { findByText, getByText } = renderHeader();
+    const { findByText, getByText } = await renderHeader();
 
     expect(await findByText("Habit Crew")).toBeTruthy();
     expect(getByText("1 of 2 done")).toBeTruthy();
@@ -68,8 +68,8 @@ describe("DashboardHeader", () => {
     expect(getByText(/Group · 1 person/)).toBeTruthy();
   });
 
-  it("derives progress from the goals it is handed, not the cache", () => {
-    const { getByText } = renderHeader({
+  it("derives progress from the goals it is handed, not the cache", async () => {
+    const { getByText } = await renderHeader({
       todayGoals: [goal("a", true), goal("b", true), goal("c", true)],
     });
 
@@ -77,22 +77,22 @@ describe("DashboardHeader", () => {
     expect(getByText("100%")).toBeTruthy();
   });
 
-  it("shows a placeholder until the group arrives", () => {
-    const { getByText } = renderHeader({ seedStats: false });
+  it("shows a placeholder until the group arrives", async () => {
+    const { getByText } = await renderHeader({ seedStats: false });
     expect(getByText("Loading...")).toBeTruthy();
   });
 
-  it("opens the habit manager when Habits is pressed", () => {
+  it("opens the habit manager when Habits is pressed", async () => {
     const onOpenHabitManager = jest.fn();
-    const { getByLabelText } = renderHeader({ onOpenHabitManager });
+    const { getByLabelText } = await renderHeader({ onOpenHabitManager });
 
-    fireEvent.press(getByLabelText("Habits"));
+    await fireEvent.press(getByLabelText("Habits"));
     expect(onOpenHabitManager).toHaveBeenCalledTimes(1);
   });
 
   describe("accessibility", () => {
     it("announces the streak as a phrase, not a flame and a number", async () => {
-      const { findByLabelText } = renderHeader();
+      const { findByLabelText } = await renderHeader();
       expect(await findByLabelText("Group streak: 7 days")).toBeTruthy();
     });
 
@@ -108,7 +108,7 @@ describe("DashboardHeader", () => {
       );
       const { Wrapper } = buildWrapper({ queryClient });
 
-      const { findByLabelText } = render(
+      const { findByLabelText } = await render(
         <DashboardHeader
           todayGoals={todayGoals}
           onOpenHabitManager={jest.fn()}
@@ -120,7 +120,7 @@ describe("DashboardHeader", () => {
     });
 
     it("exposes the group name as a button into settings", async () => {
-      const { findByLabelText } = renderHeader();
+      const { findByLabelText } = await renderHeader();
       const button = await findByLabelText("Habit Crew");
 
       expect(button.props.accessibilityRole).toBe("button");
@@ -128,7 +128,7 @@ describe("DashboardHeader", () => {
     });
 
     it("reports progress on the ring itself", async () => {
-      const { findByLabelText } = renderHeader();
+      const { findByLabelText } = await renderHeader();
       const ring = await findByLabelText("Today's progress");
 
       expect(ring.props.accessibilityRole).toBe("progressbar");

@@ -23,7 +23,7 @@ const goal: Goal = {
   repeat_days: [],
 };
 
-function renderCamera(isOnline = true) {
+async function renderCamera(isOnline = true) {
   const rpcImpl = jest.fn(() =>
     makeQueryBuilder({
       data: { success: true, photo_id: "p-1" },
@@ -33,7 +33,7 @@ function renderCamera(isOnline = true) {
   const supabase = buildFakeSupabase({ rpcImpl });
   const { Wrapper } = buildWrapper({ supabase });
   const onClose = jest.fn();
-  const utils = render(
+  const utils = await render(
     <CameraModal
       goal={goal}
       day="2026-11-03"
@@ -68,25 +68,25 @@ describe("CameraModal", () => {
     jest.restoreAllMocks();
   });
 
-  it("opens on the back camera and flips to the front", () => {
-    const { getByTestId, getByLabelText, getByText } = renderCamera();
+  it("opens on the back camera and flips to the front", async () => {
+    const { getByTestId, getByLabelText, getByText } = await renderCamera();
     expect(getByText("Photo of Run")).toBeTruthy();
     expect(getByTestId("camera-view").props.facing).toBe("back");
-    fireEvent.press(getByLabelText("Flip camera"));
+    await fireEvent.press(getByLabelText("Flip camera"));
     expect(getByTestId("camera-view").props.facing).toBe("front");
   });
 
   it("takes a photo, previews it, and posts it", async () => {
-    const { getByLabelText, onClose, rpcImpl } = renderCamera();
+    const { getByLabelText, onClose, rpcImpl } = await renderCamera();
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Take photo"));
+      await fireEvent.press(getByLabelText("Take photo"));
     });
     expect(haptics.tapLight).toHaveBeenCalled();
     expect(getByLabelText("Retake")).toBeTruthy();
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Post photo"));
+      await fireEvent.press(getByLabelText("Post photo"));
     });
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
@@ -98,52 +98,52 @@ describe("CameraModal", () => {
   });
 
   it("retakes before posting", async () => {
-    const { getByLabelText, getByTestId } = renderCamera();
+    const { getByLabelText, getByTestId } = await renderCamera();
     await act(async () => {
-      fireEvent.press(getByLabelText("Take photo"));
+      await fireEvent.press(getByLabelText("Take photo"));
     });
-    fireEvent.press(getByLabelText("Retake"));
+    await fireEvent.press(getByLabelText("Retake"));
     expect(getByTestId("camera-view")).toBeTruthy();
   });
 
   it("can't post offline", async () => {
-    const { getByLabelText, getByText, rpcImpl } = renderCamera(false);
+    const { getByLabelText, getByText, rpcImpl } = await renderCamera(false);
     await act(async () => {
-      fireEvent.press(getByLabelText("Take photo"));
+      await fireEvent.press(getByLabelText("Take photo"));
     });
     const post = getByLabelText("Post photo");
     expect(post.props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
     expect(getByText("Needs a connection")).toBeTruthy();
-    fireEvent.press(post);
+    await fireEvent.press(post);
     expect(rpcImpl).not.toHaveBeenCalled();
   });
 
   it("asks for the camera when it may", async () => {
     const request = permission(false, true);
-    const { getByLabelText, queryByTestId } = renderCamera();
+    const { getByLabelText, queryByTestId } = await renderCamera();
     expect(queryByTestId("camera-view")).toBeNull();
     await act(async () => {
-      fireEvent.press(getByLabelText("Allow camera"));
+      await fireEvent.press(getByLabelText("Allow camera"));
     });
     expect(request).toHaveBeenCalled();
   });
 
   // iOS asks once per install; after a no, the way back is Settings.
-  it("points to Settings once the camera has been refused", () => {
+  it("points to Settings once the camera has been refused", async () => {
     permission(false, false);
     const openSettings = jest
       .spyOn(Linking, "openSettings")
       .mockResolvedValue();
-    const { getByLabelText } = renderCamera();
-    fireEvent.press(getByLabelText("Open Settings"));
+    const { getByLabelText } = await renderCamera();
+    await fireEvent.press(getByLabelText("Open Settings"));
     expect(openSettings).toHaveBeenCalled();
   });
 
-  it("cancels", () => {
-    const { getByLabelText, onClose } = renderCamera();
-    fireEvent.press(getByLabelText("Cancel"));
+  it("cancels", async () => {
+    const { getByLabelText, onClose } = await renderCamera();
+    await fireEvent.press(getByLabelText("Cancel"));
     expect(onClose).toHaveBeenCalled();
   });
 });

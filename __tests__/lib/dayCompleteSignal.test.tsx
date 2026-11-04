@@ -70,27 +70,27 @@ describe("dayCompleteSignal", () => {
 });
 
 describe("useDayCompleteSignal", () => {
-  it("starts at zero, so nothing animates on first paint", () => {
-    const { result } = renderHook(() => useDayCompleteSignal());
+  it("starts at zero, so nothing animates on first paint", async () => {
+    const { result } = await renderHook(() => useDayCompleteSignal());
     expect(result.current).toBe(0);
   });
 
-  it("advances once per celebration", () => {
-    const { result } = renderHook(() => useDayCompleteSignal());
+  it("advances once per celebration", async () => {
+    const { result } = await renderHook(() => useDayCompleteSignal());
 
-    act(() => emitDayComplete());
+    await act(() => emitDayComplete());
     expect(result.current).toBe(1);
 
-    act(() => emitDayComplete());
+    await act(() => emitDayComplete());
     expect(result.current).toBe(2);
   });
 
-  it("detaches on unmount", () => {
-    const { result, unmount } = renderHook(() => useDayCompleteSignal());
-    act(() => emitDayComplete());
+  it("detaches on unmount", async () => {
+    const { result, unmount } = await renderHook(() => useDayCompleteSignal());
+    await act(() => emitDayComplete());
     expect(result.current).toBe(1);
 
-    unmount();
+    await unmount();
     expect(() => emitDayComplete()).not.toThrow();
   });
 });

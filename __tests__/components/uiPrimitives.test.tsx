@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import { Text, TextInput } from "react-native";
+import { Text, type TextInputInstance } from "react-native";
 import { fireEvent, render } from "@testing-library/react-native";
 import { useRouter } from "expo-router";
 
@@ -11,27 +11,27 @@ import ScreenHeader from "@/app/components/ui/ScreenHeader";
 beforeEach(() => jest.clearAllMocks());
 
 describe("PrimaryButton", () => {
-  it("presses when filled", () => {
+  it("presses when filled", async () => {
     const onPress = jest.fn();
-    const { getByRole } = render(
+    const { getByRole } = await render(
       <PrimaryButton label="Save" onPress={onPress} filled />,
     );
 
     const button = getByRole("button", { name: "Save" });
-    fireEvent.press(button);
+    await fireEvent.press(button);
 
     expect(onPress).toHaveBeenCalledTimes(1);
     expect(button.props.accessibilityState).toMatchObject({ disabled: false });
   });
 
-  it("is disabled until filled", () => {
+  it("is disabled until filled", async () => {
     const onPress = jest.fn();
-    const { getByRole } = render(
+    const { getByRole } = await render(
       <PrimaryButton label="Save" onPress={onPress} filled={false} />,
     );
 
     const button = getByRole("button", { name: "Save" });
-    fireEvent.press(button);
+    await fireEvent.press(button);
 
     expect(onPress).not.toHaveBeenCalled();
     expect(button.props.accessibilityState).toMatchObject({ disabled: true });
@@ -39,14 +39,14 @@ describe("PrimaryButton", () => {
 
   // Busy keeps the fill (the spinner is dark and needs it) but takes no
   // second press, and keeps its name while the label text is swapped out.
-  it("shows a spinner and refuses presses while busy", () => {
+  it("shows a spinner and refuses presses while busy", async () => {
     const onPress = jest.fn();
-    const { getByRole, queryByText, getByTestId } = render(
+    const { getByRole, queryByText, getByTestId } = await render(
       <PrimaryButton label="Save" onPress={onPress} filled busy />,
     );
 
     const button = getByRole("button", { name: "Save" });
-    fireEvent.press(button);
+    await fireEvent.press(button);
 
     expect(onPress).not.toHaveBeenCalled();
     expect(queryByText("Save")).toBeNull();
@@ -57,30 +57,32 @@ describe("PrimaryButton", () => {
     });
   });
 
-  it("can be disabled while filled", () => {
+  it("can be disabled while filled", async () => {
     const onPress = jest.fn();
-    const { getByRole } = render(
+    const { getByRole } = await render(
       <PrimaryButton label="Save" onPress={onPress} filled disabled />,
     );
 
-    fireEvent.press(getByRole("button", { name: "Save" }));
+    await fireEvent.press(getByRole("button", { name: "Save" }));
 
     expect(onPress).not.toHaveBeenCalled();
   });
 });
 
 describe("ScreenHeader", () => {
-  it("shows the title and goes back", () => {
-    const { getByText, getByRole } = render(<ScreenHeader title="New habit" />);
+  it("shows the title and goes back", async () => {
+    const { getByText, getByRole } = await render(
+      <ScreenHeader title="New habit" />,
+    );
 
     expect(getByText("New habit")).toBeTruthy();
-    fireEvent.press(getByRole("button", { name: "Back" }));
+    await fireEvent.press(getByRole("button", { name: "Back" }));
 
     expect(useRouter().back).toHaveBeenCalledTimes(1);
   });
 
-  it("puts an action on the right when given one", () => {
-    const { getByText } = render(
+  it("puts an action on the right when given one", async () => {
+    const { getByText } = await render(
       <ScreenHeader title="Group settings" right={<Text>Save</Text>} />,
     );
 
@@ -89,9 +91,9 @@ describe("ScreenHeader", () => {
 });
 
 describe("DialogShell", () => {
-  it("closes from the backdrop when allowed", () => {
+  it("closes from the backdrop when allowed", async () => {
     const onBackdropPress = jest.fn();
-    const { getByRole } = render(
+    const { getByRole } = await render(
       <DialogShell
         isVisible
         onRequestClose={jest.fn()}
@@ -102,13 +104,13 @@ describe("DialogShell", () => {
       </DialogShell>,
     );
 
-    fireEvent.press(getByRole("button", { name: "Close" }));
+    await fireEvent.press(getByRole("button", { name: "Close" }));
 
     expect(onBackdropPress).toHaveBeenCalledTimes(1);
   });
 
-  it("offers no backdrop button when closing isn't allowed", () => {
-    const { queryByRole, getByText } = render(
+  it("offers no backdrop button when closing isn't allowed", async () => {
+    const { queryByRole, getByText } = await render(
       <DialogShell isVisible onRequestClose={jest.fn()} backdropLabel="Close">
         <Text>Body</Text>
       </DialogShell>,
@@ -120,10 +122,10 @@ describe("DialogShell", () => {
 });
 
 describe("AuthField", () => {
-  it("labels the input and forwards its props and ref", () => {
+  it("labels the input and forwards its props and ref", async () => {
     const onChangeText = jest.fn();
-    const ref = createRef<TextInput>();
-    const { getByText, getByPlaceholderText } = render(
+    const ref = createRef<TextInputInstance>();
+    const { getByText, getByPlaceholderText } = await render(
       <AuthField
         ref={ref}
         label="Email"
@@ -134,7 +136,10 @@ describe("AuthField", () => {
     );
 
     expect(getByText("Email")).toBeTruthy();
-    fireEvent.changeText(getByPlaceholderText("you@example.com"), "a@b.c");
+    await fireEvent.changeText(
+      getByPlaceholderText("you@example.com"),
+      "a@b.c",
+    );
 
     expect(onChangeText).toHaveBeenCalledWith("a@b.c");
     expect(ref.current).toBeTruthy();

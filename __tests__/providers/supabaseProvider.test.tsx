@@ -92,8 +92,8 @@ function Consumer({ id }: { id: string }) {
 
 // The real tree mounts the provider *inside* PersistQueryClientProvider
 // (`app/_layout.tsx`), so a QueryClient is always above it.
-function renderWithConsumers(ids: string[]) {
-  return render(
+async function renderWithConsumers(ids: string[]) {
+  return await render(
     <QueryClientProvider client={queryClient}>
       <SupabaseProvider>
         {ids.map((id) => (
@@ -117,7 +117,7 @@ describe("SupabaseProvider", () => {
   // inside each of TanStack's attempts is what kept an offline refresh
   // spinning for half a minute.
   it("turns off supabase-js's own read retries", async () => {
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
 
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
@@ -132,7 +132,7 @@ describe("SupabaseProvider", () => {
   // run its own getSession + onAuthStateChange per call site, which on the
   // dashboard meant ~28 concurrent subscriptions.
   it("opens one auth subscription and one session lookup for the whole tree", async () => {
-    renderWithConsumers(["a", "b", "c", "d", "e"]);
+    await renderWithConsumers(["a", "b", "c", "d", "e"]);
 
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
@@ -141,7 +141,7 @@ describe("SupabaseProvider", () => {
   });
 
   it("hands every consumer the very same session object", async () => {
-    renderWithConsumers(["a", "b", "c"]);
+    await renderWithConsumers(["a", "b", "c"]);
 
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
@@ -159,7 +159,7 @@ describe("SupabaseProvider", () => {
     );
     const settled = { data: { session: null } };
 
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
 
     // Still in flight: consumers must not mistake "not known yet" for "signed
     // out" — `_layout` holds the splash on exactly this flag.
@@ -176,7 +176,7 @@ describe("SupabaseProvider", () => {
   it("still flips isLoaded when the session lookup rejects", async () => {
     client.auth.getSession.mockRejectedValueOnce(new Error("storage gone"));
 
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
 
     // A failed read means "signed out", never a splash that never lifts.
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
@@ -184,7 +184,7 @@ describe("SupabaseProvider", () => {
   });
 
   it("pushes auth state changes to every consumer", async () => {
-    renderWithConsumers(["a", "b"]);
+    await renderWithConsumers(["a", "b"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     const next = { user: { id: "user-2" } } as unknown as Session;
@@ -197,7 +197,7 @@ describe("SupabaseProvider", () => {
   });
 
   it("clears the session for every consumer on signOut", async () => {
-    renderWithConsumers(["a", "b"]);
+    await renderWithConsumers(["a", "b"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
     expect(seen.a.session).not.toBeNull();
 
@@ -217,7 +217,7 @@ describe("SupabaseProvider", () => {
   // ever running this signOut, so their `device_push_tokens` rows survive and
   // keep receiving this account's pushes while signed out.
   it("signs out this device only, not the account's other sessions", async () => {
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     await act(async () => {
@@ -233,7 +233,7 @@ describe("SupabaseProvider", () => {
   // Nothing used to clear it — not sign-out, and not `delete_my_account`, which
   // reaches this same signOut.
   it("empties the query cache on signOut", async () => {
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     queryClient.setQueryData(queryKeys.profile("user-1"), {
@@ -261,7 +261,7 @@ describe("SupabaseProvider", () => {
   });
 
   it("drops the persisted copy of the cache on signOut", async () => {
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     await act(async () => {
@@ -274,10 +274,10 @@ describe("SupabaseProvider", () => {
   });
 
   it("unsubscribes when the provider unmounts", async () => {
-    const view = renderWithConsumers(["a"]);
+    const view = await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
-    view.unmount();
+    await view.unmount();
 
     expect(unsubscribeSpy()).toHaveBeenCalledTimes(1);
   });
@@ -302,7 +302,7 @@ describe("SupabaseProvider — push token cleanup on sign-out", () => {
   });
 
   it("deletes this device's row before dropping the session", async () => {
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     await act(async () => {
@@ -320,7 +320,7 @@ describe("SupabaseProvider — push token cleanup on sign-out", () => {
   });
 
   it("forgets the token once its row is gone", async () => {
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     await act(async () => {
@@ -332,7 +332,7 @@ describe("SupabaseProvider — push token cleanup on sign-out", () => {
 
   it("touches nothing when this device never registered", async () => {
     getRegisteredPushToken.mockReturnValue(null);
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     await act(async () => {
@@ -350,7 +350,7 @@ describe("SupabaseProvider — push token cleanup on sign-out", () => {
     client.from = jest.fn(() => {
       throw new Error("offline");
     }) as unknown as typeof client.from;
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     await act(async () => {
@@ -363,7 +363,7 @@ describe("SupabaseProvider — push token cleanup on sign-out", () => {
 
   it("signs out anyway when the delete comes back with an error", async () => {
     tokenQuery = makeQueryBuilder({ error: { message: "permission denied" } });
-    renderWithConsumers(["a"]);
+    await renderWithConsumers(["a"]);
     await waitFor(() => expect(seen.a.isLoaded).toBe(true));
 
     await act(async () => {

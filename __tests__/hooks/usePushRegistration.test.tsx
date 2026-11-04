@@ -37,7 +37,7 @@ function Harness() {
   return null;
 }
 
-function renderWithUser(
+async function renderWithUser(
   userId: string | null,
   supabase: SupabaseClient = buildFakeSupabase(),
 ) {
@@ -55,11 +55,12 @@ function renderWithUser(
       </SupabaseContext.Provider>
     </QueryClientProvider>
   );
-  const view = render(<Tree uid={userId} />);
+  const view = await render(<Tree uid={userId} />);
   return {
     supabase,
     ...view,
-    setUser: (uid: string | null) => view.rerender(<Tree uid={uid} />),
+    setUser: async (uid: string | null) =>
+      await view.rerender(<Tree uid={uid} />),
   };
 }
 
@@ -82,7 +83,7 @@ describe("usePushRegistration", () => {
   it("registers this device's token through the RPC", async () => {
     // Writes go through register_push_token, not a client upsert: RLS cannot
     // let a new account take over a row the previous one owns.
-    const { supabase } = renderWithUser("user-1");
+    const { supabase } = await renderWithUser("user-1");
 
     await waitFor(() => expect(rpcCalls(supabase).length).toBe(1));
     expect(rpcCalls(supabase)[0]).toEqual([
@@ -94,7 +95,7 @@ describe("usePushRegistration", () => {
   it("does nothing at all without a session", async () => {
     // The hook mounts in `(protected)/_layout.tsx`, which only renders behind
     // the session guard — but a sign-out unmounts that tree mid-flight.
-    const { supabase } = renderWithUser(null);
+    const { supabase } = await renderWithUser(null);
 
     await waitFor(() =>
       expect(registerForPushNotificationsAsync).not.toHaveBeenCalled(),
@@ -107,7 +108,7 @@ describe("usePushRegistration", () => {
       token: null,
       status: "denied",
     });
-    const { supabase } = renderWithUser("user-1");
+    const { supabase } = await renderWithUser("user-1");
 
     await waitFor(() =>
       expect(registerForPushNotificationsAsync).toHaveBeenCalled(),
@@ -116,11 +117,11 @@ describe("usePushRegistration", () => {
   });
 
   it("registers once, not on every render", async () => {
-    const { supabase, setUser } = renderWithUser("user-1");
+    const { supabase, setUser } = await renderWithUser("user-1");
     await waitFor(() => expect(rpcCalls(supabase).length).toBe(1));
 
-    setUser("user-1");
-    setUser("user-1");
+    await setUser("user-1");
+    await setUser("user-1");
 
     await waitFor(() => expect(rpcCalls(supabase).length).toBe(1));
   });
@@ -128,10 +129,10 @@ describe("usePushRegistration", () => {
   it("registers again when a different account signs in on this device", async () => {
     // The account-switch case the SECURITY DEFINER RPC exists for: the row has
     // to move to the new owner, or the previous user keeps getting the pushes.
-    const { supabase, setUser } = renderWithUser("user-1");
+    const { supabase, setUser } = await renderWithUser("user-1");
     await waitFor(() => expect(rpcCalls(supabase).length).toBe(1));
 
-    setUser("user-2");
+    await setUser("user-2");
 
     await waitFor(() => expect(rpcCalls(supabase).length).toBe(2));
   });
@@ -145,7 +146,7 @@ describe("usePushRegistration", () => {
         makeQueryBuilder({ error: { message: "network down" } }),
       ),
     });
-    renderWithUser("user-1", supabase);
+    await renderWithUser("user-1", supabase);
 
     await waitFor(() => expect(rpcCalls(supabase).length).toBe(1));
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -153,7 +154,7 @@ describe("usePushRegistration", () => {
 
   it("stays silent when registration itself throws", async () => {
     registerForPushNotificationsAsync.mockRejectedValue(new Error("boom"));
-    const { supabase } = renderWithUser("user-1");
+    const { supabase } = await renderWithUser("user-1");
 
     await waitFor(() =>
       expect(registerForPushNotificationsAsync).toHaveBeenCalled(),
@@ -175,7 +176,7 @@ describe("usePushRegistration — the timezone", () => {
 
   it("writes this device's timezone onto the prefs row", async () => {
     const { qb, supabase } = withSharedBuilder();
-    renderWithUser("user-1", supabase);
+    await renderWithUser("user-1", supabase);
 
     await waitFor(() => expect(qb.update).toHaveBeenCalled());
     expect(supabase.from as unknown as jest.Mock).toHaveBeenCalledWith(
@@ -195,7 +196,7 @@ describe("usePushRegistration — the timezone", () => {
       status: "denied",
     });
     const { qb, supabase } = withSharedBuilder();
-    renderWithUser("user-1", supabase);
+    await renderWithUser("user-1", supabase);
 
     await waitFor(() => expect(qb.update).toHaveBeenCalled());
   });
@@ -204,7 +205,7 @@ describe("usePushRegistration — the timezone", () => {
     // The row comes from a trigger on auth.users; there is no client INSERT
     // policy for the client to fall back on.
     const { qb, supabase } = withSharedBuilder();
-    renderWithUser("user-1", supabase);
+    await renderWithUser("user-1", supabase);
 
     await waitFor(() => expect(qb.update).toHaveBeenCalled());
     expect(qb.upsert).not.toHaveBeenCalled();
@@ -214,7 +215,7 @@ describe("usePushRegistration — the timezone", () => {
   it("stays silent when the timezone write fails", async () => {
     const qb = makeQueryBuilder({ error: { message: "network down" } });
     const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => qb) });
-    renderWithUser("user-1", supabase);
+    await renderWithUser("user-1", supabase);
 
     await waitFor(() => expect(qb.update).toHaveBeenCalled());
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -222,7 +223,7 @@ describe("usePushRegistration — the timezone", () => {
 
   it("writes nothing without a session", async () => {
     const { qb, supabase } = withSharedBuilder();
-    renderWithUser(null, supabase);
+    await renderWithUser(null, supabase);
 
     await waitFor(() =>
       expect(registerForPushNotificationsAsync).not.toHaveBeenCalled(),

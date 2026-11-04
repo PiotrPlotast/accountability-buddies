@@ -42,14 +42,14 @@ function seed(queryClient: ReturnType<typeof makeQueryClient>) {
   );
 }
 
-function setup(goalOverride: Goal | null = goal) {
+async function setup(goalOverride: Goal | null = goal) {
   const queryClient = makeQueryClient();
   seed(queryClient);
   const updateQB = makeQueryBuilder({ error: null });
   const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => updateQB) });
   const { Wrapper } = buildWrapper({ supabase, queryClient });
   const onClose = jest.fn();
-  const utils = render(
+  const utils = await render(
     <EditGoalModal goal={goalOverride} isVisible onClose={onClose} />,
     { wrapper: Wrapper },
   );
@@ -59,14 +59,14 @@ function setup(goalOverride: Goal | null = goal) {
 describe("EditGoalModal", () => {
   // The create screen always carried this line; the edit sheet, a copy of the
   // same form, lost it.
-  it("explains when the reminder fires, as the create screen does", () => {
-    const { getByText } = setup();
+  it("explains when the reminder fires, as the create screen does", async () => {
+    const { getByText } = await setup();
 
     expect(getByText("Only if you haven't ticked it off yet.")).toBeTruthy();
   });
 
-  it("prefills the title, icon and repeat days from the goal", () => {
-    const { getByDisplayValue, getByLabelText } = setup();
+  it("prefills the title, icon and repeat days from the goal", async () => {
+    const { getByDisplayValue, getByLabelText } = await setup();
 
     expect(getByDisplayValue("Run")).toBeTruthy();
     expect(getByLabelText("🏃").props.accessibilityState.selected).toBe(true);
@@ -76,10 +76,10 @@ describe("EditGoalModal", () => {
   });
 
   it("submits the new title and closes on save", async () => {
-    const { getByDisplayValue, getByText, updateQB, onClose } = setup();
+    const { getByDisplayValue, getByText, updateQB, onClose } = await setup();
 
-    fireEvent.changeText(getByDisplayValue("Run"), "Walk");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.changeText(getByDisplayValue("Run"), "Walk");
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => {
       expect(updateQB.update).toHaveBeenCalledWith(
@@ -90,10 +90,10 @@ describe("EditGoalModal", () => {
   });
 
   it("saves a changed icon", async () => {
-    const { getByLabelText, getByText, updateQB } = setup();
+    const { getByLabelText, getByText, updateQB } = await setup();
 
-    fireEvent.press(getByLabelText("📚"));
-    fireEvent.press(getByText("Save"));
+    await fireEvent.press(getByLabelText("📚"));
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => {
       expect(updateQB.update).toHaveBeenCalledWith(
@@ -103,11 +103,11 @@ describe("EditGoalModal", () => {
   });
 
   it("saves changed repeat days, keeping them sorted", async () => {
-    const { getByLabelText, getByText, updateQB } = setup();
+    const { getByLabelText, getByText, updateQB } = await setup();
 
-    fireEvent.press(getByLabelText("Tue")); // add index 1
-    fireEvent.press(getByLabelText("Mon")); // remove index 0
-    fireEvent.press(getByText("Save"));
+    await fireEvent.press(getByLabelText("Tue")); // add index 1
+    await fireEvent.press(getByLabelText("Mon")); // remove index 0
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => {
       expect(updateQB.update).toHaveBeenCalledWith(
@@ -116,18 +116,18 @@ describe("EditGoalModal", () => {
     });
   });
 
-  it("treats a goal with no repeat days as every day", () => {
-    const { getByLabelText } = setup({ ...goal, repeat_days: [] });
+  it("treats a goal with no repeat days as every day", async () => {
+    const { getByLabelText } = await setup({ ...goal, repeat_days: [] });
 
     expect(getByLabelText("Mon").props.accessibilityState.selected).toBe(true);
     expect(getByLabelText("Sun").props.accessibilityState.selected).toBe(true);
   });
 
-  it("does not save an empty title", () => {
-    const { getByDisplayValue, getByText, updateQB, onClose } = setup();
+  it("does not save an empty title", async () => {
+    const { getByDisplayValue, getByText, updateQB, onClose } = await setup();
 
-    fireEvent.changeText(getByDisplayValue("Run"), "   ");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.changeText(getByDisplayValue("Run"), "   ");
+    await fireEvent.press(getByText("Save"));
 
     expect(updateQB.update).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
@@ -135,50 +135,53 @@ describe("EditGoalModal", () => {
 
   // Dashboard keeps the modal mounted and swaps `goal` (null while closed), so
   // these drive it the same way.
-  it("shows a different habit's values when another one is opened", () => {
-    const { getByDisplayValue, rerender, getByLabelText } = setup();
+  it("shows a different habit's values when another one is opened", async () => {
+    const { getByDisplayValue, rerender, getByLabelText } = await setup();
     const swim: Goal = { ...goal, id: "g-2", title: "Swim", repeat_days: [1] };
 
-    rerender(
+    await rerender(
       <EditGoalModal goal={null} isVisible={false} onClose={jest.fn()} />,
     );
-    rerender(<EditGoalModal goal={swim} isVisible onClose={jest.fn()} />);
+    await rerender(<EditGoalModal goal={swim} isVisible onClose={jest.fn()} />);
 
     expect(getByDisplayValue("Swim")).toBeTruthy();
     expect(getByLabelText("Tue").props.accessibilityState.selected).toBe(true);
     expect(getByLabelText("Mon").props.accessibilityState.selected).toBe(false);
   });
 
-  it("reopens the same habit with its saved values, not abandoned edits", () => {
-    const { getByDisplayValue, rerender, getByLabelText } = setup();
+  it("reopens the same habit with its saved values, not abandoned edits", async () => {
+    const { getByDisplayValue, rerender, getByLabelText } = await setup();
 
-    fireEvent.changeText(getByDisplayValue("Run"), "Jog");
-    fireEvent.press(getByLabelText("Tue"));
-    rerender(
+    await fireEvent.changeText(getByDisplayValue("Run"), "Jog");
+    await fireEvent.press(getByLabelText("Tue"));
+    await rerender(
       <EditGoalModal goal={null} isVisible={false} onClose={jest.fn()} />,
     );
-    rerender(<EditGoalModal goal={goal} isVisible onClose={jest.fn()} />);
+    await rerender(<EditGoalModal goal={goal} isVisible onClose={jest.fn()} />);
 
     expect(getByDisplayValue("Run")).toBeTruthy();
     expect(getByLabelText("Tue").props.accessibilityState.selected).toBe(false);
   });
 
   describe("reminder", () => {
-    it("shows the habit's reminder as on", () => {
-      const { getByLabelText } = setup({ ...goal, reminder_time: "08:30" });
+    it("shows the habit's reminder as on", async () => {
+      const { getByLabelText } = await setup({
+        ...goal,
+        reminder_time: "08:30",
+      });
       expect(getByLabelText("Reminder").props.value).toBe(true);
     });
 
-    it("shows a habit without one as off", () => {
-      const { getByLabelText } = setup();
+    it("shows a habit without one as off", async () => {
+      const { getByLabelText } = await setup();
       expect(getByLabelText("Reminder").props.value).toBe(false);
     });
 
     it("saves a newly switched-on reminder", async () => {
-      const { getByLabelText, getByText, updateQB } = setup();
+      const { getByLabelText, getByText, updateQB } = await setup();
 
-      fireEvent(getByLabelText("Reminder"), "valueChange", true);
-      fireEvent.press(getByText("Save"));
+      await fireEvent(getByLabelText("Reminder"), "valueChange", true);
+      await fireEvent.press(getByText("Save"));
 
       await waitFor(() =>
         expect(updateQB.update).toHaveBeenCalledWith(
@@ -188,13 +191,13 @@ describe("EditGoalModal", () => {
     });
 
     it("saves a switched-off reminder as null", async () => {
-      const { getByLabelText, getByText, updateQB } = setup({
+      const { getByLabelText, getByText, updateQB } = await setup({
         ...goal,
         reminder_time: "08:30",
       });
 
-      fireEvent(getByLabelText("Reminder"), "valueChange", false);
-      fireEvent.press(getByText("Save"));
+      await fireEvent(getByLabelText("Reminder"), "valueChange", false);
+      await fireEvent.press(getByText("Save"));
 
       await waitFor(() =>
         expect(updateQB.update).toHaveBeenCalledWith(
@@ -203,11 +206,11 @@ describe("EditGoalModal", () => {
       );
     });
 
-    it("counts a reminder change as unsaved, so a backdrop tap won't drop it", () => {
-      const { getByLabelText, queryByLabelText } = setup();
+    it("counts a reminder change as unsaved, so a backdrop tap won't drop it", async () => {
+      const { getByLabelText, queryByLabelText } = await setup();
       expect(queryByLabelText("Close")).toBeTruthy();
 
-      fireEvent(getByLabelText("Reminder"), "valueChange", true);
+      await fireEvent(getByLabelText("Reminder"), "valueChange", true);
 
       expect(queryByLabelText("Close")).toBeNull();
     });
@@ -226,13 +229,13 @@ describe("EditGoalModal with its own onSave", () => {
     });
     const onSave = jest.fn(() => Promise.resolve());
     const onClose = jest.fn();
-    const { getByDisplayValue, getByText } = render(
+    const { getByDisplayValue, getByText } = await render(
       <EditGoalModal goal={goal} isVisible onClose={onClose} onSave={onSave} />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.changeText(getByDisplayValue("Run"), "Walk");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.changeText(getByDisplayValue("Run"), "Walk");
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(onSave).toHaveBeenCalledWith("g-1", {
@@ -246,8 +249,8 @@ describe("EditGoalModal with its own onSave", () => {
 });
 
 describe("EditGoalModal title", () => {
-  it("stops at 60 characters, the server's limit", () => {
-    const { getByDisplayValue } = setup();
+  it("stops at 60 characters, the server's limit", async () => {
+    const { getByDisplayValue } = await setup();
     expect(getByDisplayValue("Run").props.maxLength).toBe(60);
   });
 });

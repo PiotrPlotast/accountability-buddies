@@ -64,7 +64,7 @@ describe("useUpdateProfile", () => {
       Wrapper,
     );
 
-    act(() => {
+    await act(() => {
       utils.result.current.value.mutate({ fullName: "Zofia" });
     });
 

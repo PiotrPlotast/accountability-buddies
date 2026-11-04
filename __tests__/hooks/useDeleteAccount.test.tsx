@@ -124,7 +124,7 @@ describe("useDeleteAccount", () => {
 
     // Plain `renderHook`: `renderHookWithSession` waits for a session that by
     // construction never arrives here.
-    const { result, unmount } = renderHook(() => useDeleteAccount(), {
+    const { result, unmount } = await renderHook(() => useDeleteAccount(), {
       wrapper: Wrapper,
     });
     // The guard rejects on the first tick, and React Query then notifies its
@@ -132,7 +132,7 @@ describe("useDeleteAccount", () => {
     // as an unwrapped update. Unmounting first leaves nothing to notify; the
     // mutation object stays usable, and the guard is hook logic, not render
     // output.
-    unmount();
+    await unmount();
 
     const thrown = await result.current.mutateAsync().catch((e: unknown) => e);
 
