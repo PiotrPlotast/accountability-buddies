@@ -63,6 +63,20 @@ npm run ios          # build & launch the iOS dev client
 npm run android      # build & launch the Android dev client
 ```
 
+### Beta releases (TestFlight + over-the-air updates)
+
+Testers install the app once from TestFlight. After that, JavaScript-only changes reach them as EAS Updates: the app checks on launch and whenever it comes back to the foreground, and offers to restart once an update has downloaded. Changes to native code (a new native module, a plugin or permission in `app.json`, an SDK upgrade) still need a new TestFlight build; the `fingerprint` runtime version keeps an update from reaching a build that can't run it.
+
+The `production` build and its updates read `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY` from the EAS `production` environment (`eas env:create`), not from `.env`.
+
+```bash
+# a new build, uploaded to TestFlight (needed once, then after any native change)
+eas build --profile production --platform ios --auto-submit
+
+# a JavaScript-only change, delivered to every installed build
+eas update --channel production --environment production --message "What changed"
+```
+
 ## Scripts
 
 | Command | What it does |
