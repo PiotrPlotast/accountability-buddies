@@ -23,6 +23,7 @@ import { Goal } from "@/types/dashboardTypes";
 import {
   buildFakeSupabase,
   buildWrapper,
+  GestureRoot,
   makeQueryClient,
 } from "../test-utils/render";
 
@@ -202,6 +203,7 @@ describe("Ticked habit rows", () => {
         onEdit={jest.fn()}
         onDelete={jest.fn()}
       />,
+      { wrapper: GestureRoot },
     ).getByLabelText("Read").props.className as string;
 
   it("sits on the darker background when ticked", () => {
@@ -231,6 +233,7 @@ describe("Habit row actions", () => {
         {...handlers}
         {...props}
       />,
+      { wrapper: GestureRoot },
     );
     return { ...utils, ...handlers };
   }

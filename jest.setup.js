@@ -18,13 +18,37 @@ jest.mock("react-native-worklets", () =>
 // assert; a test wanting the degraded path spies on this export.
 // `LayoutAnimationConfig` is another "ADD ME IF NEEDED": a pass-through keeps
 // its children rendering and its props readable from a test.
-jest.mock("react-native-reanimated", () => ({
-  ...require("react-native-reanimated/mock"),
-  useReducedMotion: () => false,
-  LayoutAnimationConfig: function LayoutAnimationConfig({ children }) {
-    return children;
-  },
-}));
+//
+// Since gesture-handler 3 (SDK 58) a gesture subscribes to the shared values
+// in its config (`addListener` / `removeListener`), which the mock's shared
+// values don't have. On a device the listener only forwards a change to the
+// native handler, which is mocked here, so the methods are no-ops.
+jest.mock("react-native-reanimated", () => {
+  const mock = require("react-native-reanimated/mock");
+  const listenable = (sharedValue) =>
+    new Proxy(sharedValue, {
+      get(target, prop) {
+        if (prop === "addListener" || prop === "removeListener") {
+          return () => {};
+        }
+        return Reflect.get(target, prop);
+      },
+      set(target, prop, value) {
+        target[prop] = value;
+        return true;
+      },
+    });
+  const useSharedValue = (init) => listenable(mock.useSharedValue(init));
+  return {
+    ...mock,
+    useSharedValue,
+    default: { ...mock.default, useSharedValue },
+    useReducedMotion: () => false,
+    LayoutAnimationConfig: function LayoutAnimationConfig({ children }) {
+      return children;
+    },
+  };
+});
 
 // The native time picker renders nothing under Jest; tests find it by type and
 // call its `onChange` the way the OS would.

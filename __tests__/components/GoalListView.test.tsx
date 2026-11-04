@@ -3,6 +3,8 @@ import { fireEvent, render } from "@testing-library/react-native";
 import { GoalListView } from "@/app/components/dashboard/GoalList";
 import { Goal } from "@/types/dashboardTypes";
 
+import { GestureRoot } from "../test-utils/render";
+
 // The habit rows without the group behind them: what the tour drives with
 // sample habits. `GoalList` is this plus the reads and the toggle mutation.
 const goal: Goal = {
@@ -29,6 +31,7 @@ function renderView(props: Partial<Parameters<typeof GoalListView>[0]> = {}) {
       {...handlers}
       {...props}
     />,
+    { wrapper: GestureRoot },
   );
   return { ...utils, ...handlers };
 }

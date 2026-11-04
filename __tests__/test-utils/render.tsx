@@ -1,5 +1,6 @@
 import React, { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import {
   renderHook,
@@ -137,6 +138,20 @@ interface WrapperProps {
   children: ReactNode;
 }
 
+/**
+ * The gesture root alone, for a test that renders swipeable habit rows
+ * without the rest of `buildWrapper`. Since gesture-handler 3 (SDK 58) a
+ * gesture outside one throws; in the app `app/(protected)/_layout.tsx`
+ * renders it.
+ */
+export function GestureRoot({ children }: WrapperProps) {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {children}
+    </GestureHandlerRootView>
+  );
+}
+
 export function buildWrapper(opts?: {
   supabase?: SupabaseClient;
   queryClient?: QueryClient;
@@ -161,10 +176,15 @@ export function buildWrapper(opts?: {
     },
   };
   // useTheme is stubbed globally in jest.setup.js, so no ThemeProvider here.
+  // The gesture root stands in for the one `app/(protected)/_layout.tsx`
+  // renders: since gesture-handler 3 (SDK 58) a swipeable row outside one
+  // throws.
   const Wrapper = ({ children }: WrapperProps) => (
     <QueryClientProvider client={queryClient}>
       <SupabaseContext.Provider value={contextValue}>
-        {children}
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          {children}
+        </GestureHandlerRootView>
       </SupabaseContext.Provider>
     </QueryClientProvider>
   );
