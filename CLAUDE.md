@@ -40,7 +40,7 @@ npx jest -t "rolls back the cache"                  # single test by name
 
 ## Architecture
 
-**Provider chain** (`app/_layout.tsx`): `PersistQueryClientProvider` (AsyncStorage persister, 24h `gcTime`, 5min `staleTime`) → `SupabaseProvider` → `ThemeProvider` → `Stack`. Routing is gated by `Stack.Protected guard={!!session}` swapping the `(protected)` and `(public)` groups. Never navigate between those groups directly — change the session and let the guard redirect. The splash screen hides only once `isLoaded && !isRestoring`.
+**Provider chain** (`app/_layout.tsx`): `PersistQueryClientProvider` (AsyncStorage persister, 24h `gcTime`, 5min `staleTime`) → `SupabaseProvider` → `ThemeProvider` → `Stack`. Routing is gated by `Stack.Protected guard={!!session}` swapping the `(protected)` and `(public)` groups. Never navigate between those groups directly — change the session and let the guard redirect. Both groups answer `/`: signed in it is the dashboard, and signed out `app/(public)/index.tsx` redirects it to `/welcome` — a cold start opens at `/`, so without it a fresh install showed expo-router's "Unmatched Route" (it never showed in development, where the session was always there). `__tests__/components/signedOutLaunch.test.tsx` drives the real router (`expo-router/testing-library`, which needs `standard-navigation` in `transformIgnorePatterns`) over that tree. The splash screen hides only once `isLoaded && !isRestoring`.
 
 **Supabase access** goes through `hooks/useSupabase.ts` (`{ isLoaded, session, supabase, signOut }`); the provider owns the single memoized client plus the `AppState` auto-refresh wiring. Don't construct clients elsewhere.
 
@@ -156,7 +156,7 @@ Three SDK 58 additions to the test setup. **`jest.resolver.js`** (`package.json`
 
 Two things to know when reading test output:
 
-- **The baseline is green.** As of 2026-11-04 on Expo SDK 58 (React Native 0.88, React 19.3): 98 suites, 858 tests passing, `tsc --noEmit` clean under TypeScript 6, and every `npx expo-doctor` check that can run offline passing (the config-schema and React Native Directory checks need `exp.host` and the Directory's API). A failure is a real regression, not pre-existing drift.
+- **The baseline is green.** As of 2026-11-04 on Expo SDK 58 (React Native 0.88, React 19.3): 99 suites, 863 tests passing, `tsc --noEmit` clean under TypeScript 6, and every `npx expo-doctor` check that can run offline passing (the config-schema and React Native Directory checks need `exp.host` and the Directory's API). A failure is a real regression, not pre-existing drift.
 - **`npm run lint` is clean** (as of 2026-10-08) — keep it that way; a new error or warning is yours. The React Compiler-era hook rules (`set-state-in-effect`, `immutability`, `globals`) are on: seed form state during render or from a `key`, not from an effect. `no-require-imports` is off under `__tests__/` and in `jest.setup.js`, because `jest.mock` factories are hoisted above imports, and the generated `expo-env.d.ts` is ignored rather than fought over with `expo start`.
 - Jest doesn't exit on its own after any suite that renders React ("Jest did not exit one second after the test run has completed"), so a plain `npx jest <file>` hangs until killed — use `--forceExit`. It also warns about a worker that failed to exit gracefully; that's the same leak and is expected.
 
