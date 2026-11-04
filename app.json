@@ -7,6 +7,12 @@
     "icon": "./assets/icon.png",
     "scheme": "accountabilitybuddies",
     "userInterfaceStyle": "dark",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/176e6217-dbf7-4c0d-9174-d7d084a973ea"
+    },
     "web": {
       "bundler": "metro"
     },

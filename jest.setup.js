@@ -299,6 +299,30 @@ jest.mock("expo-device", () => ({
   osName: "iOS",
 }));
 
+// expo-updates — no native module under Jest. Nothing is available unless a
+// test says so; `isEnabled` stays a plain property a test replaces, and
+// `__esModule` keeps one namespace every importer shares, as for expo-device.
+jest.mock("expo-updates", () => ({
+  __esModule: true,
+  isEnabled: true,
+  checkForUpdateAsync: jest.fn(() =>
+    Promise.resolve({
+      isAvailable: false,
+      manifest: undefined,
+      isRollBackToEmbedded: false,
+      reason: "noUpdateAvailableOnServer",
+    }),
+  ),
+  fetchUpdateAsync: jest.fn(() =>
+    Promise.resolve({
+      isNew: false,
+      manifest: undefined,
+      isRollBackToEmbedded: false,
+    }),
+  ),
+  reloadAsync: jest.fn(() => Promise.resolve()),
+}));
+
 // expo-constants — `getExpoPushTokenAsync` needs the EAS project id, which at
 // runtime comes from `app.json`'s `extra.eas.projectId`. Without it the call
 // throws and the failure reads like a credentials problem.
