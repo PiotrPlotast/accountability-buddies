@@ -157,8 +157,10 @@ describe("registerForPushNotificationsAsync — platforms", () => {
     );
     // A missing enum member reads as `undefined`, and Android then files the
     // channel at its own default importance rather than the one asked for.
+    // 5 is the real `AndroidImportance.DEFAULT` (not 3, which is MIN), so this
+    // also catches the enum being read from somewhere that isn't the library's.
     const channel = setChannel.mock.calls[0][1];
-    expect(typeof channel.importance).toBe("number");
+    expect(channel.importance).toBe(5);
   });
 
   it("creates no channel on iOS", async () => {

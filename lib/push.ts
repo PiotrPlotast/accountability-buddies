@@ -2,6 +2,13 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+// A named import, not `Notifications.AndroidImportance`: since 58.1 the
+// library's build puts each enum's `export` on the line its JSDoc closes on
+// (` * */ export var AndroidImportance = …`), which eslint-plugin-import's
+// "is this an ES module?" sniff doesn't recognise, so `import/namespace` can't
+// see anything that file exports. The enum is the same object either way, and
+// `tsc` checks a named import (`import/named` is off for TypeScript).
+import { AndroidImportance } from "expo-notifications";
 
 /**
  * The only file allowed to import `expo-notifications`, the way `lib/haptics.ts`
@@ -94,7 +101,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
       name: "default",
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: AndroidImportance.DEFAULT,
     });
   }
 
