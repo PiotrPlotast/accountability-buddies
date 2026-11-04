@@ -1,5 +1,9 @@
 import { forwardRef } from "react";
-import { TextInput, TextInputProps } from "react-native";
+import {
+  TextInput,
+  type TextInputInstance,
+  type TextInputProps,
+} from "react-native";
 import { themeColors } from "@/lib/colors";
 
 const FONTS = {
@@ -32,7 +36,7 @@ type Props = TextInputProps & {
  * Forwards its ref, so screens chaining fields with `onSubmitEditing` still
  * hold a real `TextInput` and can call `.focus()` on it.
  */
-const AppTextInput = forwardRef<TextInput, Props>(function AppTextInput(
+const AppTextInput = forwardRef<TextInputInstance, Props>(function AppTextInput(
   { weight = "regular", style, placeholderTextColor, ...rest },
   ref,
 ) {

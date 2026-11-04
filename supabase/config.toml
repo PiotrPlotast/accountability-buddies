@@ -423,3 +423,8 @@ verify_jwt = false
 # same shared secret as check-receipts.
 [functions.dispatch-notifications]
 verify_jwt = false
+
+# Called hourly by the `cleanup-habit-photos` pg_cron job with the same shared
+# secret as check-receipts.
+[functions.cleanup-habit-photos]
+verify_jwt = false

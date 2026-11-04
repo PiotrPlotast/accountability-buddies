@@ -43,27 +43,27 @@ function seed(queryClient: ReturnType<typeof makeQueryClient>) {
 }
 
 describe("DeleteGoalModal", () => {
-  it("renders the goal title in the confirmation", () => {
+  it("renders the goal title in the confirmation", async () => {
     const queryClient = makeQueryClient();
     seed(queryClient);
     const { Wrapper } = buildWrapper({ queryClient });
-    const { getByText } = render(
+    const { getByText } = await render(
       <DeleteGoalModal goal={goal} isVisible onClose={() => {}} />,
       { wrapper: Wrapper },
     );
     expect(getByText('"Run" will be removed.')).toBeTruthy();
   });
 
-  it("calls onClose when Cancel is pressed", () => {
+  it("calls onClose when Cancel is pressed", async () => {
     const queryClient = makeQueryClient();
     seed(queryClient);
     const { Wrapper } = buildWrapper({ queryClient });
     const onClose = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <DeleteGoalModal goal={goal} isVisible onClose={onClose} />,
       { wrapper: Wrapper },
     );
-    fireEvent.press(getByText("Cancel"));
+    await fireEvent.press(getByText("Cancel"));
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -76,11 +76,11 @@ describe("DeleteGoalModal", () => {
     const { Wrapper } = buildWrapper({ supabase, queryClient });
     const onClose = jest.fn();
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <DeleteGoalModal goal={goal} isVisible onClose={onClose} />,
       { wrapper: Wrapper },
     );
-    fireEvent.press(getByText("Delete"));
+    await fireEvent.press(getByText("Delete"));
 
     await waitFor(() => {
       expect(fromImpl).toHaveBeenCalledWith("goals");
@@ -98,7 +98,7 @@ describe("DeleteGoalModal with its own onConfirm", () => {
     });
     const onConfirm = jest.fn(() => Promise.resolve());
     const onClose = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <DeleteGoalModal
         goal={goal}
         isVisible
@@ -108,7 +108,7 @@ describe("DeleteGoalModal with its own onConfirm", () => {
       { wrapper: Wrapper },
     );
 
-    fireEvent.press(getByText("Delete"));
+    await fireEvent.press(getByText("Delete"));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(onConfirm).toHaveBeenCalledWith(goal);

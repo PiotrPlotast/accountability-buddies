@@ -16,12 +16,12 @@ const today = () => screen.getByTestId("today").props.children;
 const remove = jest.fn();
 
 /** The listener the mounted hook handed to AppState, and a way to fire it. */
-function emitAppState(state: string) {
+async function emitAppState(state: string) {
   // `lastCall`, not `calls[0]`: the spy's history outlives a test, so the
   // first call can belong to an earlier test's long-unmounted Probe.
   const addListener = AppState.addEventListener as unknown as jest.Mock;
   const handler = addListener.mock.lastCall[1];
-  act(() => handler(state));
+  await act(() => handler(state));
 }
 
 beforeEach(() => {
@@ -38,73 +38,83 @@ afterEach(() => {
 });
 
 describe("useTodayLocalDate", () => {
-  it("returns today's local date on mount", () => {
-    render(<Probe />);
+  it("returns today's local date on mount", async () => {
+    await render(<Probe />);
     expect(today()).toBe("2026-10-05");
   });
 
-  it("rolls over at local midnight while the app stays open", () => {
-    render(<Probe />);
+  it("rolls over at local midnight while the app stays open", async () => {
+    await render(<Probe />);
 
-    act(() => jest.advanceTimersByTime(29_000));
+    await act(() => jest.advanceTimersByTime(29_000));
     expect(today()).toBe("2026-10-05");
 
-    act(() => jest.advanceTimersByTime(1_000));
+    await act(() => jest.advanceTimersByTime(1_000));
     expect(today()).toBe("2026-10-06");
   });
 
-  it("keeps rolling over on every following midnight", () => {
-    render(<Probe />);
+  it("keeps rolling over on every following midnight", async () => {
+    await render(<Probe />);
 
-    act(() => jest.advanceTimersByTime(30_000));
-    act(() => jest.advanceTimersByTime(24 * 60 * 60 * 1000));
+    await act(() => jest.advanceTimersByTime(30_000));
+    await act(() => jest.advanceTimersByTime(24 * 60 * 60 * 1000));
     expect(today()).toBe("2026-10-07");
   });
 
-  it("catches up when the app returns to the foreground", () => {
-    render(<Probe />);
+  it("catches up when the app returns to the foreground", async () => {
+    await render(<Probe />);
 
     // Timers don't run while the app is suspended: the clock moves on two
     // days without the midnight timer ever firing.
     jest.setSystemTime(new Date(2026, 9, 7, 9, 0, 0));
     expect(today()).toBe("2026-10-05");
 
-    emitAppState("active");
+    await emitAppState("active");
     expect(today()).toBe("2026-10-07");
   });
 
-  it("ignores app states other than active", () => {
-    render(<Probe />);
+  it("ignores app states other than active", async () => {
+    await render(<Probe />);
 
     jest.setSystemTime(new Date(2026, 9, 7, 9, 0, 0));
-    emitAppState("background");
+    await emitAppState("background");
     expect(today()).toBe("2026-10-05");
   });
 
-  it("does not re-render when the date has not changed", () => {
-    render(<Probe />);
+  it("does not re-render when the date has not changed", async () => {
+    await render(<Probe />);
     const before = onRender.mock.calls.length;
 
-    emitAppState("active");
+    await emitAppState("active");
     expect(onRender).toHaveBeenCalledTimes(before);
   });
 
-  it("re-arms the midnight timer after a foreground catch-up", () => {
-    render(<Probe />);
+  it("re-arms the midnight timer after a foreground catch-up", async () => {
+    await render(<Probe />);
 
     jest.setSystemTime(new Date(2026, 9, 7, 23, 59, 0));
-    emitAppState("active");
+    await emitAppState("active");
     expect(today()).toBe("2026-10-07");
 
-    act(() => jest.advanceTimersByTime(60_000));
+    await act(() => jest.advanceTimersByTime(60_000));
     expect(today()).toBe("2026-10-08");
   });
 
-  it("clears its timer and listener on unmount", () => {
-    const { unmount } = render(<Probe />);
-    unmount();
+  // The hook's own timer, picked out by its delay: RNTL 14's async `act`
+  // schedules timers of its own under fake timers, so a plain count of
+  // what is left no longer says anything about the hook.
+  it("clears its timer and listener on unmount", async () => {
+    const set = jest.spyOn(globalThis, "setTimeout");
+    const clear = jest.spyOn(globalThis, "clearTimeout");
+    const { unmount } = await render(<Probe />);
+    // 23:59:30, so local midnight is 30 seconds away.
+    const midnight = set.mock.calls.findIndex(([, ms]) => ms === 30_000);
+    expect(midnight).toBeGreaterThanOrEqual(0);
+    const timer = set.mock.results[midnight].value;
+
+    await unmount();
 
     expect(remove).toHaveBeenCalled();
-    expect(jest.getTimerCount()).toBe(0);
+    expect(clear).toHaveBeenCalledWith(timer);
   });
 });

@@ -5,6 +5,8 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
+  Pressable,
+  Text,
 } from "react-native";
 import { onlineManager } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,6 +30,12 @@ import { onCheerRequest, onShowTab } from "@/lib/notificationTaps";
 import type { CheerRequest } from "@/lib/cheer";
 import { getTodayLocalDate } from "@/lib/date";
 import { OfflineBanner, OfflineRetry } from "./ConnectionNotice";
+import PhotoStrip from "./PhotoStrip";
+import PhotoViewerModal from "./PhotoViewerModal";
+import CameraModal from "./CameraModal";
+import { useHabitPhotoUrls } from "@/hooks/useHabitPhotoUrls";
+import { useRemoveHabitPhoto } from "@/hooks/useRemoveHabitPhoto";
+import { photoSlotUsed, todaysPhotos, type PhotoItem } from "@/lib/habitPhotos";
 
 type PendingAction = { type: "edit" | "delete"; goal: Goal };
 
@@ -47,6 +55,14 @@ type CheerTarget = CheerRequest & { key: number };
 
 // How long "Nudge sent to …" stays under the buttons.
 const SENT_NOTICE_MS = 3000;
+
+// How long "Add a photo of Run?" stays after a tick.
+const PHOTO_PROMPT_MS = 6000;
+
+// Each opening of the viewer or the camera is a fresh mount (`key`), so
+// their starting state is read once instead of copied in by an effect.
+type ViewerTarget = { index: number; key: number };
+type CameraTarget = { goal: Goal; day: string; key: number };
 
 export default function Dashboard() {
   const {
@@ -132,6 +148,55 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, [sent]);
 
+  // Habit photos. The strip and the viewer share one newest-first list, and
+  // every thumbnail is signed in one call.
+  const photoItems = useMemo(() => todaysPhotos(members), [members]);
+  const photoUrls = useHabitPhotoUrls(
+    useMemo(() => photoItems.map((i) => i.photo.path), [photoItems]),
+  );
+  const [viewer, setViewer] = useState<ViewerTarget | null>(null);
+  const [camera, setCamera] = useState<CameraTarget | null>(null);
+  const [photoPrompt, setPhotoPrompt] = useState<{
+    goal: Goal;
+    key: number;
+  } | null>(null);
+  const { mutate: removePhoto } = useRemoveHabitPhoto();
+
+  const openPhotoOf = (goal: Goal) => {
+    const index = photoItems.findIndex((i) => i.photo.id === goal.photo?.id);
+    if (index >= 0) setViewer({ index, key: Date.now() });
+  };
+  // A photo needs the server, like a nudge: offline the camera isn't opened.
+  const openCamera = (goal: Goal) => {
+    if (!onlineManager.isOnline()) return;
+    setPhotoPrompt(null);
+    setCamera({ goal, day: getTodayLocalDate(), key: Date.now() });
+  };
+  // Offered from the tap itself, never from the cache: a refetch that shows
+  // a habit ticked must not ask for a photo.
+  const offerPhoto = (goal: Goal) => {
+    if (!onlineManager.isOnline() || photoSlotUsed(goal)) return;
+    setPhotoPrompt({ goal, key: Date.now() });
+  };
+  const cheerPhoto = (item: PhotoItem) =>
+    openCheer({
+      buddyId: item.member.userId,
+      goal: { id: item.goal.id, title: item.goal.title },
+      day: getTodayLocalDate(),
+    });
+  const deletePhoto = (item: PhotoItem) =>
+    removePhoto(
+      { photoId: item.photo.id, groupId: item.goal.group_id },
+      { onSuccess: () => setViewer(null) },
+    );
+
+  // The offer clears itself, the same way the sent notice does.
+  useEffect(() => {
+    if (!photoPrompt) return;
+    const timer = setTimeout(() => setPhotoPrompt(null), PHOTO_PROMPT_MS);
+    return () => clearTimeout(timer);
+  }, [photoPrompt]);
+
   const todayGoals = useMemo(
     () => filterGoalsForToday(currentMember?.goals ?? []),
     [currentMember?.goals],
@@ -200,6 +265,12 @@ export default function Dashboard() {
           todayGoals={todayGoals}
           onOpenHabitManager={() => setIsHabitManagerVisible(true)}
         />
+        <PhotoStrip
+          items={photoItems}
+          urls={photoUrls}
+          userId={userId}
+          onOpen={(index) => setViewer({ index, key: Date.now() })}
+        />
         <MemberTabs
           members={members}
           selectedTabId={viewedId || ""}
@@ -248,9 +319,73 @@ export default function Dashboard() {
                     })
                 : undefined
             }
+            photoUrls={photoUrls}
+            onOpenPhoto={openPhotoOf}
+            onAddPhoto={openCamera}
+            photosOffline={!isOnline}
+            onTicked={offerPhoto}
           />
         </View>
       </ScrollView>
+
+      {photoPrompt && isOnline ? (
+        <View
+          className="absolute left-5 right-5 bg-surface border border-border rounded-tile px-4 py-3 flex-row items-center gap-3"
+          style={{ bottom: insets.bottom + 16 }}
+        >
+          <Text
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{ fontSize: 18 }}
+          >
+            📸
+          </Text>
+          <Text className="flex-1 text-text text-sm">
+            Add a photo of {photoPrompt.goal.title}?
+          </Text>
+          <Pressable
+            onPress={() => openCamera(photoPrompt.goal)}
+            accessibilityRole="button"
+            accessibilityLabel="Add photo"
+            className="px-2 py-2"
+          >
+            <Text style={{ color: accent.hex }} className="font-mono-medium">
+              Add photo
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setPhotoPrompt(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Not now"
+            className="px-2 py-2"
+          >
+            <Text className="text-text-muted font-mono">✕</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {viewer ? (
+        <PhotoViewerModal
+          key={viewer.key}
+          items={photoItems}
+          initialIndex={viewer.index}
+          urls={photoUrls}
+          userId={userId}
+          isOnline={isOnline}
+          onClose={() => setViewer(null)}
+          onCheer={cheerPhoto}
+          onDelete={deletePhoto}
+        />
+      ) : null}
+      {camera ? (
+        <CameraModal
+          key={camera.key}
+          goal={camera.goal}
+          day={camera.day}
+          isOnline={isOnline}
+          onClose={() => setCamera(null)}
+        />
+      ) : null}
 
       <EditGoalModal
         goal={editingGoal}

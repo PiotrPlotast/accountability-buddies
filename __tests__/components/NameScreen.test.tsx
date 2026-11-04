@@ -36,18 +36,18 @@ describe("NameScreen", () => {
     (Alert.alert as jest.Mock).mockRestore();
   });
 
-  it("starts with an empty field rather than a prefilled guess", () => {
+  it("starts with an empty field rather than a prefilled guess", async () => {
     const { Wrapper } = setup({ data: [{ id: "user-1" }], error: null });
-    const { getByPlaceholderText } = render(<NameScreen />, {
+    const { getByPlaceholderText } = await render(<NameScreen />, {
       wrapper: Wrapper,
     });
 
     expect(getByPlaceholderText("Your name").props.value).toBe("");
   });
 
-  it("offers no way to skip", () => {
+  it("offers no way to skip", async () => {
     const { Wrapper } = setup({ data: [{ id: "user-1" }], error: null });
-    const { queryByText } = render(<NameScreen />, { wrapper: Wrapper });
+    const { queryByText } = await render(<NameScreen />, { wrapper: Wrapper });
 
     expect(queryByText(/skip/i)).toBeNull();
   });
@@ -57,13 +57,13 @@ describe("NameScreen", () => {
       data: [{ id: "user-1" }],
       error: null,
     });
-    const { getByPlaceholderText, getByText } = render(<NameScreen />, {
+    const { getByPlaceholderText, getByText } = await render(<NameScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByText("Continue"));
-    fireEvent.changeText(getByPlaceholderText("Your name"), "   ");
-    fireEvent.press(getByText("Continue"));
+    await fireEvent.press(getByText("Continue"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "   ");
+    await fireEvent.press(getByText("Continue"));
 
     await waitFor(() => {
       expect(fromImpl).not.toHaveBeenCalled();
@@ -71,9 +71,9 @@ describe("NameScreen", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("caps what can be typed at the maximum length", () => {
+  it("caps what can be typed at the maximum length", async () => {
     const { Wrapper } = setup({ data: [{ id: "user-1" }], error: null });
-    const { getByPlaceholderText } = render(<NameScreen />, {
+    const { getByPlaceholderText } = await render(<NameScreen />, {
       wrapper: Wrapper,
     });
 
@@ -84,12 +84,12 @@ describe("NameScreen", () => {
 
   it("saves the trimmed name and hands the user to the dashboard", async () => {
     const { qb, Wrapper } = setup({ data: [{ id: "user-1" }], error: null });
-    const { getByPlaceholderText, getByText } = render(<NameScreen />, {
+    const { getByPlaceholderText, getByText } = await render(<NameScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "  Zofia  ");
-    fireEvent.press(getByText("Continue"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "  Zofia  ");
+    await fireEvent.press(getByText("Continue"));
 
     await waitFor(() => {
       expect(qb.update).toHaveBeenCalledWith({ full_name: "Zofia" });
@@ -101,12 +101,12 @@ describe("NameScreen", () => {
 
   it("keeps the user on the screen when the save fails", async () => {
     const { Wrapper } = setup({ data: null, error: { message: "offline" } });
-    const { getByPlaceholderText, getByText } = render(<NameScreen />, {
+    const { getByPlaceholderText, getByText } = await render(<NameScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
-    fireEvent.press(getByText("Continue"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
+    await fireEvent.press(getByText("Continue"));
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalled();
@@ -119,12 +119,12 @@ describe("NameScreen", () => {
       data: [{ id: "user-1" }],
       error: null,
     });
-    const { getByPlaceholderText, getByText } = render(<NameScreen />, {
+    const { getByPlaceholderText, getByText } = await render(<NameScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
-    fireEvent.press(getByText("Continue"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
+    await fireEvent.press(getByText("Continue"));
 
     await waitFor(() => {
       expect(

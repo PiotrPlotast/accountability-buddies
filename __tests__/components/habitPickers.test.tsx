@@ -26,7 +26,7 @@ beforeEach(() => {
 
 // The stored row loads after mount; settle it so it lands inside act().
 async function renderPicker(ui: React.ReactElement) {
-  const result = render(ui);
+  const result = await render(ui);
   await act(async () => {});
   return result;
 }
@@ -45,8 +45,8 @@ function tileOrder() {
 // painted the colour of what's behind it) is invisible on screen. Both
 // pickers assume a `bg-bg` surface behind them.
 describe("habit pickers", () => {
-  it("gives unselected days a background and border", () => {
-    const { getByLabelText } = render(
+  it("gives unselected days a background and border", async () => {
+    const { getByLabelText } = await render(
       <DayPicker value={[0]} onChange={() => {}} />,
     );
     const unselected = getByLabelText("Tue").props.className;
@@ -63,8 +63,8 @@ describe("habit pickers", () => {
     expect(unselected).toContain("border-border");
   });
 
-  it("gives the selected chip no background class, so the inline accent shows", () => {
-    const { getByLabelText } = render(
+  it("gives the selected chip no background class, so the inline accent shows", async () => {
+    const { getByLabelText } = await render(
       <DayPicker value={[0]} onChange={() => {}} />,
     );
     const selected = getByLabelText("Mon");
@@ -72,38 +72,38 @@ describe("habit pickers", () => {
     expect(selected.props.style).toMatchObject({ backgroundColor: "#C6F94A" });
   });
 
-  it("toggles days, keeping the selection sorted", () => {
+  it("toggles days, keeping the selection sorted", async () => {
     const onChange = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <DayPicker value={[4, 0]} onChange={onChange} />,
     );
 
-    fireEvent.press(getByLabelText("Wed"));
+    await fireEvent.press(getByLabelText("Wed"));
     expect(onChange).toHaveBeenCalledWith([0, 2, 4]);
 
-    fireEvent.press(getByLabelText("Mon"));
+    await fireEvent.press(getByLabelText("Mon"));
     expect(onChange).toHaveBeenLastCalledWith([4]);
   });
 
   // An empty selection is stored as "every day", so clearing the last chip
   // would mean the opposite of what the empty picker shows.
-  it("refuses to clear the last selected day", () => {
+  it("refuses to clear the last selected day", async () => {
     const onChange = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <DayPicker value={[2]} onChange={onChange} />,
     );
 
-    fireEvent.press(getByLabelText("Wed"));
+    await fireEvent.press(getByLabelText("Wed"));
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("still allows deselecting when more than one day is lit", () => {
+  it("still allows deselecting when more than one day is lit", async () => {
     const onChange = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <DayPicker value={[2, 5]} onChange={onChange} />,
     );
 
-    fireEvent.press(getByLabelText("Wed"));
+    await fireEvent.press(getByLabelText("Wed"));
     expect(onChange).toHaveBeenCalledWith([5]);
   });
 });
@@ -116,29 +116,29 @@ describe("habit picker haptics", () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  it("taps when a day is selected", () => {
-    const { getByLabelText } = render(
+  it("taps when a day is selected", async () => {
+    const { getByLabelText } = await render(
       <DayPicker value={[0]} onChange={() => {}} />,
     );
-    fireEvent.press(getByLabelText("Wed"));
+    await fireEvent.press(getByLabelText("Wed"));
     expect(tap).toHaveBeenCalledTimes(1);
   });
 
-  it("taps when a day is deselected", () => {
-    const { getByLabelText } = render(
+  it("taps when a day is deselected", async () => {
+    const { getByLabelText } = await render(
       <DayPicker value={[0, 2]} onChange={() => {}} />,
     );
-    fireEvent.press(getByLabelText("Wed"));
+    await fireEvent.press(getByLabelText("Wed"));
     expect(tap).toHaveBeenCalledTimes(1);
   });
 
   // Clearing the last day is refused (it would silently mean "every day"), and
   // a press that changes nothing must not feel like a press that does.
-  it("stays silent on the refused last-day tap", () => {
-    const { getByLabelText } = render(
+  it("stays silent on the refused last-day tap", async () => {
+    const { getByLabelText } = await render(
       <DayPicker value={[0]} onChange={() => {}} />,
     );
-    fireEvent.press(getByLabelText("Mon"));
+    await fireEvent.press(getByLabelText("Mon"));
     expect(tap).not.toHaveBeenCalled();
   });
 
@@ -146,7 +146,7 @@ describe("habit picker haptics", () => {
     const { getByLabelText } = await renderPicker(
       <IconPicker value="🧘" onChange={() => {}} />,
     );
-    fireEvent.press(getByLabelText("📚"));
+    await fireEvent.press(getByLabelText("📚"));
     expect(tap).toHaveBeenCalledTimes(1);
   });
 });
@@ -162,8 +162,8 @@ describe("icon picker: any emoji", () => {
     const onChange = jest.fn();
     await renderPicker(<IconPicker value="🧘" onChange={onChange} />);
 
-    fireEvent.press(screen.getByLabelText("More emoji"));
-    fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
+    await fireEvent.press(screen.getByLabelText("More emoji"));
+    await fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
 
     expect(onChange).toHaveBeenCalledWith("🦄");
     expect(screen.queryByLabelText("sheet: close")).toBeNull();
@@ -174,9 +174,9 @@ describe("icon picker: any emoji", () => {
       <IconPicker value="🧘" onChange={() => {}} />,
     );
 
-    fireEvent.press(screen.getByLabelText("More emoji"));
-    fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
-    rerender(<IconPicker value="🦄" onChange={() => {}} />);
+    await fireEvent.press(screen.getByLabelText("More emoji"));
+    await fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
+    await rerender(<IconPicker value="🦄" onChange={() => {}} />);
 
     const expected = ["🦄", ...ICON_CHOICES.slice(0, -1)];
     expect(tileOrder()).toEqual(expected);
@@ -192,8 +192,8 @@ describe("icon picker: any emoji", () => {
     const onChange = jest.fn();
     await renderPicker(<IconPicker value="🧘" onChange={onChange} />);
 
-    fireEvent.press(screen.getByLabelText("More emoji"));
-    fireEvent.press(screen.getByLabelText("sheet: close"));
+    await fireEvent.press(screen.getByLabelText("More emoji"));
+    await fireEvent.press(screen.getByLabelText("sheet: close"));
 
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.queryByLabelText("sheet: close")).toBeNull();
@@ -224,7 +224,7 @@ describe("icon picker: any emoji", () => {
     const onChange = jest.fn();
     await renderPicker(<IconPicker value="🧘" onChange={onChange} />);
 
-    fireEvent.press(screen.getByLabelText("💤"));
+    await fireEvent.press(screen.getByLabelText("💤"));
 
     expect(onChange).toHaveBeenCalledWith("💤");
     expect(tileOrder()).toEqual(ICON_CHOICES);
@@ -237,8 +237,8 @@ describe("icon picker: any emoji", () => {
     );
     expect(tileOrder()).toEqual(GROUP_ICON_CHOICES);
 
-    fireEvent.press(screen.getByLabelText("More emoji"));
-    fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
+    await fireEvent.press(screen.getByLabelText("More emoji"));
+    await fireEvent.press(screen.getByLabelText("sheet: pick unicorn"));
 
     await waitFor(() => expect(setItem).toHaveBeenCalled());
     await renderPicker(<IconPicker value="🧘" onChange={() => {}} />);

@@ -83,7 +83,7 @@ function SignedOutGuard({ signedIn }: { signedIn: boolean }) {
   return signedIn ? <Taps /> : null;
 }
 
-function renderWith(
+async function renderWith(
   ui: React.ReactElement,
   { signedIn = true, isLoaded = true } = {},
 ) {
@@ -112,20 +112,28 @@ function renderWith(
       </SupabaseContext.Provider>
     </QueryClientProvider>
   );
-  const view = render(<Tree signed={signedIn} loaded={isLoaded} child={ui} />);
+  const view = await render(
+    <Tree signed={signedIn} loaded={isLoaded} child={ui} />,
+  );
   return {
     ...view,
     from,
     update,
-    rerenderWith: (signed: boolean, child: React.ReactElement, loaded = true) =>
-      view.rerender(<Tree signed={signed} loaded={loaded} child={child} />),
+    rerenderWith: async (
+      signed: boolean,
+      child: React.ReactElement,
+      loaded = true,
+    ) =>
+      await view.rerender(
+        <Tree signed={signed} loaded={loaded} child={child} />,
+      ),
   };
 }
 
 // The listener `useNotificationTaps` registered last, i.e. a live tap.
-const liveTap = (tap: NotificationTap) => {
+const liveTap = async (tap: NotificationTap) => {
   const calls = push.onNotificationTap.mock.calls;
-  act(() => calls[calls.length - 1][0](tap));
+  await act(() => calls[calls.length - 1][0](tap));
 };
 
 let showTab: jest.Mock;
@@ -142,30 +150,30 @@ beforeEach(() => {
 afterEach(() => offShowTab());
 
 describe("useNotificationTaps", () => {
-  it("opens the dashboard on your own tab when a nudge launched the app", () => {
+  it("opens the dashboard on your own tab when a nudge launched the app", async () => {
     push.getLastNotificationTap.mockReturnValue(nudgeTap());
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(router.navigate).toHaveBeenCalledWith("/");
     expect(showTab).toHaveBeenCalledTimes(1);
     expect(showTab).toHaveBeenCalledWith(null);
   });
 
-  it("opens your own tab for a nudge tapped while the app is running", () => {
-    renderWith(<Taps />);
+  it("opens your own tab for a nudge tapped while the app is running", async () => {
+    await renderWith(<Taps />);
     expect(router.navigate).not.toHaveBeenCalled();
 
-    liveTap(nudgeTap());
+    await liveTap(nudgeTap());
 
     expect(router.navigate).toHaveBeenCalledWith("/");
     expect(showTab).toHaveBeenCalledTimes(1);
     expect(showTab).toHaveBeenCalledWith(null);
   });
 
-  it("marks the tapped notification as read", () => {
+  it("marks the tapped notification as read", async () => {
     const tap = nudgeTap();
     push.getLastNotificationTap.mockReturnValue(tap);
-    const { from, update } = renderWith(<Taps />);
+    const { from, update } = await renderWith(<Taps />);
 
     expect(from).toHaveBeenCalledWith("notifications");
     expect(update.update).toHaveBeenCalledWith({
@@ -174,76 +182,76 @@ describe("useNotificationTaps", () => {
     expect(update.eq).toHaveBeenCalledWith("id", tap.data.notification_id);
   });
 
-  it("still opens the dashboard when the push carries no notification id", () => {
+  it("still opens the dashboard when the push carries no notification id", async () => {
     push.getLastNotificationTap.mockReturnValue({
       id: "tap-no-row",
       data: { type: "nudge" },
     });
-    const { from } = renderWith(<Taps />);
+    const { from } = await renderWith(<Taps />);
 
     expect(from).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith("/");
   });
 
-  it("clears the launch tap once handled, so a reload doesn't replay it", () => {
+  it("clears the launch tap once handled, so a reload doesn't replay it", async () => {
     push.getLastNotificationTap.mockReturnValue(nudgeTap());
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
     expect(push.clearLastNotificationTap).toHaveBeenCalledTimes(1);
   });
 
-  it("routes a tap once, however often the hook mounts again", () => {
+  it("routes a tap once, however often the hook mounts again", async () => {
     const tap = nudgeTap();
     push.getLastNotificationTap.mockReturnValue(tap);
-    const first = renderWith(<Taps />);
-    first.unmount();
-    renderWith(<Taps />);
-    liveTap(tap);
+    const first = await renderWith(<Taps />);
+    await first.unmount();
+    await renderWith(<Taps />);
+    await liveTap(tap);
 
     expect(router.navigate).toHaveBeenCalledTimes(1);
     expect(showTab).toHaveBeenCalledTimes(1);
     expect(showTab).toHaveBeenCalledWith(null);
   });
 
-  it("waits for the name and the group to be read, then routes", () => {
+  it("waits for the name and the group to be read, then routes", async () => {
     setGates({ nameResolved: false, groupLoading: true });
     push.getLastNotificationTap.mockReturnValue(nudgeTap());
-    const view = renderWith(<Taps />);
+    const view = await renderWith(<Taps />);
     expect(router.navigate).not.toHaveBeenCalled();
 
     setGates({ groupLoading: true });
-    view.rerenderWith(true, <Taps />);
+    await view.rerenderWith(true, <Taps />);
     expect(router.navigate).not.toHaveBeenCalled();
 
     setGates();
-    view.rerenderWith(true, <Taps />);
+    await view.rerenderWith(true, <Taps />);
     expect(router.navigate).toHaveBeenCalledWith("/");
   });
 
-  it("leaves a user who still owes a name on the name screen", () => {
+  it("leaves a user who still owes a name on the name screen", async () => {
     setGates({ needsName: true });
     push.getLastNotificationTap.mockReturnValue(nudgeTap());
-    const { from } = renderWith(<Taps />);
+    const { from } = await renderWith(<Taps />);
 
     expect(router.navigate).not.toHaveBeenCalled();
     expect(showTab).not.toHaveBeenCalled();
     expect(from).toHaveBeenCalledWith("notifications");
   });
 
-  it("leaves a user with no group on the join-group screen", () => {
+  it("leaves a user with no group on the join-group screen", async () => {
     setGates({ hasNoGroup: true });
     push.getLastNotificationTap.mockReturnValue(nudgeTap());
-    const { from } = renderWith(<Taps />);
+    const { from } = await renderWith(<Taps />);
 
     expect(router.navigate).not.toHaveBeenCalled();
     expect(showTab).not.toHaveBeenCalled();
     expect(from).toHaveBeenCalledWith("notifications");
   });
 
-  it("opens your own tab for a habit reminder, like a nudge", () => {
+  it("opens your own tab for a habit reminder, like a nudge", async () => {
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "reminder", goal_id: "goal-1", group_id: "group-1" }),
     );
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(router.navigate).toHaveBeenCalledWith("/");
     expect(showTab).toHaveBeenCalledTimes(1);
@@ -252,11 +260,11 @@ describe("useNotificationTaps", () => {
 
   it.each(["buddy_ticked", "buddy_done", "member_joined"])(
     "opens the buddy's tab for %s",
-    (type) => {
+    async (type) => {
       push.getLastNotificationTap.mockReturnValue(
         nudgeTap({ type, buddy_id: "user-2", group_id: "group-1" }),
       );
-      renderWith(<Taps />);
+      await renderWith(<Taps />);
 
       expect(router.navigate).toHaveBeenCalledWith("/");
       expect(showTab).toHaveBeenCalledTimes(1);
@@ -264,33 +272,33 @@ describe("useNotificationTaps", () => {
     },
   );
 
-  it("just opens the app for a buddy event that names no buddy", () => {
+  it("just opens the app for a buddy event that names no buddy", async () => {
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "buddy_done" }),
     );
-    const { from } = renderWith(<Taps />);
+    const { from } = await renderWith(<Taps />);
 
     expect(router.navigate).not.toHaveBeenCalled();
     expect(showTab).not.toHaveBeenCalled();
     expect(from).toHaveBeenCalledWith("notifications");
   });
 
-  it("just opens the app for a type it doesn't know", () => {
+  it("just opens the app for a type it doesn't know", async () => {
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "something_new", buddy_id: "user-2" }),
     );
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(router.navigate).not.toHaveBeenCalled();
     expect(showTab).not.toHaveBeenCalled();
   });
 
-  it("leaves a user with no group where they are, even for a buddy event", () => {
+  it("leaves a user with no group where they are, even for a buddy event", async () => {
     setGates({ hasNoGroup: true });
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "member_joined", buddy_id: "user-2" }),
     );
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(router.navigate).not.toHaveBeenCalled();
     expect(showTab).not.toHaveBeenCalled();
@@ -309,7 +317,7 @@ describe("useNotificationTaps, cheers", () => {
   });
   afterEach(() => offCheer());
 
-  it("opens a habit cheer on the buddy's tab for a push about one habit", () => {
+  it("opens a habit cheer on the buddy's tab for a push about one habit", async () => {
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({
         type: "buddy_ticked",
@@ -319,7 +327,7 @@ describe("useNotificationTaps, cheers", () => {
         day: "2026-10-16",
       }),
     );
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(showTab).toHaveBeenCalledWith("user-2");
     expect(cheer).toHaveBeenCalledTimes(1);
@@ -330,11 +338,11 @@ describe("useNotificationTaps, cheers", () => {
     });
   });
 
-  it("opens a day cheer for a closed-day push", () => {
+  it("opens a day cheer for a closed-day push", async () => {
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "buddy_done", buddy_id: "user-2", day: "2026-10-16" }),
     );
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(showTab).toHaveBeenCalledWith("user-2");
     expect(cheer).toHaveBeenCalledWith({
@@ -344,85 +352,85 @@ describe("useNotificationTaps, cheers", () => {
     });
   });
 
-  it("offers no cheer for someone joining, only their tab", () => {
+  it("offers no cheer for someone joining, only their tab", async () => {
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "member_joined", buddy_id: "user-2" }),
     );
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(showTab).toHaveBeenCalledWith("user-2");
     expect(cheer).not.toHaveBeenCalled();
   });
 
-  it("opens your own tab for a cheer you received, like a nudge", () => {
+  it("opens your own tab for a cheer you received, like a nudge", async () => {
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "cheer", kind: "habit", sender_id: "user-2" }),
     );
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(router.navigate).toHaveBeenCalledWith("/");
     expect(showTab).toHaveBeenCalledWith(null);
     expect(cheer).not.toHaveBeenCalled();
   });
 
-  it("opens no cheer for a user with no group", () => {
+  it("opens no cheer for a user with no group", async () => {
     setGates({ hasNoGroup: true });
     push.getLastNotificationTap.mockReturnValue(
       nudgeTap({ type: "buddy_done", buddy_id: "user-2" }),
     );
-    renderWith(<Taps />);
+    await renderWith(<Taps />);
 
     expect(cheer).not.toHaveBeenCalled();
   });
 
-  it("opens the cheer once, however often the hook mounts again", () => {
+  it("opens the cheer once, however often the hook mounts again", async () => {
     const tap = nudgeTap({ type: "buddy_done", buddy_id: "user-2" });
     push.getLastNotificationTap.mockReturnValue(tap);
-    renderWith(<Taps />).unmount();
-    renderWith(<Taps />);
+    await (await await renderWith(<Taps />)).unmount();
+    await renderWith(<Taps />);
 
     expect(cheer).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("useForgetTapsWhileSignedOut", () => {
-  it("forgets a tap that opened the app signed out, even after signing in", () => {
+  it("forgets a tap that opened the app signed out, even after signing in", async () => {
     const tap = nudgeTap();
     push.getLastNotificationTap.mockReturnValue(tap);
-    const view = renderWith(<SignedOutGuard signedIn={false} />, {
+    const view = await renderWith(<SignedOutGuard signedIn={false} />, {
       signedIn: false,
     });
     expect(push.clearLastNotificationTap).toHaveBeenCalled();
 
-    view.rerenderWith(true, <SignedOutGuard signedIn />);
+    await view.rerenderWith(true, <SignedOutGuard signedIn />);
 
     expect(router.navigate).not.toHaveBeenCalled();
     expect(showTab).not.toHaveBeenCalled();
   });
 
-  it("forgets a tap made while signed out with the app running", () => {
-    const view = renderWith(<SignedOutGuard signedIn={false} />, {
+  it("forgets a tap made while signed out with the app running", async () => {
+    const view = await renderWith(<SignedOutGuard signedIn={false} />, {
       signedIn: false,
     });
     const tap = nudgeTap();
-    liveTap(tap);
+    await liveTap(tap);
     push.getLastNotificationTap.mockReturnValue(tap);
 
-    view.rerenderWith(true, <SignedOutGuard signedIn />);
+    await view.rerenderWith(true, <SignedOutGuard signedIn />);
 
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it("leaves the tap alone until the stored session has been read", () => {
+  it("leaves the tap alone until the stored session has been read", async () => {
     push.getLastNotificationTap.mockReturnValue(nudgeTap());
-    const view = renderWith(<SignedOutGuard signedIn={false} />, {
+    const view = await renderWith(<SignedOutGuard signedIn={false} />, {
       signedIn: false,
       isLoaded: false,
     });
     expect(push.clearLastNotificationTap).not.toHaveBeenCalled();
 
     // The stored session turns out to be signed in: the tap is still routed.
-    view.rerenderWith(true, <SignedOutGuard signedIn />);
+    await view.rerenderWith(true, <SignedOutGuard signedIn />);
     expect(router.navigate).toHaveBeenCalledWith("/");
   });
 });

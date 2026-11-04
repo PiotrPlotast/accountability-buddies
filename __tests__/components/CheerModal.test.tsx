@@ -7,7 +7,7 @@ import * as haptics from "@/lib/haptics";
 
 import { buildFakeSupabase, buildWrapper } from "../test-utils/render";
 
-function renderModal(
+async function renderModal(
   opts: {
     invoke?: jest.Mock;
     goal?: { id: string; title: string } | null;
@@ -27,7 +27,7 @@ function renderModal(
   const { Wrapper } = buildWrapper({
     supabase: buildFakeSupabase({ functionsImpl: invoke }),
   });
-  const utils = render(
+  const utils = await render(
     <CheerModal
       recipient={{ userId: "user-2", name: "Ada" }}
       goal={opts.goal ?? null}
@@ -53,8 +53,8 @@ describe("CheerModal", () => {
     jest.restoreAllMocks();
   });
 
-  it("names the buddy and the habit for a habit cheer, with its presets", () => {
-    const { getByText, getByLabelText } = renderModal({ goal: run });
+  it("names the buddy and the habit for a habit cheer, with its presets", async () => {
+    const { getByText, getByLabelText } = await renderModal({ goal: run });
     expect(getByText("Cheer Ada for Run")).toBeTruthy();
     for (const preset of habitCheerPresets("Run")) {
       expect(getByText(preset)).toBeTruthy();
@@ -62,8 +62,8 @@ describe("CheerModal", () => {
     expect(getByLabelText("Cheer message").props.value).toBe("");
   });
 
-  it("names the day for a day cheer, with presets of its own", () => {
-    const { getByText, queryByText } = renderModal();
+  it("names the day for a day cheer, with presets of its own", async () => {
+    const { getByText, queryByText } = await renderModal();
     expect(getByText("Cheer Ada's day")).toBeTruthy();
     for (const preset of DAY_CHEER_PRESETS) {
       expect(getByText(preset)).toBeTruthy();
@@ -71,30 +71,31 @@ describe("CheerModal", () => {
     expect(queryByText("Nice work on Run!")).toBeNull();
   });
 
-  it("caps the message at 140 characters and counts as you type", () => {
-    const { getByLabelText, getByText } = renderModal();
+  it("caps the message at 140 characters and counts as you type", async () => {
+    const { getByLabelText, getByText } = await renderModal();
     const input = getByLabelText("Cheer message");
     expect(input.props.maxLength).toBe(140);
-    fireEvent.changeText(input, "Hello");
+    await fireEvent.changeText(input, "Hello");
     expect(getByText("5/140")).toBeTruthy();
   });
 
-  it("fills the box from a preset", () => {
-    const { getByText, getByLabelText } = renderModal({ goal: run });
-    fireEvent.press(getByText("Nice work on Run!"));
+  it("fills the box from a preset", async () => {
+    const { getByText, getByLabelText } = await renderModal({ goal: run });
+    await fireEvent.press(getByText("Nice work on Run!"));
     expect(getByLabelText("Cheer message").props.value).toBe(
       "Nice work on Run!",
     );
   });
 
   it("sends a habit cheer with the habit and the day, then reports and closes", async () => {
-    const { getByText, getByLabelText, invoke, onSent, onClose } = renderModal({
-      goal: run,
-    });
-    fireEvent.changeText(getByLabelText("Cheer message"), "Legend");
+    const { getByText, getByLabelText, invoke, onSent, onClose } =
+      await renderModal({
+        goal: run,
+      });
+    await fireEvent.changeText(getByLabelText("Cheer message"), "Legend");
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     expect(invoke).toHaveBeenCalledWith("send-cheer", {
@@ -110,10 +111,10 @@ describe("CheerModal", () => {
   });
 
   it("sends an empty day cheer, which the server gives its default line", async () => {
-    const { getByText, invoke } = renderModal({ day: null });
+    const { getByText, invoke } = await renderModal({ day: null });
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     expect(invoke).toHaveBeenCalledWith("send-cheer", {
@@ -128,13 +129,13 @@ describe("CheerModal", () => {
         error: null,
       }),
     );
-    const { getByText, getByLabelText, onSent, onClose } = renderModal({
+    const { getByText, getByLabelText, onSent, onClose } = await renderModal({
       invoke,
     });
-    fireEvent.changeText(getByLabelText("Cheer message"), "Yes!");
+    await fireEvent.changeText(getByLabelText("Cheer message"), "Yes!");
 
     await act(async () => {
-      fireEvent.press(getByText("Send"));
+      await fireEvent.press(getByText("Send"));
     });
 
     await waitFor(() =>
@@ -156,15 +157,18 @@ describe("CheerModal", () => {
           finish = resolve;
         }),
     );
-    const { getByText, onSent } = renderModal({ invoke });
+    const { getByText, onSent } = await renderModal({ invoke });
 
-    fireEvent.press(getByText("Send"));
+    // Not awaited: RNTL 14's press waits for the handler, and this send
+    // stays in flight until `finish` below.
+    const firstSend = fireEvent.press(getByText("Send"));
     await waitFor(() => expect(getByText("Sending…")).toBeTruthy());
-    fireEvent.press(getByText("Sending…"));
+    await fireEvent.press(getByText("Sending…"));
 
     await act(async () => {
       finish({ data: { success: true, message: "Cheer sent" }, error: null });
     });
+    await firstSend;
 
     expect(invoke).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(onSent).toHaveBeenCalledTimes(1));

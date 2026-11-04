@@ -69,6 +69,10 @@ export const toggleGoalSpec: GoalMutationSpec<Goal, StoredToggle, void> = {
           completed_dates: done
             ? [...new Set([...dates, date])].sort()
             : dates.filter((d) => d !== date),
+          // The server removes the photo with the log
+          // (`remove_habit_photo_on_untick`); the cache follows at once, so a
+          // quick re-tick doesn't bring it back.
+          ...(!done && g.photo ? { photo: { ...g.photo, removed: true } } : {}),
         };
       }),
   describe: ({ title, done }) => `${done ? "Ticking" : "Unticking"} "${title}"`,

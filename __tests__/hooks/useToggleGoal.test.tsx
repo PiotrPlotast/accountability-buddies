@@ -218,6 +218,59 @@ describe("useToggleGoal", () => {
     expect(deleteQB.eq).toHaveBeenCalledWith("goal_id", "g-1");
   });
 
+  // The server removes the photo when the log goes (a trigger); the cache
+  // follows at once, so a quick re-tick doesn't bring the old photo back.
+  it("marks the habit's photo removed when unticking", async () => {
+    const supabase = buildFakeSupabase();
+    const queryClient = makeQueryClient();
+    const withPhoto: Goal = {
+      ...baseGoal,
+      completed_today: true,
+      photo: { id: "p-1", path: "a.jpg", createdAt: "x", removed: false },
+    };
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [withPhoto] }],
+    );
+    const { Wrapper } = buildWrapper({ supabase, queryClient });
+    const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
+
+    await act(async () => {
+      await utils.result.current.value.mutateAsync(withPhoto);
+    });
+
+    const cached = queryClient.getQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+    );
+    expect(cached?.[0].goals[0].photo).toEqual(
+      expect.objectContaining({ id: "p-1", removed: true }),
+    );
+  });
+
+  it("leaves a photo alone when ticking", async () => {
+    const supabase = buildFakeSupabase();
+    const queryClient = makeQueryClient();
+    const removed: Goal = {
+      ...baseGoal,
+      photo: { id: "p-1", path: "a.jpg", createdAt: "x", removed: true },
+    };
+    queryClient.setQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-1", full_name: "Me", goals: [removed] }],
+    );
+    const { Wrapper } = buildWrapper({ supabase, queryClient });
+    const utils = await renderHookWithSession(() => useToggleGoal(), Wrapper);
+
+    await act(async () => {
+      await utils.result.current.value.mutateAsync(removed);
+    });
+
+    const cached = queryClient.getQueryData<Member[]>(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+    );
+    expect(cached?.[0].goals[0].photo).toEqual(removed.photo);
+  });
+
   // The cache is keyed by day, so a tick just after midnight belongs in the
   // new day's entry — the one the dashboard is now showing.
   it("patches the current day's entry and leaves yesterday's alone", async () => {

@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { TextInput, View } from "react-native";
+import { View, type TextInputInstance } from "react-native";
 import AuthField from "@/app/components/ui/AuthField";
 
 type Props = {
@@ -22,7 +22,7 @@ export default function CredentialFields({
   onSubmit,
   newPassword = false,
 }: Props) {
-  const passwordRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInputInstance>(null);
 
   return (
     <View className="gap-4 mt-4">

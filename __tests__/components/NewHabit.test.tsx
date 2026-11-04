@@ -22,7 +22,7 @@ const stats: GroupResult = {
   groups: { last_streak_date: null, current_streak: 0 },
 };
 
-function setup() {
+async function setup() {
   const queryClient = makeQueryClient();
   queryClient.setQueryData(queryKeys.groupStats("user-1"), stats);
   queryClient.setQueryData(
@@ -35,8 +35,8 @@ function setup() {
   });
   const supabase = buildFakeSupabase({ fromImpl: jest.fn(() => insertQB) });
   const { Wrapper } = buildWrapper({ supabase, queryClient });
-  const utils = render(<NewHabitScreen />, { wrapper: Wrapper });
-  fireEvent.changeText(
+  const utils = await render(<NewHabitScreen />, { wrapper: Wrapper });
+  await fireEvent.changeText(
     utils.getByPlaceholderText("Meditate 10 minutes"),
     "Run",
   );
@@ -44,17 +44,17 @@ function setup() {
 }
 
 describe("New habit reminder", () => {
-  it("explains when the reminder fires", () => {
-    const { getByText } = setup();
+  it("explains when the reminder fires", async () => {
+    const { getByText } = await setup();
 
     expect(getByText("Only if you haven't ticked it off yet.")).toBeTruthy();
   });
 
   it("starts with no reminder and creates the habit without one", async () => {
-    const { getByLabelText, getByText, insertQB } = setup();
+    const { getByLabelText, getByText, insertQB } = await setup();
     expect(getByLabelText("Reminder").props.value).toBe(false);
 
-    fireEvent.press(getByText("Create habit"));
+    await fireEvent.press(getByText("Create habit"));
 
     await waitFor(() => expect(insertQB.insert).toHaveBeenCalled());
     expect(insertQB.insert.mock.calls[0][0]).not.toHaveProperty(
@@ -63,10 +63,10 @@ describe("New habit reminder", () => {
   });
 
   it("creates the habit with the reminder that was switched on", async () => {
-    const { getByLabelText, getByText, insertQB } = setup();
+    const { getByLabelText, getByText, insertQB } = await setup();
 
-    fireEvent(getByLabelText("Reminder"), "valueChange", true);
-    fireEvent.press(getByText("Create habit"));
+    await fireEvent(getByLabelText("Reminder"), "valueChange", true);
+    await fireEvent.press(getByText("Create habit"));
 
     await waitFor(() =>
       expect(insertQB.insert).toHaveBeenCalledWith(
@@ -77,8 +77,8 @@ describe("New habit reminder", () => {
 });
 
 describe("New habit title", () => {
-  it("stops at 60 characters, the server's limit", () => {
-    const { getByPlaceholderText } = setup();
+  it("stops at 60 characters, the server's limit", async () => {
+    const { getByPlaceholderText } = await setup();
     expect(getByPlaceholderText("Meditate 10 minutes").props.maxLength).toBe(
       60,
     );

@@ -1,5 +1,6 @@
 import React, { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import {
   renderHook,
@@ -59,6 +60,38 @@ interface FakeSupabaseOpts {
   rpcImpl?: jest.Mock;
   // `supabase.functions.invoke` — the Edge Function calls (send-nudge).
   functionsImpl?: jest.Mock;
+  // `supabase.storage.from(bucket)` — the habit photos bucket.
+  storage?: Partial<FakeBucket>;
+}
+
+export type FakeBucket = {
+  upload: jest.Mock;
+  remove: jest.Mock;
+  createSignedUrls: jest.Mock;
+};
+
+/**
+ * A storage bucket that accepts every upload and signs every path as
+ * `signed:<path>`, unless a test passes its own functions.
+ */
+export function makeFakeBucket(over: Partial<FakeBucket> = {}): FakeBucket {
+  return {
+    upload: jest.fn((path: string) =>
+      Promise.resolve({ data: { path }, error: null }),
+    ),
+    remove: jest.fn(() => Promise.resolve({ data: [], error: null })),
+    createSignedUrls: jest.fn((paths: string[]) =>
+      Promise.resolve({
+        data: paths.map((path) => ({
+          path,
+          signedUrl: `signed:${path}`,
+          error: null,
+        })),
+        error: null,
+      }),
+    ),
+    ...over,
+  };
 }
 
 export function buildFakeSupabase({
@@ -66,7 +99,9 @@ export function buildFakeSupabase({
   fromImpl,
   rpcImpl,
   functionsImpl,
+  storage,
 }: FakeSupabaseOpts = {}) {
+  const bucket = makeFakeBucket(storage);
   const subscription = { unsubscribe: jest.fn() };
   const session = userId
     ? {
@@ -99,6 +134,7 @@ export function buildFakeSupabase({
     from: fromImpl ?? jest.fn(() => makeQueryBuilder({ error: null })),
     rpc:
       rpcImpl ?? jest.fn(() => makeQueryBuilder({ data: null, error: null })),
+    storage: { from: jest.fn(() => bucket) },
     functions: {
       invoke:
         functionsImpl ??
@@ -137,6 +173,20 @@ interface WrapperProps {
   children: ReactNode;
 }
 
+/**
+ * The gesture root alone, for a test that renders swipeable habit rows
+ * without the rest of `buildWrapper`. Since gesture-handler 3 (SDK 58) a
+ * gesture outside one throws; in the app `app/(protected)/_layout.tsx`
+ * renders it.
+ */
+export function GestureRoot({ children }: WrapperProps) {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {children}
+    </GestureHandlerRootView>
+  );
+}
+
 export function buildWrapper(opts?: {
   supabase?: SupabaseClient;
   queryClient?: QueryClient;
@@ -161,10 +211,15 @@ export function buildWrapper(opts?: {
     },
   };
   // useTheme is stubbed globally in jest.setup.js, so no ThemeProvider here.
+  // The gesture root stands in for the one `app/(protected)/_layout.tsx`
+  // renders: since gesture-handler 3 (SDK 58) a swipeable row outside one
+  // throws.
   const Wrapper = ({ children }: WrapperProps) => (
     <QueryClientProvider client={queryClient}>
       <SupabaseContext.Provider value={contextValue}>
-        {children}
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          {children}
+        </GestureHandlerRootView>
       </SupabaseContext.Provider>
     </QueryClientProvider>
   );
@@ -181,7 +236,7 @@ export async function renderHookWithSession<T>(
   hookFactory: () => T,
   Wrapper: React.ComponentType<WrapperProps>,
 ): Promise<RenderHookResult<{ session: unknown; value: T }, unknown>> {
-  const utils = renderHook(
+  const utils = await renderHook(
     () => ({ session: useSupabase().session, value: hookFactory() }),
     { wrapper: Wrapper },
   );
