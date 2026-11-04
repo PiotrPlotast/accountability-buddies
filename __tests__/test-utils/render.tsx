@@ -60,6 +60,38 @@ interface FakeSupabaseOpts {
   rpcImpl?: jest.Mock;
   // `supabase.functions.invoke` — the Edge Function calls (send-nudge).
   functionsImpl?: jest.Mock;
+  // `supabase.storage.from(bucket)` — the habit photos bucket.
+  storage?: Partial<FakeBucket>;
+}
+
+export type FakeBucket = {
+  upload: jest.Mock;
+  remove: jest.Mock;
+  createSignedUrls: jest.Mock;
+};
+
+/**
+ * A storage bucket that accepts every upload and signs every path as
+ * `signed:<path>`, unless a test passes its own functions.
+ */
+export function makeFakeBucket(over: Partial<FakeBucket> = {}): FakeBucket {
+  return {
+    upload: jest.fn((path: string) =>
+      Promise.resolve({ data: { path }, error: null }),
+    ),
+    remove: jest.fn(() => Promise.resolve({ data: [], error: null })),
+    createSignedUrls: jest.fn((paths: string[]) =>
+      Promise.resolve({
+        data: paths.map((path) => ({
+          path,
+          signedUrl: `signed:${path}`,
+          error: null,
+        })),
+        error: null,
+      }),
+    ),
+    ...over,
+  };
 }
 
 export function buildFakeSupabase({
@@ -67,7 +99,9 @@ export function buildFakeSupabase({
   fromImpl,
   rpcImpl,
   functionsImpl,
+  storage,
 }: FakeSupabaseOpts = {}) {
+  const bucket = makeFakeBucket(storage);
   const subscription = { unsubscribe: jest.fn() };
   const session = userId
     ? {
@@ -100,6 +134,7 @@ export function buildFakeSupabase({
     from: fromImpl ?? jest.fn(() => makeQueryBuilder({ error: null })),
     rpc:
       rpcImpl ?? jest.fn(() => makeQueryBuilder({ data: null, error: null })),
+    storage: { from: jest.fn(() => bucket) },
     functions: {
       invoke:
         functionsImpl ??

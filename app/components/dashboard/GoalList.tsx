@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { View, Text, Pressable } from "react-native";
+import { Alert, View, Text, Pressable } from "react-native";
 import { Goal } from "@/types/dashboardTypes";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
@@ -18,7 +18,9 @@ import { useActiveGroup } from "@/hooks/useActiveGroup";
 import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useTheme } from "@/hooks/useTheme";
 import { themeColors } from "@/lib/colors";
+import { canAddPhoto, livePhoto } from "@/lib/habitPhotos";
 import GoalCheckbox from "./GoalCheckbox";
+import PhotoImage from "./PhotoImage";
 import SwipeAction from "./SwipeAction";
 import WeekStrip, { PULSE_MIN_OPACITY, PULSE_MS } from "./WeekStrip";
 
@@ -31,27 +33,55 @@ type Props = {
   // nudge about an unticked habit instead, and a cheer for a ticked one.
   onNudge?: (goal: Goal) => void;
   onCheer?: (goal: Goal) => void;
+  // Habit photos. Signed URLs by storage path; a photo opens the viewer.
+  // `onAddPhoto` offers the camera on your own ticked habits, shown disabled
+  // with `photosOffline`. Left out (the tour), rows show no photos at all.
+  photoUrls?: Record<string, string>;
+  onOpenPhoto?: (goal: Goal) => void;
+  onAddPhoto?: (goal: Goal) => void;
+  photosOffline?: boolean;
+  // A habit was just ticked (never on an untick), so the dashboard can offer
+  // a photo of it.
+  onTicked?: (goal: Goal) => void;
 };
 
 // The rows on the active group: `GoalListView` plus the reads and the toggle
 // mutation behind it.
-export default function GoalList({ selectedTabId, ...rest }: Props) {
+export default function GoalList({ selectedTabId, onTicked, ...rest }: Props) {
   const { loading, userId, activeGroupId } = useActiveGroup();
   const { toggleGoal } = useDashboardActions(activeGroupId);
+
+  const onToggle = (goal: Goal) => {
+    // The photo goes with the tick (a trigger on the server), and a photo is
+    // final, so this one asks first.
+    if (goal.completed_today && livePhoto(goal)) {
+      Alert.alert(`Untick ${goal.title}?`, "This will delete your photo.", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Untick",
+          style: "destructive",
+          onPress: () => toggleGoal(goal),
+        },
+      ]);
+      return;
+    }
+    toggleGoal(goal);
+    if (!goal.completed_today) onTicked?.(goal);
+  };
 
   return (
     <GoalListView
       {...rest}
       loading={loading}
       canEdit={selectedTabId === userId}
-      onToggle={toggleGoal}
+      onToggle={onToggle}
     />
   );
 }
 
 type RowAction = { name: string; label: string; run: (goal: Goal) => void };
 
-type ViewProps = Omit<Props, "selectedTabId"> & {
+type ViewProps = Omit<Props, "selectedTabId" | "onTicked"> & {
   loading: boolean;
   // Your own tab: rows tick, and swipe to edit or delete. A buddy's rows are
   // read-only and swipe to nudge (unticked, with `onNudge`) or cheer (ticked,
@@ -85,6 +115,10 @@ function GoalListContent({
   onDelete,
   onNudge,
   onCheer,
+  photoUrls,
+  onOpenPhoto,
+  onAddPhoto,
+  photosOffline = false,
 }: ViewProps) {
   const { accent } = useTheme();
 
@@ -156,6 +190,13 @@ function GoalListContent({
     <View style={{ gap: 10 }}>
       {goals.map((goal) => {
         const done = goal.completed_today;
+        // Your own photo shows on a ticked row only (an untick takes it). A
+        // buddy's shows whenever the server says it's live: their day, which
+        // need not be yours, decides that.
+        const photo = onOpenPhoto ? livePhoto(goal) : null;
+        const shownPhoto = photo && (!isViewingMe || done) ? photo : null;
+        const offerCamera =
+          isViewingMe && !!onAddPhoto && !shownPhoto && canAddPhoto(goal, true);
         const buddyAction = done
           ? onCheer && { onAction: onCheer, emoji: "🎉", label: "Cheer" }
           : onNudge && { onAction: onNudge, emoji: "👋", label: "Nudge" };
@@ -237,59 +278,100 @@ function GoalListContent({
               overshootLeft={false}
               friction={2}
             >
-              <Pressable
-                disabled={!isViewingMe}
-                onPressIn={() => {
-                  swipedDuringTouch.current = false;
-                }}
-                onPress={() => {
-                  if (swipedDuringTouch.current) return;
-                  onToggle(goal);
-                }}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: done, disabled: !isViewingMe }}
-                accessibilityLabel={goal.title}
-                accessibilityActions={rowActions.map(({ name, label }) => ({
-                  name,
-                  label,
-                }))}
-                onAccessibilityAction={(event) =>
-                  rowActions
-                    .find((a) => a.name === event.nativeEvent.actionName)
-                    ?.run(goal)
-                }
+              <View
                 // A ticked row is dimmed by its background, never by opacity:
                 // a faded row took its text down with it, to about 1.9:1.
                 // `text-dim` on `bg` is 5.6:1.
                 className={`${
                   done ? "bg-bg" : "bg-surface"
-                } border border-border rounded-tile px-4 py-4 flex-row items-center`}
+                } border border-border rounded-tile flex-row items-center`}
               >
-                <GoalCheckbox
-                  done={done}
-                  icon={goal.icon}
-                  accentHex={accent.hex}
-                  reduceMotion={reduceMotion}
-                />
-
-                <View className="flex-1">
-                  <Text
-                    className={`text-base font-semibold tracking-tight ${
-                      done ? "text-text-dim line-through" : "text-text"
-                    }`}
-                  >
-                    {goal.title}
-                  </Text>
-                  <WeekStrip
-                    goal={goal}
+                <Pressable
+                  disabled={!isViewingMe}
+                  onPressIn={() => {
+                    swipedDuringTouch.current = false;
+                  }}
+                  onPress={() => {
+                    if (swipedDuringTouch.current) return;
+                    onToggle(goal);
+                  }}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: done, disabled: !isViewingMe }}
+                  accessibilityLabel={goal.title}
+                  accessibilityActions={rowActions.map(({ name, label }) => ({
+                    name,
+                    label,
+                  }))}
+                  onAccessibilityAction={(event) =>
+                    rowActions
+                      .find((a) => a.name === event.nativeEvent.actionName)
+                      ?.run(goal)
+                  }
+                  // The row's own colour too (the wrapper's, repeated), so the
+                  // checkbox element itself is dimmed by background.
+                  className={`${
+                    done ? "bg-bg" : "bg-surface"
+                  } flex-1 rounded-tile px-4 py-4 flex-row items-center`}
+                >
+                  <GoalCheckbox
+                    done={done}
+                    icon={goal.icon}
                     accentHex={accent.hex}
-                    pulse={pulse}
                     reduceMotion={reduceMotion}
                   />
-                </View>
 
-                {done ? <Text style={{ fontSize: 16 }}>🔥</Text> : null}
-              </Pressable>
+                  <View className="flex-1">
+                    <Text
+                      className={`text-base font-semibold tracking-tight ${
+                        done ? "text-text-dim line-through" : "text-text"
+                      }`}
+                    >
+                      {goal.title}
+                    </Text>
+                    <WeekStrip
+                      goal={goal}
+                      accentHex={accent.hex}
+                      pulse={pulse}
+                      reduceMotion={reduceMotion}
+                    />
+                  </View>
+
+                  {done && !shownPhoto && !offerCamera ? (
+                    <Text style={{ fontSize: 16 }}>🔥</Text>
+                  ) : null}
+                </Pressable>
+                {/* Beside the row's Pressable, never inside it: a nested
+                  button is hidden from VoiceOver by the accessible row. */}
+                {shownPhoto ? (
+                  <Pressable
+                    onPress={() => onOpenPhoto?.(goal)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Photo of ${goal.title}`}
+                    className="pr-3 py-2"
+                  >
+                    <PhotoImage
+                      path={shownPhoto.path}
+                      url={photoUrls?.[shownPhoto.path]}
+                      style={{ width: 44, height: 44, borderRadius: 10 }}
+                    />
+                  </Pressable>
+                ) : offerCamera ? (
+                  <Pressable
+                    onPress={() => onAddPhoto?.(goal)}
+                    disabled={photosOffline}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add a photo of ${goal.title}`}
+                    accessibilityHint={
+                      photosOffline ? "Needs a connection" : undefined
+                    }
+                    accessibilityState={{ disabled: photosOffline }}
+                    style={{ opacity: photosOffline ? 0.4 : 1 }}
+                    className="pr-4 pl-2 py-4"
+                  >
+                    <Text style={{ fontSize: 20 }}>📷</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </Swipeable>
           </Reanimated.View>
         );

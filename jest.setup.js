@@ -358,3 +358,66 @@ jest.spyOn(console, "error").mockImplementation((...args) => {
   if (msg.includes("act(")) return;
   realError(...args);
 });
+
+// Habit photos: the camera, the compression and the file read, all native.
+// `lib/camera.ts` is the only importer of the three. `__esModule: true` for
+// the same reason as `expo-notifications`: one namespace every importer
+// shares, so a test's override reaches the module under test.
+//
+// The camera view is a plain View that hands its ref a `takePictureAsync`
+// resolving to a fixed photo. Permission is granted unless a test overrides
+// `useCameraPermissions` (`[permission, requestPermission]`).
+jest.mock("expo-camera", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  const takePictureAsync = jest.fn(() =>
+    Promise.resolve({ uri: "file:///photo.jpg", width: 3024, height: 4032 }),
+  );
+  const CameraView = React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({ takePictureAsync }));
+    return React.createElement(View, { testID: "camera-view", ...props });
+  });
+  CameraView.displayName = "CameraView";
+  const granted = { granted: true, canAskAgain: true, status: "granted" };
+  return {
+    __esModule: true,
+    CameraView,
+    useCameraPermissions: jest.fn(() => [
+      granted,
+      jest.fn(() => Promise.resolve(granted)),
+    ]),
+    __takePictureAsync: takePictureAsync,
+  };
+});
+
+jest.mock("expo-image-manipulator", () => {
+  const manipulate = jest.fn(() => {
+    const image = {
+      saveAsync: jest.fn(() =>
+        Promise.resolve({
+          uri: "file:///compressed.jpg",
+          width: 1080,
+          height: 1440,
+        }),
+      ),
+    };
+    const context = {
+      resize: jest.fn(() => context),
+      renderAsync: jest.fn(() => Promise.resolve(image)),
+    };
+    return context;
+  });
+  return {
+    __esModule: true,
+    ImageManipulator: { manipulate },
+    SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" },
+  };
+});
+
+jest.mock("expo-file-system", () => ({
+  __esModule: true,
+  File: jest.fn().mockImplementation((uri) => ({
+    uri,
+    arrayBuffer: jest.fn(() => Promise.resolve(new ArrayBuffer(8))),
+  })),
+}));
