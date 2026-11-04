@@ -3,7 +3,6 @@ import { render, fireEvent, waitFor } from "@testing-library/react-native";
 
 import NotificationSettingsScreen from "@/app/(protected)/notification-settings";
 import { queryKeys } from "@/lib/queryKeys";
-import DateTimePicker from "@react-native-community/datetimepicker";
 
 import {
   buildFakeSupabase,
@@ -87,7 +86,7 @@ afterEach(() => jest.restoreAllMocks());
 describe("Notification settings — preferences", () => {
   it("shows each switch at its stored value", async () => {
     const { Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
@@ -100,11 +99,11 @@ describe("Notification settings — preferences", () => {
 
   it("writes the column behind the switch that moved", async () => {
     const { qb, Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent(getByLabelText("Nudges"), "valueChange", false);
+    await fireEvent(getByLabelText("Nudges"), "valueChange", false);
 
     await waitFor(() =>
       expect(qb.update).toHaveBeenCalledWith({ nudges_enabled: false }),
@@ -113,11 +112,11 @@ describe("Notification settings — preferences", () => {
 
   it("turns a switch that was off back on", async () => {
     const { qb, Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent(getByLabelText("Buddy activity"), "valueChange", true);
+    await fireEvent(getByLabelText("Buddy activity"), "valueChange", true);
 
     await waitFor(() =>
       expect(qb.update).toHaveBeenCalledWith({ social_enabled: true }),
@@ -126,22 +125,22 @@ describe("Notification settings — preferences", () => {
 });
 
 describe("Notification settings — the OS permission", () => {
-  it("offers a way back when the system is blocking delivery", () => {
+  it("offers a way back when the system is blocking delivery", async () => {
     // Someone who tapped "Don't Allow" once has no route back inside the app,
     // and the whole feature looks broken rather than switched off.
     const { Wrapper } = setup({ granted: false, canAskAgain: false });
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByLabelText("Open Settings"));
+    await fireEvent.press(getByLabelText("Open Settings"));
 
     expect(Linking.openSettings).toHaveBeenCalled();
   });
 
-  it("says nothing about permission once it is granted", () => {
+  it("says nothing about permission once it is granted", async () => {
     const { Wrapper } = setup({ granted: true, canAskAgain: false });
-    const { queryByLabelText } = render(<NotificationSettingsScreen />, {
+    const { queryByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
@@ -152,22 +151,22 @@ describe("Notification settings — the OS permission", () => {
     // `notification_prefs` is per account, not per device: these switches also
     // govern the person's other phones, so a block here must not disable them.
     const { qb, Wrapper } = setup({ granted: false, canAskAgain: false });
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent(getByLabelText("Nudges"), "valueChange", false);
+    await fireEvent(getByLabelText("Nudges"), "valueChange", false);
 
     await waitFor(() =>
       expect(qb.update).toHaveBeenCalledWith({ nudges_enabled: false }),
     );
   });
 
-  it("shows nothing either way until the permission has been read", () => {
+  it("shows nothing either way until the permission has been read", async () => {
     // `null` is "not asked yet", which must not render as "blocked" for the
     // frame before the check resolves.
     const { Wrapper } = setup(null);
-    const { queryByLabelText } = render(<NotificationSettingsScreen />, {
+    const { queryByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
@@ -176,24 +175,24 @@ describe("Notification settings — the OS permission", () => {
 });
 
 describe("Notification settings — feedback and account", () => {
-  it("carries the haptics switch, which is per device", () => {
+  it("carries the haptics switch, which is per device", async () => {
     const { Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent(getByLabelText("Haptics"), "valueChange", false);
+    await fireEvent(getByLabelText("Haptics"), "valueChange", false);
 
     expect(mockSetHapticsEnabled).toHaveBeenCalledWith(false);
   });
 
-  it("asks before signing out", () => {
+  it("asks before signing out", async () => {
     const { supabase, Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByLabelText("Log out"));
+    await fireEvent.press(getByLabelText("Log out"));
 
     expect(Alert.alert).toHaveBeenCalled();
     expect(supabase.auth.signOut).not.toHaveBeenCalled();
@@ -201,23 +200,23 @@ describe("Notification settings — feedback and account", () => {
 
   it("signs out once confirmed", async () => {
     const { supabase, Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByLabelText("Log out"));
+    await fireEvent.press(getByLabelText("Log out"));
     pressAlertButton("Log out");
 
     await waitFor(() => expect(supabase.auth.signOut).toHaveBeenCalledTimes(1));
   });
 
-  it("stays put when the sign-out is cancelled", () => {
+  it("stays put when the sign-out is cancelled", async () => {
     const { supabase, Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByLabelText("Log out"));
+    await fireEvent.press(getByLabelText("Log out"));
     pressAlertButton("Cancel");
 
     expect(supabase.auth.signOut).not.toHaveBeenCalled();
@@ -227,24 +226,24 @@ describe("Notification settings — feedback and account", () => {
 describe("Notification settings — quiet hours", () => {
   const at = (h: number, m: number) => new Date(2026, 9, 8, h, m);
   const QUIET = { ...STORED, quiet_start: "22:00:00", quiet_end: "07:00:00" };
-  const renderScreen = (stored: Record<string, unknown> = STORED) => {
+  const renderScreen = async (stored: Record<string, unknown> = STORED) => {
     const { qb, Wrapper } = setup(undefined, stored);
     return {
       qb,
-      ...render(<NotificationSettingsScreen />, { wrapper: Wrapper }),
+      ...(await render(<NotificationSettingsScreen />, { wrapper: Wrapper })),
     };
   };
 
-  it("is off, with no times, when none are stored", () => {
-    const { getByLabelText, queryByText } = renderScreen();
+  it("is off, with no times, when none are stored", async () => {
+    const { getByLabelText, queryByText } = await renderScreen();
     expect(getByLabelText("Quiet hours").props.value).toBe(false);
     expect(queryByText("From")).toBeNull();
   });
 
   it("switching it on stores 22:00 to 07:00", async () => {
-    const { getByLabelText, qb } = renderScreen();
+    const { getByLabelText, qb } = await renderScreen();
 
-    fireEvent(getByLabelText("Quiet hours"), "valueChange", true);
+    await fireEvent(getByLabelText("Quiet hours"), "valueChange", true);
 
     await waitFor(() =>
       expect(qb.update).toHaveBeenCalledWith({
@@ -255,10 +254,10 @@ describe("Notification settings — quiet hours", () => {
   });
 
   it("switching it off clears both times", async () => {
-    const { getByLabelText, qb } = renderScreen(QUIET);
+    const { getByLabelText, qb } = await renderScreen(QUIET);
     expect(getByLabelText("Quiet hours").props.value).toBe(true);
 
-    fireEvent(getByLabelText("Quiet hours"), "valueChange", false);
+    await fireEvent(getByLabelText("Quiet hours"), "valueChange", false);
 
     await waitFor(() =>
       expect(qb.update).toHaveBeenCalledWith({
@@ -269,40 +268,40 @@ describe("Notification settings — quiet hours", () => {
   });
 
   it("writes a new start or end time", async () => {
-    const { getByText, UNSAFE_getAllByType, qb } = renderScreen(QUIET);
+    const { getByText, getAllByTestId, qb } = await renderScreen(QUIET);
     expect(getByText("From")).toBeTruthy();
-    const [from, to] = UNSAFE_getAllByType(DateTimePicker);
+    const [from, to] = getAllByTestId("date-time-picker");
 
-    from.props.onChange({ type: "set" }, at(21, 30));
+    await fireEvent(from, "change", { type: "set" }, at(21, 30));
     await waitFor(() =>
       expect(qb.update).toHaveBeenCalledWith({ quiet_start: "21:30" }),
     );
 
-    to.props.onChange({ type: "set" }, at(6, 0));
+    await fireEvent(to, "change", { type: "set" }, at(6, 0));
     await waitFor(() =>
       expect(qb.update).toHaveBeenCalledWith({ quiet_end: "06:00" }),
     );
   });
 
-  it("refuses a start equal to the end, which the database rejects", () => {
-    const { UNSAFE_getAllByType, qb } = renderScreen(QUIET);
-    const [from] = UNSAFE_getAllByType(DateTimePicker);
+  it("refuses a start equal to the end, which the database rejects", async () => {
+    const { getAllByTestId, qb } = await renderScreen(QUIET);
+    const [from] = getAllByTestId("date-time-picker");
 
-    from.props.onChange({ type: "set" }, at(7, 0));
+    await fireEvent(from, "change", { type: "set" }, at(7, 0));
 
     expect(qb.update).not.toHaveBeenCalled();
   });
 });
 
 describe("Notification settings — the tour", () => {
-  it("offers the tour again", () => {
+  it("offers the tour again", async () => {
     const router = require("expo-router").__router as { push: jest.Mock };
     const { Wrapper } = setup();
-    const { getByRole } = render(<NotificationSettingsScreen />, {
+    const { getByRole } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByRole("button", { name: "Show the tour again" }));
+    await fireEvent.press(getByRole("button", { name: "Show the tour again" }));
 
     expect(router.push).toHaveBeenCalledWith("/tour-replay");
   });

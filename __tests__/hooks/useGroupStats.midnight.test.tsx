@@ -15,9 +15,9 @@ import {
 describe("useGroupStats across midnight", () => {
   const remove = jest.fn();
 
-  function emitAppState(state: string) {
+  async function emitAppState(state: string) {
     const addListener = AppState.addEventListener as unknown as jest.Mock;
-    act(() => addListener.mock.lastCall[1](state));
+    await act(() => addListener.mock.lastCall[1](state));
   }
 
   beforeEach(() => {
@@ -49,7 +49,7 @@ describe("useGroupStats across midnight", () => {
   it("asks again for the new day's streak at midnight", async () => {
     const rpcImpl = await renderStats();
 
-    act(() => jest.advanceTimersByTime(30_000));
+    await act(() => jest.advanceTimersByTime(30_000));
 
     await waitFor(() => expect(rpcImpl).toHaveBeenCalledTimes(2));
     expect(rpcImpl).toHaveBeenLastCalledWith("get_my_group_stats", {
@@ -61,7 +61,7 @@ describe("useGroupStats across midnight", () => {
     const rpcImpl = await renderStats();
 
     jest.setSystemTime(new Date(2026, 9, 7, 9, 0, 0));
-    emitAppState("active");
+    await emitAppState("active");
 
     await waitFor(() => expect(rpcImpl).toHaveBeenCalledTimes(2));
     expect(rpcImpl).toHaveBeenLastCalledWith("get_my_group_stats", {
@@ -72,8 +72,8 @@ describe("useGroupStats across midnight", () => {
   it("does not ask again on a foreground return the same day", async () => {
     const rpcImpl = await renderStats();
 
-    emitAppState("active");
-    act(() => jest.advanceTimersByTime(1_000));
+    await emitAppState("active");
+    await act(() => jest.advanceTimersByTime(1_000));
 
     expect(rpcImpl).toHaveBeenCalledTimes(1);
   });

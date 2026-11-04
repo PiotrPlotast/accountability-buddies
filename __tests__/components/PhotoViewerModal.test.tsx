@@ -31,7 +31,7 @@ const item = (
 const ada = item("p-1", "user-2", "Ada Lovelace", "Run");
 const mine = item("p-2", "user-1", "Me Myself", "Read");
 
-function renderViewer(
+async function renderViewer(
   over: Partial<Parameters<typeof PhotoViewerModal>[0]> = {},
 ) {
   const handlers = {
@@ -39,7 +39,7 @@ function renderViewer(
     onCheer: jest.fn(),
     onDelete: jest.fn(),
   };
-  const utils = render(
+  const utils = await render(
     <PhotoViewerModal
       items={[ada, mine]}
       initialIndex={0}
@@ -61,47 +61,47 @@ describe("PhotoViewerModal", () => {
     jest.restoreAllMocks();
   });
 
-  it("shows whose photo it is and of which habit", () => {
-    const { getByText, getByLabelText } = renderViewer();
+  it("shows whose photo it is and of which habit", async () => {
+    const { getByText, getByLabelText } = await renderViewer();
     expect(getByText("Ada")).toBeTruthy();
     expect(getByText(/Run/)).toBeTruthy();
     expect(getByLabelText("Ada's photo of Run")).toBeTruthy();
   });
 
-  it("cheers a buddy's photo", () => {
-    const { getByLabelText, onCheer } = renderViewer();
-    fireEvent.press(getByLabelText("Cheer Ada"));
+  it("cheers a buddy's photo", async () => {
+    const { getByLabelText, onCheer } = await renderViewer();
+    await fireEvent.press(getByLabelText("Cheer Ada"));
     expect(onCheer).toHaveBeenCalledWith(ada);
   });
 
-  it("can't cheer offline", () => {
-    const { getByLabelText, getByText, onCheer } = renderViewer({
+  it("can't cheer offline", async () => {
+    const { getByLabelText, getByText, onCheer } = await renderViewer({
       isOnline: false,
     });
-    fireEvent.press(getByLabelText("Cheer Ada"));
+    await fireEvent.press(getByLabelText("Cheer Ada"));
     expect(onCheer).not.toHaveBeenCalled();
     expect(getByText("Needs a connection")).toBeTruthy();
   });
 
-  it("moves between the day's photos", () => {
-    const { getByLabelText, getByText } = renderViewer();
+  it("moves between the day's photos", async () => {
+    const { getByLabelText, getByText } = await renderViewer();
     expect(getByLabelText("Previous photo").props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
-    fireEvent.press(getByLabelText("Next photo"));
+    await fireEvent.press(getByLabelText("Next photo"));
     expect(getByText("You")).toBeTruthy();
     expect(getByLabelText("Next photo").props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
   });
 
-  it("deletes your own photo after asking, and never offers a cheer for it", () => {
-    const { getByLabelText, queryByLabelText, onDelete } = renderViewer({
+  it("deletes your own photo after asking, and never offers a cheer for it", async () => {
+    const { getByLabelText, queryByLabelText, onDelete } = await renderViewer({
       initialIndex: 1,
     });
 
     expect(queryByLabelText(/^Cheer/)).toBeNull();
-    fireEvent.press(getByLabelText("Delete photo"));
+    await fireEvent.press(getByLabelText("Delete photo"));
     expect(onDelete).not.toHaveBeenCalled();
 
     const [title, message, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
@@ -111,9 +111,9 @@ describe("PhotoViewerModal", () => {
     expect(onDelete).toHaveBeenCalledWith(mine);
   });
 
-  it("closes", () => {
-    const { getByLabelText, onClose } = renderViewer();
-    fireEvent.press(getByLabelText("Close"));
+  it("closes", async () => {
+    const { getByLabelText, onClose } = await renderViewer();
+    await fireEvent.press(getByLabelText("Close"));
     expect(onClose).toHaveBeenCalled();
   });
 });

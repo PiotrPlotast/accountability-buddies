@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
 
-import PublicLayout from "@/app/(public)/_layout";
+import PublicLayout, { unstable_settings } from "@/app/(public)/_layout";
 
 // The screens of the signed-out stack draw their own heading ("Create account",
 // "Welcome back"), so the native header must never draw a title of its own: on
@@ -30,10 +30,10 @@ function optionsFor(name: string) {
   return { ...(stackProps[0]?.screenOptions as object), ...screen?.options };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   stackProps.length = 0;
   screenProps.length = 0;
-  render(<PublicLayout />);
+  await render(<PublicLayout />);
 });
 
 describe("the signed-out stack", () => {
@@ -53,6 +53,13 @@ describe("the signed-out stack", () => {
       expect(optionsFor(name).headerTransparent).toBeFalsy();
     },
   );
+
+  // Signed out, the stack opens on welcome, whatever route was asked for.
+  // expo-router 58 (SDK 58) dropped the `initialRouteName` prop on `Stack`;
+  // a layout says it through `unstable_settings` instead.
+  it("starts on the welcome screen", () => {
+    expect(unstable_settings).toEqual({ initialRouteName: "welcome" });
+  });
 
   it("shows no header on the welcome screen, which has nothing to go back to", () => {
     expect(optionsFor("welcome").headerShown).toBe(false);

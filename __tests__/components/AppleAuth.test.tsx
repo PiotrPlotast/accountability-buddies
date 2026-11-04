@@ -29,7 +29,7 @@ describe("AppleAuth", () => {
     });
   });
 
-  it("renders nothing off iOS", () => {
+  it("renders nothing off iOS", async () => {
     // expo-apple-authentication is iOS-only, and an "or" divider with no
     // second option under it is worse than no divider.
     Object.defineProperty(Platform, "OS", {
@@ -38,7 +38,7 @@ describe("AppleAuth", () => {
     });
     const { Wrapper } = setup();
 
-    const { queryByText } = render(<AppleAuth onError={jest.fn()} />, {
+    const { queryByText } = await render(<AppleAuth onError={jest.fn()} />, {
       wrapper: Wrapper,
     });
 
@@ -46,10 +46,10 @@ describe("AppleAuth", () => {
     expect(queryByText("or")).toBeNull();
   });
 
-  it("renders the divider and the button on iOS", () => {
+  it("renders the divider and the button on iOS", async () => {
     const { Wrapper } = setup();
 
-    const { getByText } = render(<AppleAuth onError={jest.fn()} />, {
+    const { getByText } = await render(<AppleAuth onError={jest.fn()} />, {
       wrapper: Wrapper,
     });
 
@@ -57,10 +57,10 @@ describe("AppleAuth", () => {
     expect(getByText("Sign in with Apple")).toBeTruthy();
   });
 
-  it("takes the wording from the screen it sits on", () => {
+  it("takes the wording from the screen it sits on", async () => {
     const { Wrapper } = setup();
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <AppleAuth
         onError={jest.fn()}
         buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
@@ -74,10 +74,10 @@ describe("AppleAuth", () => {
   it("signs in through Supabase when pressed", async () => {
     const { supabase, Wrapper } = setup();
 
-    const { getByText } = render(<AppleAuth onError={jest.fn()} />, {
+    const { getByText } = await render(<AppleAuth onError={jest.fn()} />, {
       wrapper: Wrapper,
     });
-    fireEvent.press(getByText("Sign in with Apple"));
+    await fireEvent.press(getByText("Sign in with Apple"));
 
     await waitFor(() => {
       expect(supabase.auth.signInWithIdToken).toHaveBeenCalled();
@@ -89,10 +89,10 @@ describe("AppleAuth", () => {
     const onError = jest.fn();
     const { Wrapper } = setup();
 
-    const { getByText } = render(<AppleAuth onError={onError} />, {
+    const { getByText } = await render(<AppleAuth onError={onError} />, {
       wrapper: Wrapper,
     });
-    fireEvent.press(getByText("Sign in with Apple"));
+    await fireEvent.press(getByText("Sign in with Apple"));
 
     await waitFor(() => {
       expect(onError).toHaveBeenCalledWith("Apple is having a day");
@@ -108,10 +108,10 @@ describe("AppleAuth", () => {
     const onError = jest.fn();
     const { Wrapper } = setup();
 
-    const { getByText } = render(<AppleAuth onError={onError} />, {
+    const { getByText } = await render(<AppleAuth onError={onError} />, {
       wrapper: Wrapper,
     });
-    fireEvent.press(getByText("Sign in with Apple"));
+    await fireEvent.press(getByText("Sign in with Apple"));
 
     await waitFor(() => {
       expect(signInAsync).toHaveBeenCalled();
@@ -123,10 +123,10 @@ describe("AppleAuth", () => {
     const onError = jest.fn();
     const { Wrapper } = setup();
 
-    const { getByText } = render(<AppleAuth onError={onError} />, {
+    const { getByText } = await render(<AppleAuth onError={onError} />, {
       wrapper: Wrapper,
     });
-    fireEvent.press(getByText("Sign in with Apple"));
+    await fireEvent.press(getByText("Sign in with Apple"));
 
     await waitFor(() => {
       expect(onError).toHaveBeenCalledWith(null);
@@ -142,15 +142,19 @@ describe("AppleAuth", () => {
     );
     const { Wrapper } = setup();
 
-    const { getByText } = render(<AppleAuth onError={jest.fn()} />, {
+    const { getByText } = await render(<AppleAuth onError={jest.fn()} />, {
       wrapper: Wrapper,
     });
-    fireEvent.press(getByText("Sign in with Apple"));
-    fireEvent.press(getByText("Sign in with Apple"));
-
+    // Not awaited: RNTL 14's press waits for the handler, and this sign-in
+    // stays in flight until `release` below.
+    const firstPress = fireEvent.press(getByText("Sign in with Apple"));
     await waitFor(() => {
       expect(signInAsync).toHaveBeenCalledTimes(1);
     });
+    await fireEvent.press(getByText("Sign in with Apple"));
+
+    expect(signInAsync).toHaveBeenCalledTimes(1);
     release({ identityToken: "id-token" });
+    await firstPress;
   });
 });

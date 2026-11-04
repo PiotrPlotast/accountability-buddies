@@ -32,12 +32,12 @@ const members: Member[] = [
   },
 ];
 
-const wrap = (ui: React.ReactElement) =>
-  render(<ThemeProvider>{ui}</ThemeProvider>);
+const wrap = async (ui: React.ReactElement) =>
+  await render(<ThemeProvider>{ui}</ThemeProvider>);
 
 describe("MemberTabs", () => {
-  it("renders 'You' for the current user and first names for others", () => {
-    const { getByText } = wrap(
+  it("renders 'You' for the current user and first names for others", async () => {
+    const { getByText } = await wrap(
       <MemberTabs
         members={members}
         selectedTabId="user-1"
@@ -49,8 +49,8 @@ describe("MemberTabs", () => {
     expect(getByText("Bob")).toBeTruthy();
   });
 
-  it("shows the per-member done/total counts", () => {
-    const { getByText } = wrap(
+  it("shows the per-member done/total counts", async () => {
+    const { getByText } = await wrap(
       <MemberTabs
         members={members}
         selectedTabId="user-1"
@@ -62,9 +62,9 @@ describe("MemberTabs", () => {
     expect(getByText("2/3")).toBeTruthy();
   });
 
-  it("calls onSelect with the tapped member's user_id", () => {
+  it("calls onSelect with the tapped member's user_id", async () => {
     const onSelect = jest.fn();
-    const { getByText } = wrap(
+    const { getByText } = await wrap(
       <MemberTabs
         members={members}
         selectedTabId="user-1"
@@ -72,11 +72,11 @@ describe("MemberTabs", () => {
         userId="user-1"
       />,
     );
-    fireEvent.press(getByText("Bob"));
+    await fireEvent.press(getByText("Bob"));
     expect(onSelect).toHaveBeenCalledWith("user-2");
   });
 
-  it("excludes goals not due today from the count", () => {
+  it("excludes goals not due today from the count", async () => {
     const membersWithSchedules: Member[] = [
       {
         user_id: "user-3",
@@ -90,7 +90,7 @@ describe("MemberTabs", () => {
         ),
       },
     ];
-    const { getByText, queryByText } = wrap(
+    const { getByText, queryByText } = await wrap(
       <MemberTabs
         members={membersWithSchedules}
         selectedTabId="user-3"
@@ -111,9 +111,9 @@ describe("MemberTabs haptics", () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  it("taps when a member tab is chosen", () => {
+  it("taps when a member tab is chosen", async () => {
     const onSelect = jest.fn();
-    const { getByText } = wrap(
+    const { getByText } = await wrap(
       <MemberTabs
         members={members}
         selectedTabId="user-1"
@@ -122,7 +122,7 @@ describe("MemberTabs haptics", () => {
       />,
     );
 
-    fireEvent.press(getByText("Bob"));
+    await fireEvent.press(getByText("Bob"));
     expect(tap).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith("user-2");
   });

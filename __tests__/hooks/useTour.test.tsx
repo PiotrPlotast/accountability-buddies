@@ -138,7 +138,7 @@ describe("useCompleteTour", () => {
       expect(utils.result.current.value.gate.needsTour).toBe(true);
     });
 
-    act(() => utils.result.current.value.complete());
+    await act(() => utils.result.current.value.complete());
 
     await waitFor(() => {
       expect(utils.result.current.value.gate.needsTour).toBe(false);
@@ -165,7 +165,7 @@ describe("useCompleteTour", () => {
       expect(utils.result.current.value.gate.needsTour).toBe(true);
     });
 
-    act(() => utils.result.current.value.complete());
+    await act(() => utils.result.current.value.complete());
 
     await waitFor(() => expect(update.update).toHaveBeenCalled());
     await waitFor(() => {
@@ -182,7 +182,7 @@ describe("useCompleteTour", () => {
 
     const utils = await renderHookWithSession(() => useCompleteTour(), Wrapper);
 
-    act(() => utils.result.current.value());
+    await act(() => utils.result.current.value());
 
     expect(update.update).not.toHaveBeenCalled();
   });

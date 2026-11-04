@@ -23,16 +23,16 @@ const item = (id: string, name: string, title: string): PhotoItem => ({
 });
 
 describe("PhotoStrip", () => {
-  it("renders nothing when nobody has posted today", () => {
-    const { toJSON } = render(
+  it("renders nothing when nobody has posted today", async () => {
+    const { toJSON } = await render(
       <PhotoStrip items={[]} urls={{}} onOpen={jest.fn()} />,
     );
     expect(toJSON()).toBeNull();
   });
 
-  it("shows each photo, named for its poster and habit, and opens the one tapped", () => {
+  it("shows each photo, named for its poster and habit, and opens the one tapped", async () => {
     const onOpen = jest.fn();
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByText } = await render(
       <PhotoStrip
         items={[item("p-1", "Ada Lovelace", "Run"), item("p-2", "Bo", "Read")]}
         urls={{ "p-1.jpg": "signed:p-1" }}
@@ -41,7 +41,7 @@ describe("PhotoStrip", () => {
     );
 
     expect(getByText("Today's photos")).toBeTruthy();
-    fireEvent.press(getByLabelText("Bo's photo of Read"));
+    await fireEvent.press(getByLabelText("Bo's photo of Read"));
     expect(onOpen).toHaveBeenCalledWith(1);
     expect(getByLabelText("Ada's photo of Run")).toBeTruthy();
   });

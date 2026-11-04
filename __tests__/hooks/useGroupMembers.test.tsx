@@ -275,9 +275,9 @@ describe("useGroupMembers across midnight", () => {
   }
 
   const remove = jest.fn();
-  function emitAppState(state: string) {
+  async function emitAppState(state: string) {
     const addListener = AppState.addEventListener as unknown as jest.Mock;
-    act(() => addListener.mock.lastCall[1](state));
+    await act(() => addListener.mock.lastCall[1](state));
   }
 
   beforeEach(() => {
@@ -339,7 +339,7 @@ describe("useGroupMembers across midnight", () => {
       },
     ];
     const { utils } = await renderSeeded(withPhoto);
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(60_000);
     });
     await waitFor(() =>
@@ -353,7 +353,7 @@ describe("useGroupMembers across midnight", () => {
   it("clears the ticks at midnight without waiting for the network", async () => {
     const { utils, fromImpl, goalsQB } = await renderSeeded();
 
-    act(() => jest.advanceTimersByTime(30_000));
+    await act(() => jest.advanceTimersByTime(30_000));
 
     await waitFor(() =>
       expect(
@@ -383,7 +383,7 @@ describe("useGroupMembers across midnight", () => {
 
     // Suspended overnight: the midnight timer never ran.
     jest.setSystemTime(new Date(2026, 9, 7, 9, 0, 0));
-    emitAppState("active");
+    await emitAppState("active");
 
     await waitFor(() =>
       expect(

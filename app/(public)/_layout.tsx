@@ -1,6 +1,10 @@
 import { Stack } from "expo-router";
 import { themeColors } from "@/lib/colors";
 
+// The stack opens on welcome. Said here rather than as a `Stack` prop, which
+// expo-router 58 (SDK 58) no longer accepts.
+export const unstable_settings = { initialRouteName: "welcome" };
+
 // Each screen draws its own heading, so the native header carries only the
 // back button: no title, and opaque in the screen's own colour so the content
 // starts below it. A transparent large-title header painted "Sign Up" faintly
@@ -8,7 +12,6 @@ import { themeColors } from "@/lib/colors";
 export default function PublicLayout() {
   return (
     <Stack
-      initialRouteName="welcome"
       screenOptions={{
         headerTitle: "",
         headerBackButtonDisplayMode: "minimal",

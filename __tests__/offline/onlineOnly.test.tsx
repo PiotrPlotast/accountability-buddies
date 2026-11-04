@@ -126,9 +126,9 @@ afterEach(() => {
 });
 
 describe("the dashboard offline", () => {
-  it("says it is offline as soon as the phone does, with your habits on screen", () => {
+  it("says it is offline as soon as the phone does, with your habits on screen", async () => {
     const { Wrapper } = setup();
-    const { getByText } = render(<Dashboard />, { wrapper: Wrapper });
+    const { getByText } = await render(<Dashboard />, { wrapper: Wrapper });
 
     expect(getByText("Offline. Showing your last update.")).toBeTruthy();
     expect(getByText("My habit")).toBeTruthy();
@@ -137,31 +137,34 @@ describe("the dashboard offline", () => {
   it("counts the changes waiting to sync", async () => {
     const { queryClient, Wrapper } = setup();
     queueChanges(queryClient, 3);
-    const { findByText } = render(<Dashboard />, { wrapper: Wrapper });
+    const { findByText } = await render(<Dashboard />, { wrapper: Wrapper });
 
     expect(await findByText("3 changes waiting to sync")).toBeTruthy();
   });
 
   it("drops the banner when the connection returns", async () => {
     const { Wrapper } = setup();
-    const { queryByText } = render(<Dashboard />, { wrapper: Wrapper });
+    const { queryByText } = await render(<Dashboard />, { wrapper: Wrapper });
 
-    act(() => onlineManager.setOnline(true));
+    await act(() => onlineManager.setOnline(true));
 
     await waitFor(() =>
       expect(queryByText("Offline. Showing your last update.")).toBeNull(),
     );
   });
 
-  it("greys out the nudge button on a buddy's tab", () => {
+  it("greys out the nudge button on a buddy's tab", async () => {
     const { Wrapper } = setup();
-    const { getByLabelText, getByText, queryByText } = render(<Dashboard />, {
-      wrapper: Wrapper,
-    });
-    fireEvent.press(getByLabelText(/^Buddy Pal,/));
+    const { getByLabelText, getByText, queryByText } = await render(
+      <Dashboard />,
+      {
+        wrapper: Wrapper,
+      },
+    );
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
 
     expect(getByText("Needs a connection")).toBeTruthy();
-    fireEvent.press(getByText("Nudge Buddy"));
+    await fireEvent.press(getByText("Nudge Buddy"));
     expect(queryByText("Send")).toBeNull();
   });
 });
@@ -170,7 +173,7 @@ describe("saving a habit offline", () => {
   it("closes the edit form once the change is queued", async () => {
     const { Wrapper } = setup();
     const onClose = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <EditGoalModal
         goal={goal("My habit", "user-1")}
         isVisible
@@ -179,7 +182,7 @@ describe("saving a habit offline", () => {
       { wrapper: Wrapper },
     );
 
-    fireEvent.press(getByText("Save"));
+    await fireEvent.press(getByText("Save"));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
@@ -187,7 +190,7 @@ describe("saving a habit offline", () => {
   it("closes the delete prompt once the change is queued", async () => {
     const { Wrapper } = setup();
     const onClose = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <DeleteGoalModal
         goal={goal("My habit", "user-1")}
         isVisible
@@ -196,38 +199,44 @@ describe("saving a habit offline", () => {
       { wrapper: Wrapper },
     );
 
-    fireEvent.press(getByText("Delete"));
+    await fireEvent.press(getByText("Delete"));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });
 
 describe("online-only screens offline", () => {
-  it("won't save group settings", () => {
+  it("won't save group settings", async () => {
     const { qb, Wrapper } = setup();
-    const { getAllByText, getByPlaceholderText, getByText } = render(
+    const { getAllByText, getByPlaceholderText, getByText } = await render(
       <GroupSettingsScreen />,
       {
         wrapper: Wrapper,
       },
     );
 
-    fireEvent.changeText(getByPlaceholderText("Swole Mates"), "My Crew");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.changeText(getByPlaceholderText("Swole Mates"), "My Crew");
+    await fireEvent.press(getByText("Save"));
 
     // Under Save, and again under Leave group.
     expect(getAllByText("Needs a connection")).toHaveLength(2);
     expect(qb.update).not.toHaveBeenCalled();
   });
 
-  it("won't join a group", () => {
+  it("won't join a group", async () => {
     const { rpcImpl, Wrapper } = setup();
-    const { getByPlaceholderText, getByText } = render(<JoinGroupScreen />, {
-      wrapper: Wrapper,
-    });
+    const { getByPlaceholderText, getByText } = await render(
+      <JoinGroupScreen />,
+      {
+        wrapper: Wrapper,
+      },
+    );
 
-    fireEvent.changeText(getByPlaceholderText("A1B2C3D4E5"), "ABCDEF0123");
-    fireEvent.press(getByText("Join group"));
+    await fireEvent.changeText(
+      getByPlaceholderText("A1B2C3D4E5"),
+      "ABCDEF0123",
+    );
+    await fireEvent.press(getByText("Join group"));
 
     expect(getByText("Needs a connection")).toBeTruthy();
     expect(rpcImpl).not.toHaveBeenCalledWith(
@@ -236,51 +245,51 @@ describe("online-only screens offline", () => {
     );
   });
 
-  it("won't rename you", () => {
+  it("won't rename you", async () => {
     const { qb, Wrapper } = setup();
-    const { getByPlaceholderText, getByText } = render(
+    const { getByPlaceholderText, getByText } = await render(
       <RenameModal isVisible currentName="Piotr" onClose={jest.fn()} />,
       { wrapper: Wrapper },
     );
 
-    fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
-    fireEvent.press(getByText("Save"));
+    await fireEvent.changeText(getByPlaceholderText("Your name"), "Zofia");
+    await fireEvent.press(getByText("Save"));
 
     expect(getByText("Needs a connection")).toBeTruthy();
     expect(qb.update).not.toHaveBeenCalled();
   });
 
-  it("won't start deleting the account", () => {
+  it("won't start deleting the account", async () => {
     const { Wrapper } = setup();
-    const { getByLabelText, getByText } = render(<Profile />, {
+    const { getByLabelText, getByText } = await render(<Profile />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByLabelText("Delete account"));
+    await fireEvent.press(getByLabelText("Delete account"));
 
     expect(getByText("Needs a connection")).toBeTruthy();
     expect(Alert.alert).not.toHaveBeenCalled();
   });
 
-  it("won't change notification preferences", () => {
+  it("won't change notification preferences", async () => {
     const { qb, Wrapper } = setup();
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByText } = await render(
       <NotificationSettingsScreen />,
       {
         wrapper: Wrapper,
       },
     );
 
-    fireEvent(getByLabelText("Nudges"), "valueChange", false);
+    await fireEvent(getByLabelText("Nudges"), "valueChange", false);
 
     expect(getByText("Needs a connection")).toBeTruthy();
     expect(qb.update).not.toHaveBeenCalled();
   });
 
   // Haptics is a setting on this phone, not the account.
-  it("still lets you switch haptics", () => {
+  it("still lets you switch haptics", async () => {
     const { Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
@@ -289,27 +298,27 @@ describe("online-only screens offline", () => {
 });
 
 describe("signing out with changes waiting", () => {
-  it("warns that they will be lost", () => {
+  it("warns that they will be lost", async () => {
     const { queryClient, Wrapper } = setup();
     queueChanges(queryClient, 2);
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByLabelText("Log out"));
+    await fireEvent.press(getByLabelText("Log out"));
 
     const [, message, buttons] = lastAlert();
     expect(message).toBe("2 changes haven't synced and will be lost.");
     expect(buttons.map((b) => b.text)).toContain("Log out");
   });
 
-  it("asks the usual question when nothing is waiting", () => {
+  it("asks the usual question when nothing is waiting", async () => {
     const { Wrapper } = setup();
-    const { getByLabelText } = render(<NotificationSettingsScreen />, {
+    const { getByLabelText } = await render(<NotificationSettingsScreen />, {
       wrapper: Wrapper,
     });
 
-    fireEvent.press(getByLabelText("Log out"));
+    await fireEvent.press(getByLabelText("Log out"));
 
     expect(lastAlert()[1]).toBe("Are you sure?");
   });
