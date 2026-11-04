@@ -160,7 +160,7 @@ describe("AppleAuth", () => {
 
   // Two taps landing in the same frame, before React has re-rendered: a
   // guard kept in state reads the old `false` for both and opens two Apple
-  // sheets. Pressed inside one `act`, nothing re-renders in between.
+  // sheets.
   it("ignores a second tap in the same frame as the first", async () => {
     let release: (v: unknown) => void = () => {};
     signInAsync.mockReturnValue(
@@ -169,19 +169,31 @@ describe("AppleAuth", () => {
       }),
     );
     const { Wrapper } = setup();
-    const { getByText } = render(<AppleAuth onError={jest.fn()} />, {
+    const { getByText } = await render(<AppleAuth onError={jest.fn()} />, {
       wrapper: Wrapper,
     });
     const button = getByText("Sign in with Apple");
 
-    act(() => {
-      fireEvent.press(button);
-      fireEvent.press(button);
+    // Both taps inside one `act`, so React can't re-render between them. The
+    // handler is called directly: two `fireEvent.press` calls in flight at
+    // once would overlap two act scopes, which React doesn't support, and
+    // the handler is the button's own `onPress`, reached through
+    // test-renderer's fiber since RNTL 14 renders native elements only.
+    let fiber = button.unstable_fiber;
+    while (fiber && typeof fiber.memoizedProps?.onPress !== "function") {
+      fiber = fiber.return;
+    }
+    const onPress = fiber?.memoizedProps.onPress as () => Promise<void>;
+    let taps: Promise<void>[] = [];
+    await act(async () => {
+      taps = [onPress(), onPress()];
     });
 
-    await waitFor(() => expect(signInAsync).toHaveBeenCalled());
     expect(signInAsync).toHaveBeenCalledTimes(1);
     release({ identityToken: "id-token" });
+    await act(async () => {
+      await Promise.all(taps);
+    });
   });
 
   // The guard lifts as soon as an attempt settles, so a failed or cancelled
@@ -194,16 +206,16 @@ describe("AppleAuth", () => {
     async (_label, first) => {
       signInAsync.mockImplementationOnce(first);
       const { Wrapper } = setup();
-      const { getByText } = render(<AppleAuth onError={jest.fn()} />, {
+      const { getByText } = await render(<AppleAuth onError={jest.fn()} />, {
         wrapper: Wrapper,
       });
 
-      fireEvent.press(getByText("Sign in with Apple"));
+      await fireEvent.press(getByText("Sign in with Apple"));
       await waitFor(() => expect(signInAsync).toHaveBeenCalledTimes(1));
       // Let the first attempt settle.
       await act(async () => {});
 
-      fireEvent.press(getByText("Sign in with Apple"));
+      await fireEvent.press(getByText("Sign in with Apple"));
       await waitFor(() => expect(signInAsync).toHaveBeenCalledTimes(2));
     },
   );
