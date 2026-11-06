@@ -22,6 +22,7 @@ import { asyncStoragePersister } from "@/lib/queryPersister";
 import { useForgetTapsWhileSignedOut } from "@/hooks/useNotificationTaps";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useTheme } from "@/hooks/useTheme";
+import { useUpdatePrompt } from "@/hooks/useUpdatePrompt";
 import { SupabaseProvider } from "@/providers/supabase-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 
@@ -82,6 +83,9 @@ function RootNavigator() {
   const { hydrated } = useTheme();
   const isAppReady = isLoaded && !isRestoring && hydrated;
   useForgetTapsWhileSignedOut();
+  // Here rather than behind the session guard, so a signed-out tester still
+  // gets the fix to the sign-in screen.
+  useUpdatePrompt(isAppReady);
   useEffect(() => {
     if (isAppReady) {
       setTimeout(() => {
