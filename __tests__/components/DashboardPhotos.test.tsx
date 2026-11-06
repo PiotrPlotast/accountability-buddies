@@ -150,6 +150,66 @@ describe("Dashboard habit photos", () => {
     });
   });
 
+  // iOS presents one modal at a time from each screen, so a cheer drawn
+  // beside the full-screen viewer waited behind it and only appeared once the
+  // viewer closed. Drawn inside it, the cheer is presented over the photo.
+  const insideViewer = (node: { type: unknown; props: any; parent: any }) => {
+    for (let n = node.parent; n; n = n.parent) {
+      if (n.props?.presentationStyle === "fullScreen") return true;
+    }
+    return false;
+  };
+
+  it("opens a photo's cheer on top of the viewer", async () => {
+    const { getByLabelText, getByText } = await renderDashboard();
+    await fireEvent.press(getByLabelText("Buddy's photo of Run"));
+
+    await fireEvent.press(getByLabelText("Cheer Buddy"));
+
+    expect(insideViewer(getByText("Cheer Buddy for Run"))).toBe(true);
+  });
+
+  it("leaves you on the photo when the cheer is cancelled", async () => {
+    const { getByLabelText, getByRole, getByText, queryByText } =
+      await renderDashboard();
+    await fireEvent.press(getByLabelText("Buddy's photo of Run"));
+    await fireEvent.press(getByLabelText("Cheer Buddy"));
+
+    await fireEvent.press(getByText("Cancel"));
+
+    expect(queryByText("Cheer Buddy for Run")).toBeNull();
+    expect(getByRole("image", { name: "Buddy's photo of Run" })).toBeTruthy();
+  });
+
+  it("leaves you on the photo once the cheer is sent", async () => {
+    const { getByLabelText, getByRole, getByText, queryByText, supabase } =
+      await renderDashboard();
+    await fireEvent.press(getByLabelText("Buddy's photo of Run"));
+    await fireEvent.press(getByLabelText("Cheer Buddy"));
+
+    await fireEvent.press(getByText("Send"));
+
+    await waitFor(() =>
+      expect(supabase.functions.invoke).toHaveBeenCalledWith(
+        "send-cheer",
+        expect.anything(),
+      ),
+    );
+    await waitFor(() => expect(queryByText("Cheer Buddy for Run")).toBeNull());
+    expect(getByRole("image", { name: "Buddy's photo of Run" })).toBeTruthy();
+  });
+
+  // Away from the viewer the cheer is still drawn on the dashboard itself.
+  it("opens a swipe's cheer with no viewer behind it", async () => {
+    const { getByLabelText, getByText } = await renderDashboard();
+    await fireEvent.press(getByLabelText(/^Buddy Pal,/));
+
+    await fireEvent.press(getByText("Cheer Buddy"));
+
+    expect(getByText("Cheer Buddy's day")).toBeTruthy();
+    expect(insideViewer(getByText("Cheer Buddy's day"))).toBe(false);
+  });
+
   // The camera opens on the habit just ticked, dated the day it was ticked:
   // what it posts says both.
   it("offers a photo right after a tick, and opens the camera from it", async () => {

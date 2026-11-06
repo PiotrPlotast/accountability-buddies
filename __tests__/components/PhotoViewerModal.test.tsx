@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { Alert, Text } from "react-native";
 import { fireEvent, render } from "@testing-library/react-native";
 
 import PhotoViewerModal from "@/app/components/dashboard/PhotoViewerModal";
@@ -115,5 +115,15 @@ describe("PhotoViewerModal", () => {
     const { getByLabelText, onClose } = await renderViewer();
     await fireEvent.press(getByLabelText("Close"));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  // The cheer opened from a photo is drawn inside the viewer; the last photo
+  // going (unticked away) must not take a half-written cheer with it.
+  it("keeps what it was given to draw when the last photo goes", async () => {
+    const { getByText } = await renderViewer({
+      items: [],
+      children: <Text>Cheer box</Text>,
+    });
+    expect(getByText("Cheer box")).toBeTruthy();
   });
 });
