@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Alert, Modal, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -20,6 +20,10 @@ type Props = {
   onCheer: (item: PhotoItem) => void;
   // Your own photo, once confirmed. Final: no other photo of it today.
   onDelete: (item: PhotoItem) => void;
+  // A modal opened from the viewer (the cheer). iOS presents one modal at a
+  // time from each screen, so one drawn beside this full-screen modal waits
+  // behind it until it closes; drawn inside, it is presented over the photo.
+  children?: ReactNode;
 };
 
 /**
@@ -36,12 +40,14 @@ export default function PhotoViewerModal({
   onClose,
   onCheer,
   onDelete,
+  children,
 }: Props) {
   const { accent } = useTheme();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(initialIndex);
 
-  if (items.length === 0) return null;
+  // With nothing left to show, a cheer opened from a photo stays open.
+  if (items.length === 0) return children ?? null;
   // The list can shrink under the viewer (a photo deleted or unticked away).
   const at = Math.min(index, items.length - 1);
   const item = items[at];
@@ -172,6 +178,7 @@ export default function PhotoViewerModal({
           )}
         </View>
       </View>
+      {children}
     </Modal>
   );
 }

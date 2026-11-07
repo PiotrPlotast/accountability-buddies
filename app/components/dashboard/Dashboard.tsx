@@ -190,6 +190,27 @@ export default function Dashboard() {
       { onSuccess: () => setViewer(null) },
     );
 
+  // Drawn inside the photo viewer while it is open, so a cheer from a photo
+  // is presented over it (iOS shows one modal at a time from each screen);
+  // sent or cancelled, it leaves you on the same photo.
+  const cheerModal =
+    cheerTarget && cheerMember ? (
+      <CheerModal
+        key={cheerTarget.key}
+        recipient={{
+          userId: cheerTarget.buddyId,
+          name: firstName(cheerMember.full_name ?? ""),
+        }}
+        goal={cheerTarget.goal}
+        day={cheerTarget.day}
+        isVisible
+        onClose={() => setCheerTarget(null)}
+        onSent={(name) =>
+          confirmSent(cheerTarget.buddyId, `Cheer sent to ${name}`)
+        }
+      />
+    ) : null;
+
   // The offer clears itself, the same way the sent notice does.
   useEffect(() => {
     if (!photoPrompt) return;
@@ -375,8 +396,12 @@ export default function Dashboard() {
           onClose={() => setViewer(null)}
           onCheer={cheerPhoto}
           onDelete={deletePhoto}
-        />
-      ) : null}
+        >
+          {cheerModal}
+        </PhotoViewerModal>
+      ) : (
+        cheerModal
+      )}
       {camera ? (
         <CameraModal
           key={camera.key}
@@ -406,22 +431,6 @@ export default function Dashboard() {
           onClose={() => setNudgeTarget(null)}
           onSent={(name) =>
             confirmSent(nudgeTarget.userId, `Nudge sent to ${name}`)
-          }
-        />
-      ) : null}
-      {cheerTarget && cheerMember ? (
-        <CheerModal
-          key={cheerTarget.key}
-          recipient={{
-            userId: cheerTarget.buddyId,
-            name: firstName(cheerMember.full_name ?? ""),
-          }}
-          goal={cheerTarget.goal}
-          day={cheerTarget.day}
-          isVisible
-          onClose={() => setCheerTarget(null)}
-          onSent={(name) =>
-            confirmSent(cheerTarget.buddyId, `Cheer sent to ${name}`)
           }
         />
       ) : null}
