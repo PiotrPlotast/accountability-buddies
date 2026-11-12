@@ -5,11 +5,11 @@
   },
   "build": {
     "ios-simulator": {
-    "extends": "development",
-    "ios": {
-      "simulator": true
-    }
-  },
+      "extends": "development",
+      "ios": {
+        "simulator": true
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal"
@@ -25,7 +25,10 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6830834938"
+      }
+    }
   }
-  
 }
