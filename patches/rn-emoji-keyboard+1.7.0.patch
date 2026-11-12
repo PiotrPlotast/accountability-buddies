@@ -1,0 +1,86 @@
+diff --git a/node_modules/rn-emoji-keyboard/lib/commonjs/components/EmojiCategory.js b/node_modules/rn-emoji-keyboard/lib/commonjs/components/EmojiCategory.js
+index 2c01afd..c479ebe 100644
+--- a/node_modules/rn-emoji-keyboard/lib/commonjs/components/EmojiCategory.js
++++ b/node_modules/rn-emoji-keyboard/lib/commonjs/components/EmojiCategory.js
+@@ -117,11 +117,13 @@ const EmojiCategory = /*#__PURE__*/React.memo(_ref2 => {
+ 
+   // with InteractionManager we can show emojis after interaction is finished
+   // It helps with delay during category change animation
+-  _reactNative.InteractionManager.runAfterInteractions(() => {
+-    if (maxIndex === 0 && data.length) {
+-      setMaxIndex(minimalEmojisAmountToDisplay);
+-    }
+-  });
++  React.useEffect(() => {
++    if (maxIndex !== 0 || !data.length) return;
++    const schedule = globalThis.requestIdleCallback || setTimeout;
++    const cancel = globalThis.requestIdleCallback ? globalThis.cancelIdleCallback : clearTimeout;
++    const handle = schedule(() => setMaxIndex(minimalEmojisAmountToDisplay));
++    return () => cancel(handle);
++  }, [maxIndex, data.length, minimalEmojisAmountToDisplay]);
+   const onEndReached = () => {
+     if (maxIndex <= data.length) {
+       setMaxIndex(data.length);
+diff --git a/node_modules/rn-emoji-keyboard/lib/module/components/EmojiCategory.js b/node_modules/rn-emoji-keyboard/lib/module/components/EmojiCategory.js
+index a858fed..88357a9 100644
+--- a/node_modules/rn-emoji-keyboard/lib/module/components/EmojiCategory.js
++++ b/node_modules/rn-emoji-keyboard/lib/module/components/EmojiCategory.js
+@@ -8,7 +8,6 @@ import { useKeyboardStore } from '../store/useKeyboardStore';
+ import { parseEmoji } from '../utils/parseEmoji';
+ import { removeSkinToneModifier } from '../utils/skinToneSelectorUtils';
+ import { useKeyboard } from '../hooks/useKeyboard';
+-import { InteractionManager } from 'react-native';
+ const emptyEmoji = {
+   emoji: '',
+   name: 'blank emoji',
+@@ -110,11 +109,13 @@ export const EmojiCategory = /*#__PURE__*/React.memo(_ref2 => {
+ 
+   // with InteractionManager we can show emojis after interaction is finished
+   // It helps with delay during category change animation
+-  InteractionManager.runAfterInteractions(() => {
+-    if (maxIndex === 0 && data.length) {
+-      setMaxIndex(minimalEmojisAmountToDisplay);
+-    }
+-  });
++  React.useEffect(() => {
++    if (maxIndex !== 0 || !data.length) return;
++    const schedule = globalThis.requestIdleCallback || setTimeout;
++    const cancel = globalThis.requestIdleCallback ? globalThis.cancelIdleCallback : clearTimeout;
++    const handle = schedule(() => setMaxIndex(minimalEmojisAmountToDisplay));
++    return () => cancel(handle);
++  }, [maxIndex, data.length, minimalEmojisAmountToDisplay]);
+   const onEndReached = () => {
+     if (maxIndex <= data.length) {
+       setMaxIndex(data.length);
+diff --git a/node_modules/rn-emoji-keyboard/src/components/EmojiCategory.tsx b/node_modules/rn-emoji-keyboard/src/components/EmojiCategory.tsx
+index 6869a04..4c0d506 100644
+--- a/node_modules/rn-emoji-keyboard/src/components/EmojiCategory.tsx
++++ b/node_modules/rn-emoji-keyboard/src/components/EmojiCategory.tsx
+@@ -14,7 +14,6 @@ import { useKeyboardStore } from '../store/useKeyboardStore'
+ import { parseEmoji } from '../utils/parseEmoji'
+ import { removeSkinToneModifier } from '../utils/skinToneSelectorUtils'
+ import { useKeyboard } from '../hooks/useKeyboard'
+-import { InteractionManager } from 'react-native'
+ 
+ const emptyEmoji: JsonEmoji = {
+   emoji: '',
+@@ -149,12 +148,13 @@ export const EmojiCategory = React.memo(
+ 
+     // with InteractionManager we can show emojis after interaction is finished
+     // It helps with delay during category change animation
+-    InteractionManager.runAfterInteractions(() => {
+-      if (maxIndex === 0 && data.length) {
+-        setMaxIndex(minimalEmojisAmountToDisplay)
+-      }
+-    })
+-
++    React.useEffect(() => {
++      if (maxIndex !== 0 || !data.length) return
++      const schedule = globalThis.requestIdleCallback || setTimeout
++      const cancel = globalThis.requestIdleCallback ? globalThis.cancelIdleCallback : clearTimeout
++      const handle = schedule(() => setMaxIndex(minimalEmojisAmountToDisplay))
++      return () => cancel(handle)
++    }, [maxIndex, data.length, minimalEmojisAmountToDisplay])
+     const onEndReached = () => {
+       if (maxIndex <= data.length) {
+         setMaxIndex(data.length)
