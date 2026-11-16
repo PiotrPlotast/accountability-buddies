@@ -244,6 +244,115 @@ begin
   if _s <> 0 then raise exception 'stats: missed Monday shows %, expected 0', _s; end if;
 end $$;
 
+-- Cases 14 to 19 (2026-11-16) are judged against the clock, so their dates are
+-- relative to now. A day is missed only once it has ended for every member of
+-- the group, in the timezone each one's `notification_prefs` holds, and never
+-- later than its end at UTC-12. A tick only moves the streak of a group its
+-- author is a member of.
+
+create function pg_temp.set_tz(p_user uuid, p_tz text)
+  returns void language sql as $$
+  update public.notification_prefs set timezone = p_tz where user_id = p_user
+$$;
+
+-- 14. A member who is already on tomorrow ticks before the others have
+--     finished today: today is still open, so the streak stands, and today
+--     still counts when everyone has ticked it.
+do $$
+declare today date := (now() at time zone 'UTC')::date;
+        g uuid := pg_temp.mk_group(5, today - 1);
+        a uuid := pg_temp.mk_member(g); b uuid := pg_temp.mk_member(g);
+        a_run uuid := pg_temp.mk_goal(a, g); b_run uuid := pg_temp.mk_goal(b, g);
+begin
+  perform pg_temp.set_tz(a, 'UTC');
+  perform pg_temp.set_tz(b, 'Pacific/Auckland');
+  perform pg_temp.tick(b_run, today + 1);
+  perform pg_temp.expect(g, 5, today - 1, 'a tick for tomorrow leaves an open today alone');
+  perform pg_temp.tick(b_run, today);
+  perform pg_temp.tick(a_run, today);
+  perform pg_temp.expect(g, 6, today, 'today still counts after a tick for tomorrow');
+end $$;
+
+-- 15. "Missed" follows the members' own clocks. Tuesday 2026-03-10 is open
+--     while it is still Tuesday in Los Angeles, whatever the date in Auckland,
+--     and missed once it has ended in both.
+do $$
+declare g uuid := pg_temp.mk_group(5, '2026-03-09');
+        a uuid := pg_temp.mk_member(g); b uuid := pg_temp.mk_member(g);
+        a_run uuid := pg_temp.mk_goal(a, g); b_run uuid := pg_temp.mk_goal(b, g);
+begin
+  perform pg_temp.set_tz(a, 'America/Los_Angeles');
+  perform pg_temp.set_tz(b, 'Pacific/Auckland');
+  if not public.group_streak_holds(g, '2026-03-09', '2026-03-11', '2026-03-10 20:00+00') then
+    raise exception 'a day still open in Los Angeles broke the streak';
+  end if;
+  if public.group_streak_holds(g, '2026-03-09', '2026-03-11', '2026-03-11 08:00+00') then
+    raise exception 'a due day that has ended for every member did not break the streak';
+  end if;
+end $$;
+
+-- 16. A stored timezone cannot hold a day open for longer than the last
+--     timezone on Earth does (UTC-12).
+do $$
+declare g uuid := pg_temp.mk_group(5, '2026-03-09'); a uuid := pg_temp.mk_member(g);
+        a_run uuid := pg_temp.mk_goal(a, g);
+begin
+  perform pg_temp.set_tz(a, 'XXX+100'); -- a hundred hours behind UTC
+  if not public.group_streak_holds(g, '2026-03-09', '2026-03-11', '2026-03-11 11:00+00') then
+    raise exception 'a day still open at UTC-12 broke the streak';
+  end if;
+  if public.group_streak_holds(g, '2026-03-09', '2026-03-11', '2026-03-11 12:30+00') then
+    raise exception 'a far-off timezone held a day open past its end at UTC-12';
+  end if;
+end $$;
+
+-- 17. A day cannot be skipped by counting the one after it (unchanged rule):
+--     tomorrow counted over an unticked today starts the streak again.
+do $$
+declare today date := (now() at time zone 'UTC')::date;
+        g uuid := pg_temp.mk_group(5, today - 1); a uuid := pg_temp.mk_member(g);
+        a_run uuid := pg_temp.mk_goal(a, g);
+begin
+  perform pg_temp.set_tz(a, 'UTC');
+  perform pg_temp.tick(a_run, today + 1);
+  perform pg_temp.expect(g, 1, today + 1, 'counting past an unticked due day restarts the streak');
+end $$;
+
+-- 18. `get_my_group_stats` agrees: a caller already on tomorrow still sees
+--     the streak while today is open for a buddy.
+do $$
+declare today date := (now() at time zone 'UTC')::date;
+        g uuid := pg_temp.mk_group(5, today - 1);
+        a uuid := pg_temp.mk_member(g); b uuid := pg_temp.mk_member(g);
+        a_run uuid := pg_temp.mk_goal(a, g); b_run uuid := pg_temp.mk_goal(b, g);
+        _s int;
+begin
+  perform pg_temp.set_tz(a, 'UTC');
+  perform pg_temp.set_tz(b, 'Pacific/Auckland');
+  perform set_config('request.jwt.claim.sub', b::text, true);
+  select current_streak into _s from public.get_my_group_stats(today + 1);
+  if _s <> 5 then raise exception 'stats: an open today shows %, expected 5', _s; end if;
+end $$;
+
+-- 19. A tick by someone who is not a member of the habit's group writes
+--     nothing to that group's streak, even where a member's tick would: here
+--     yesterday was due, missed and over.
+do $$
+declare today date := (now() at time zone 'UTC')::date;
+        g uuid := pg_temp.mk_group(5, today - 2); a uuid := pg_temp.mk_member(g);
+        a_run uuid := pg_temp.mk_goal(a, g);
+        x uuid := pg_temp.mk_member(pg_temp.mk_group());
+        x_stray uuid := pg_temp.mk_goal(x, g);
+begin
+  perform pg_temp.set_tz(a, 'UTC');
+  perform pg_temp.tick(x_stray, today);
+  perform pg_temp.expect(g, 5, today - 2, 'a non-member''s tick for today');
+  perform pg_temp.tick(x_stray, today + 1);
+  perform pg_temp.expect(g, 5, today - 2, 'a non-member''s tick for tomorrow');
+  perform pg_temp.tick(a_run, today);
+  perform pg_temp.expect(g, 1, today, 'a member''s tick still judges the missed day');
+end $$;
+
 \echo 'group_streak: all cases passed'
 
 rollback;

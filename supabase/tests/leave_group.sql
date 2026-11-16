@@ -229,4 +229,54 @@ begin
                          '12: anon can call leave_group');
 end $$;
 
+-- However a membership row goes (2026-11-16), the habits go with their owner.
+-- `leave_group()` always detached them; a row deleted directly, by the member
+-- or by the creator removing them, left them pointing at the group.
+do $$
+declare
+  ada  uuid := pg_temp.mk_user('Ada');
+  bob  uuid := pg_temp.mk_user('Bob');
+  cal  uuid := pg_temp.mk_user('Cal');
+  crew uuid := pg_temp.mk_group(ada, 'Crew');
+  next uuid := pg_temp.mk_group(pg_temp.mk_user('Dee'), 'Next');
+  ada_run uuid;
+  bob_run uuid;
+  cal_run uuid;
+  res  json;
+  err  text;
+begin
+  perform pg_temp.join_at(crew, bob, now() - interval '2 days');
+  perform pg_temp.join_at(crew, cal, now() - interval '1 day');
+  ada_run := pg_temp.mk_goal(ada, crew, 'Run');
+  bob_run := pg_temp.mk_goal(bob, crew, 'Run');
+  cal_run := pg_temp.mk_goal(cal, crew, 'Run');
+
+  -- 13. A member deleting their own row takes their habits out of the group.
+  err := pg_temp.try_as(bob, format(
+    'delete from public.group_members where group_id = %L and user_id = %L', crew, bob));
+  perform pg_temp.expect(err is null, '13: could not delete own membership: ' || coalesce(err, ''));
+  perform pg_temp.expect((select group_id is null from public.goals where id = bob_run),
+                         '13: habit still points at the group its owner left');
+
+  -- 14. So does the creator removing someone.
+  err := pg_temp.try_as(ada, format(
+    'delete from public.group_members where group_id = %L and user_id = %L', crew, cal));
+  perform pg_temp.expect(err is null, '14: creator could not remove a member: ' || coalesce(err, ''));
+  perform pg_temp.expect((select group_id is null from public.goals where id = cal_run),
+                         '14: a removed member''s habit still points at the group');
+
+  -- 15. Nobody else's habits move, and the group and its creator stay.
+  perform pg_temp.expect((select group_id = crew from public.goals where id = ada_run),
+                         '15: a remaining member''s habit was detached');
+  perform pg_temp.expect((select creator_id = ada from public.groups where id = crew),
+                         '15: the group or its creator changed');
+
+  -- 16. The detached habit follows its owner into the next group they join.
+  res := pg_temp.rpc_as(bob, format('select public.join_group_via_code(%L)',
+                                    (select invite_code from public.groups where id = next)));
+  perform pg_temp.expect((res->>'success')::boolean, '16: could not join the next group: ' || res::text);
+  perform pg_temp.expect((select group_id = next from public.goals where id = bob_run),
+                         '16: habit did not follow its owner');
+end $$;
+
 rollback;
