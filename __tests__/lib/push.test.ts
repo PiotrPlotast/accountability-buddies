@@ -11,6 +11,7 @@ import {
   getRegisteredPushToken,
   onNotificationTap,
   registerForPushNotificationsAsync,
+  stopPushDelivery,
 } from "@/lib/push";
 
 const getPermissions = Notifications.getPermissionsAsync as jest.Mock;
@@ -18,6 +19,7 @@ const requestPermissions = Notifications.requestPermissionsAsync as jest.Mock;
 const getExpoToken = Notifications.getExpoPushTokenAsync as jest.Mock;
 const setChannel = Notifications.setNotificationChannelAsync as jest.Mock;
 const setHandler = Notifications.setNotificationHandler as jest.Mock;
+const unregister = Notifications.unregisterForNotificationsAsync as jest.Mock;
 
 const GRANTED = { status: "granted", granted: true, canAskAgain: false };
 const DENIED = { status: "denied", granted: false, canAskAgain: false };
@@ -36,6 +38,7 @@ beforeEach(() => {
   requestPermissions.mockResolvedValue(GRANTED);
   getExpoToken.mockResolvedValue({ type: "expo", data: DEVICE_TOKEN });
   setChannel.mockResolvedValue(undefined);
+  unregister.mockResolvedValue(undefined);
   jest.spyOn(console, "warn").mockImplementation(() => {});
 });
 
@@ -212,6 +215,45 @@ describe("configureNotificationHandler", () => {
     await expect(handleNotification()).resolves.toEqual(
       expect.objectContaining({ shouldShowBanner: true }),
     );
+  });
+});
+
+// A phone nobody is signed in on must not go on showing the last account's
+// nudges. The server's row for it cannot always be deleted (offline, or a
+// session that was revoked), so delivery is switched off on the phone itself.
+describe("stopPushDelivery", () => {
+  it("switches delivery off on this phone", async () => {
+    await stopPushDelivery();
+
+    expect(unregister).toHaveBeenCalledTimes(1);
+  });
+
+  it("forgets the token", async () => {
+    await registerForPushNotificationsAsync();
+    expect(getRegisteredPushToken()).toBe(DEVICE_TOKEN);
+
+    await stopPushDelivery();
+
+    expect(getRegisteredPushToken()).toBeNull();
+  });
+
+  // It runs while a session is ending; nothing about that may fail over push.
+  it("never throws when the phone refuses", async () => {
+    unregister.mockRejectedValue(new Error("no network"));
+
+    await expect(stopPushDelivery()).resolves.toBeUndefined();
+  });
+
+  // Asking Expo for a token registers the phone with Apple or Google again,
+  // so the next sign-in needs nothing special to turn delivery back on.
+  it("leaves the next registration to switch delivery back on", async () => {
+    await stopPushDelivery();
+
+    const result = await registerForPushNotificationsAsync();
+
+    expect(getExpoToken).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ token: DEVICE_TOKEN, status: "granted" });
+    expect(getRegisteredPushToken()).toBe(DEVICE_TOKEN);
   });
 });
 

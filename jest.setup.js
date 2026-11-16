@@ -178,28 +178,146 @@ jest.mock("rn-emoji-keyboard", () => {
   };
 });
 
+// expo-secure-store — the Keychain / Keystore, as a map in memory. Only
+// `lib/sessionStorage.ts` imports the real thing. `__reset()` is the mock's own:
+// the map outlives a test, as a keychain outlives a launch.
+jest.mock("expo-secure-store", () => {
+  const items = new Map();
+  return {
+    __esModule: true,
+    __reset: () => items.clear(),
+    AFTER_FIRST_UNLOCK: 0,
+    AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 1,
+    ALWAYS: 2,
+    WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 3,
+    ALWAYS_THIS_DEVICE_ONLY: 4,
+    WHEN_UNLOCKED: 5,
+    WHEN_UNLOCKED_THIS_DEVICE_ONLY: 6,
+    getItemAsync: jest.fn((key) => Promise.resolve(items.get(key) ?? null)),
+    setItemAsync: jest.fn((key, value) => {
+      items.set(key, value);
+      return Promise.resolve();
+    }),
+    deleteItemAsync: jest.fn((key) => {
+      items.delete(key);
+      return Promise.resolve();
+    }),
+  };
+});
+
 // expo-crypto — deterministic, so a test can prove which of the two nonce
 // values reached which side of the handshake. The digest is a readable stand-in
 // for a real SHA-256, not a reimplementation: what matters is that it differs
 // from its input and that the algorithm asked for is the one Apple expects.
-jest.mock("expo-crypto", () => ({
-  digestStringAsync: jest.fn((algorithm, data) =>
-    Promise.resolve(`${algorithm}:${data}`),
-  ),
-  getRandomBytesAsync: jest.fn((n) =>
-    Promise.resolve(Uint8Array.from({ length: n }, (_, i) => i)),
-  ),
-  getRandomBytes: jest.fn((n) => Uint8Array.from({ length: n }, (_, i) => i)),
-  randomUUID: jest.fn(() => "00000000-0000-4000-8000-000000000000"),
-  CryptoDigestAlgorithm: {
-    SHA1: "SHA-1",
-    SHA256: "SHA-256",
-    SHA384: "SHA-384",
-    SHA512: "SHA-512",
-    MD5: "MD5",
-  },
-  CryptoEncoding: { HEX: "hex", BASE64: "base64" },
-}));
+//
+// The AES half is the opposite: a real AES-GCM, on Node's `crypto`, behind the
+// library's own names. `lib/sessionStorage.ts` is tested by what ends up at
+// rest and by what a wrong key or an altered byte does, and a stand-in that
+// only pretended to encrypt would pass those tests against code that stored
+// the session in the clear.
+jest.mock("expo-crypto", () => {
+  const nodeCrypto = require("crypto");
+  const IV_BYTES = 12;
+  const TAG_BYTES = 16;
+  const toBuffer = (input, encoding = "base64") =>
+    typeof input === "string"
+      ? Buffer.from(input, encoding)
+      : Buffer.from(input);
+
+  class AESEncryptionKey {
+    constructor(bytes) {
+      this.raw = bytes;
+      this.size = bytes.length * 8;
+    }
+    static generate(size = 256) {
+      return Promise.resolve(
+        new AESEncryptionKey(nodeCrypto.randomBytes(size / 8)),
+      );
+    }
+    static import(input, encoding) {
+      return Promise.resolve(new AESEncryptionKey(toBuffer(input, encoding)));
+    }
+    bytes() {
+      return Promise.resolve(new Uint8Array(this.raw));
+    }
+    encoded(encoding) {
+      return Promise.resolve(this.raw.toString(encoding));
+    }
+  }
+
+  // IV, then ciphertext, then tag.
+  class AESSealedData {
+    constructor(combined) {
+      this.raw = combined;
+    }
+    static fromCombined(combined) {
+      return new AESSealedData(toBuffer(combined));
+    }
+    combined(encoding = "bytes") {
+      return Promise.resolve(
+        encoding === "base64"
+          ? this.raw.toString("base64")
+          : new Uint8Array(this.raw),
+      );
+    }
+  }
+
+  const aesEncryptAsync = async (plaintext, key) => {
+    const iv = nodeCrypto.randomBytes(IV_BYTES);
+    const cipher = nodeCrypto.createCipheriv(
+      `aes-${key.size}-gcm`,
+      key.raw,
+      iv,
+    );
+    const body = Buffer.concat([
+      cipher.update(toBuffer(plaintext)),
+      cipher.final(),
+    ]);
+    return new AESSealedData(Buffer.concat([iv, body, cipher.getAuthTag()]));
+  };
+
+  // Rejects, as the library does, when the key is wrong or a byte has changed.
+  const aesDecryptAsync = async (sealed, key, options) => {
+    const raw = sealed.raw;
+    const decipher = nodeCrypto.createDecipheriv(
+      `aes-${key.size}-gcm`,
+      key.raw,
+      raw.subarray(0, IV_BYTES),
+    );
+    decipher.setAuthTag(raw.subarray(raw.length - TAG_BYTES));
+    const plain = Buffer.concat([
+      decipher.update(raw.subarray(IV_BYTES, raw.length - TAG_BYTES)),
+      decipher.final(),
+    ]);
+    return options?.output === "base64"
+      ? plain.toString("base64")
+      : new Uint8Array(plain);
+  };
+
+  return {
+    AESEncryptionKey,
+    AESSealedData,
+    AESKeySize: { AES128: 128, AES192: 192, AES256: 256 },
+    aesEncryptAsync: jest.fn(aesEncryptAsync),
+    aesDecryptAsync: jest.fn(aesDecryptAsync),
+    digestStringAsync: jest.fn((algorithm, data) =>
+      Promise.resolve(`${algorithm}:${data}`),
+    ),
+    getRandomBytesAsync: jest.fn((n) =>
+      Promise.resolve(Uint8Array.from({ length: n }, (_, i) => i)),
+    ),
+    getRandomBytes: jest.fn((n) => Uint8Array.from({ length: n }, (_, i) => i)),
+    randomUUID: jest.fn(() => "00000000-0000-4000-8000-000000000000"),
+    CryptoDigestAlgorithm: {
+      SHA1: "SHA-1",
+      SHA256: "SHA-256",
+      SHA384: "SHA-384",
+      SHA512: "SHA-512",
+      MD5: "MD5",
+    },
+    CryptoEncoding: { HEX: "hex", BASE64: "base64" },
+  };
+});
 
 // expo-apple-authentication. The enums are filled in completely for the same
 // reason expo-haptics' are: a missing member reads as `undefined` and the call
@@ -262,6 +380,7 @@ jest.mock("expo-notifications", () => ({
     Promise.resolve({ type: "expo", data: "ExponentPushToken[device]" }),
   ),
   setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
+  unregisterForNotificationsAsync: jest.fn(() => Promise.resolve()),
   setNotificationHandler: jest.fn(),
   addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
   addNotificationResponseReceivedListener: jest.fn(() => ({

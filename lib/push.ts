@@ -52,6 +52,29 @@ export const forgetRegisteredPushToken = (): void => {
 };
 
 /**
+ * Switches push delivery off on this phone, for when nobody is signed in on
+ * it. Deleting the phone's `device_push_tokens` row is what stops the server
+ * sending, but that needs a network and a valid session, and a session that
+ * was revoked or a Log out made offline has neither. Without this the phone
+ * went on showing the last account's nudges on its lock screen.
+ *
+ * iOS stops receiving at once; Android gives up its token, which needs a
+ * connection, so offline there it is only an attempt. Never throws, and
+ * callers don't wait for it. Nothing switches delivery back on explicitly:
+ * the next `registerForPushNotificationsAsync()` asks Expo for a token, which
+ * registers the phone with Apple or Google again.
+ */
+export async function stopPushDelivery(): Promise<void> {
+  registeredToken = null;
+  try {
+    await Notifications.unregisterForNotificationsAsync();
+  } catch {
+    // The phone refused or had no network. The row is still reassigned by
+    // `register_push_token` the next time anyone signs in here.
+  }
+}
+
+/**
  * Without a handler iOS suppresses foreground notifications entirely, so a push
  * arriving while the app is open appears to vanish — a false failure that is
  * easy to misread in the simulator loop. Called at module scope from
