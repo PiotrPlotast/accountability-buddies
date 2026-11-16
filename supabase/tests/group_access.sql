@@ -221,4 +221,28 @@ begin
   perform pg_temp.expect(err is null, '12: 40 emoji refused as a group name');
 end $$;
 
+-- One group per person is a rule of the table itself (security review,
+-- 2026-11-16). The checks in `join_group_via_code` and the "Join groups"
+-- policy read before they write, so two joins sent at the same moment both
+-- passed them and one person ended up in two groups. A race cannot be staged
+-- inside one transaction; what can be pinned here is that nothing, not even a
+-- write that skips every policy, stores a second membership.
+do $$
+declare
+  ada   uuid := pg_temp.mk_user('Ada');
+  bob   uuid := pg_temp.mk_user('Bob');
+  crew  uuid := pg_temp.mk_group(ada, 'Crew');
+  other uuid := pg_temp.mk_group(bob, 'Other');
+begin
+  -- 13. A second membership is refused by the table.
+  begin
+    insert into public.group_members (group_id, user_id) values (other, ada);
+    raise exception 'FAILED: 13: a second membership was stored';
+  exception when unique_violation then
+    null;
+  end;
+  perform pg_temp.expect((select count(*) = 1 from public.group_members where user_id = ada),
+                         '13: wrong number of memberships');
+end $$;
+
 rollback;

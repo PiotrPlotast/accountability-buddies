@@ -205,7 +205,9 @@ declare g uuid := pg_temp.mk_group(); h uuid := pg_temp.mk_group();
         cys uuid; dis_elsewhere uuid; adas uuid;
 begin
   perform pg_temp.join(g, ada); perform pg_temp.join(h, bo);
-  perform pg_temp.join(g, cy); perform pg_temp.join(g, di); perform pg_temp.join(h, di);
+  -- Di is in `g` only (one group per person); the habit below is written
+  -- straight into `h`, the group Ada isn't in.
+  perform pg_temp.join(g, cy); perform pg_temp.join(g, di);
   update public.notification_prefs set social_enabled = false where user_id = cy;
   cys := pg_temp.mk_goal(cy, g, 'Run');
   adas := pg_temp.mk_goal(ada, g, 'Run');
