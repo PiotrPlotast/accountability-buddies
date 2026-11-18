@@ -229,4 +229,151 @@ begin
                          '12: anon can call leave_group');
 end $$;
 
+-- However a membership row goes (2026-11-16), the habits go with their owner.
+-- `leave_group()` always detached them; a row deleted directly, by the member
+-- or by the creator removing them, left them pointing at the group.
+do $$
+declare
+  ada  uuid := pg_temp.mk_user('Ada');
+  bob  uuid := pg_temp.mk_user('Bob');
+  cal  uuid := pg_temp.mk_user('Cal');
+  crew uuid := pg_temp.mk_group(ada, 'Crew');
+  next uuid := pg_temp.mk_group(pg_temp.mk_user('Dee'), 'Next');
+  ada_run uuid;
+  bob_run uuid;
+  cal_run uuid;
+  res  json;
+  err  text;
+begin
+  perform pg_temp.join_at(crew, bob, now() - interval '2 days');
+  perform pg_temp.join_at(crew, cal, now() - interval '1 day');
+  ada_run := pg_temp.mk_goal(ada, crew, 'Run');
+  bob_run := pg_temp.mk_goal(bob, crew, 'Run');
+  cal_run := pg_temp.mk_goal(cal, crew, 'Run');
+
+  -- 13. A member deleting their own row takes their habits out of the group.
+  err := pg_temp.try_as(bob, format(
+    'delete from public.group_members where group_id = %L and user_id = %L', crew, bob));
+  perform pg_temp.expect(err is null, '13: could not delete own membership: ' || coalesce(err, ''));
+  perform pg_temp.expect((select group_id is null from public.goals where id = bob_run),
+                         '13: habit still points at the group its owner left');
+
+  -- 14. So does the creator removing someone.
+  err := pg_temp.try_as(ada, format(
+    'delete from public.group_members where group_id = %L and user_id = %L', crew, cal));
+  perform pg_temp.expect(err is null, '14: creator could not remove a member: ' || coalesce(err, ''));
+  perform pg_temp.expect((select group_id is null from public.goals where id = cal_run),
+                         '14: a removed member''s habit still points at the group');
+
+  -- 15. Nobody else's habits move, and the group and its creator stay.
+  perform pg_temp.expect((select group_id = crew from public.goals where id = ada_run),
+                         '15: a remaining member''s habit was detached');
+  perform pg_temp.expect((select creator_id = ada from public.groups where id = crew),
+                         '15: the group or its creator changed');
+
+  -- 16. The detached habit follows its owner into the next group they join.
+  res := pg_temp.rpc_as(bob, format('select public.join_group_via_code(%L)',
+                                    (select invite_code from public.groups where id = next)));
+  perform pg_temp.expect((res->>'success')::boolean, '16: could not join the next group: ' || res::text);
+  perform pg_temp.expect((select group_id = next from public.goals where id = bob_run),
+                         '16: habit did not follow its owner');
+end $$;
+
+-- A group never outlives its creator's membership (security review,
+-- 2026-11-16). Whatever takes a membership row away does what `leave_group()`
+-- does: the longest-standing member left becomes the creator, and the last
+-- one out deletes the group. Deleting an account is one of those ways.
+do $$
+declare
+  ada   uuid := pg_temp.mk_user('Ada');
+  bob   uuid := pg_temp.mk_user('Bob');
+  cal   uuid := pg_temp.mk_user('Cal');
+  dee   uuid := pg_temp.mk_user('Dee');
+  eve   uuid := pg_temp.mk_user('Eve');
+  fay   uuid := pg_temp.mk_user('Fay');
+  gus   uuid := pg_temp.mk_user('Gus');
+  crew  uuid := pg_temp.mk_group(ada, 'Crew');
+  duo   uuid := pg_temp.mk_group(dee, 'Duo');
+  empty uuid;
+  code  text;
+  res   json;
+  err   text;
+begin
+  perform pg_temp.join_at(crew, cal, now() - interval '1 day');
+  perform pg_temp.join_at(crew, bob, now() - interval '3 days');
+  update public.group_members set joined_at = now() - interval '10 days'
+   where group_id = crew and user_id = ada;
+  perform pg_temp.join_at(duo, eve, now() - interval '1 day');
+  update public.group_members set joined_at = now() - interval '5 days'
+   where group_id = duo and user_id = dee;
+
+  -- 17. The creator deletes their own membership row: Bob, longest-standing
+  --     of those left, becomes the creator. Ada keeps nothing: she can no
+  --     longer see the group, rotate its code or remove anyone.
+  err := pg_temp.try_as(ada, format(
+    'delete from public.group_members where group_id = %L and user_id = %L', crew, ada));
+  perform pg_temp.expect(err is null, '17: creator could not delete own membership: ' || coalesce(err, ''));
+  perform pg_temp.expect((select creator_id = bob from public.groups where id = crew),
+                         '17: creator did not pass to the longest-standing member');
+  perform pg_temp.expect(pg_temp.count_as(ada, 'select count(*) from public.groups') = 0,
+                         '17: former creator can still see the group');
+  res := pg_temp.rpc_as(ada, format('select public.rotate_invite_code(%L)', crew));
+  perform pg_temp.expect((res->>'success')::boolean is false, '17: former creator rotated the code');
+  perform pg_temp.try_as(ada, format('delete from public.group_members where group_id = %L', crew));
+  perform pg_temp.expect((select count(*) = 2 from public.group_members where group_id = crew),
+                         '17: former creator removed a member');
+  res := pg_temp.rpc_as(bob, format('select public.rotate_invite_code(%L)', crew));
+  perform pg_temp.expect((res->>'success')::boolean, '17: new creator could not rotate the code');
+
+  -- 18. Removing someone who is not the creator moves nothing.
+  err := pg_temp.try_as(bob, format(
+    'delete from public.group_members where group_id = %L and user_id = %L', crew, cal));
+  perform pg_temp.expect(err is null, '18: creator could not remove a member: ' || coalesce(err, ''));
+  perform pg_temp.expect((select creator_id = bob from public.groups where id = crew),
+                         '18: removing a member moved the creator');
+
+  -- 19. The last one out by a direct delete deletes the group, its code stops
+  --     working, and a habit someone else left pointing at it is detached.
+  select invite_code into code from public.groups where id = crew;
+  insert into public.goals (user_id, group_id, title) values (cal, crew, 'Stale');
+  err := pg_temp.try_as(bob, format(
+    'delete from public.group_members where group_id = %L and user_id = %L', crew, bob));
+  perform pg_temp.expect(err is null, '19: last member could not delete own membership: ' || coalesce(err, ''));
+  perform pg_temp.expect(not exists (select 1 from public.groups where id = crew),
+                         '19: empty group was left behind');
+  perform pg_temp.expect((select group_id is null from public.goals where user_id = cal and title = 'Stale'),
+                         '19: stale habit was not detached');
+  res := pg_temp.rpc_as(cal, format('select public.join_group_via_code(%L)', code));
+  perform pg_temp.expect((res->>'success')::boolean is false and res->>'message' = 'Invalid code',
+                         '19: dead group''s code still works: ' || res::text);
+
+  -- 20. The creator deletes their account while a buddy remains: the buddy
+  --     becomes the creator and can rotate the code.
+  err := pg_temp.try_as(dee, 'select public.delete_my_account()');
+  perform pg_temp.expect(err is null, '20: could not delete the account: ' || coalesce(err, ''));
+  perform pg_temp.expect((select creator_id = eve from public.groups where id = duo),
+                         '20: group was left without a creator');
+  res := pg_temp.rpc_as(eve, format('select public.rotate_invite_code(%L)', duo));
+  perform pg_temp.expect((res->>'success')::boolean, '20: remaining member could not rotate the code');
+
+  -- 21. Deleting the account of the last member deletes the group.
+  err := pg_temp.try_as(eve, 'select public.delete_my_account()');
+  perform pg_temp.expect(err is null, '21: could not delete the account: ' || coalesce(err, ''));
+  perform pg_temp.expect(not exists (select 1 from public.groups where id = duo),
+                         '21: empty group was left behind');
+
+  -- 22. A creator who made a group and never joined it deletes their account:
+  --     a group others joined goes to its longest-standing member, and one
+  --     nobody joined is deleted.
+  insert into public.groups (name, creator_id) values ('Fay made', fay) returning id into duo;
+  perform pg_temp.join_at(duo, gus, now() - interval '1 day');
+  insert into public.groups (name, creator_id) values ('Never joined', fay) returning id into empty;
+  err := pg_temp.try_as(fay, 'select public.delete_my_account()');
+  perform pg_temp.expect(err is null, '22: could not delete the account: ' || coalesce(err, ''));
+  perform pg_temp.expect((select creator_id = gus from public.groups where id = duo),
+                         '22: a joined group was left without a creator');
+  perform pg_temp.expect(not exists (select 1 from public.groups where id = empty),
+                         '22: a group nobody joined was left behind');
+end $$;
+
 rollback;

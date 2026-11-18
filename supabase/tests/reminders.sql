@@ -30,8 +30,12 @@ create function pg_temp.mk_goal(
   returns uuid language plpgsql as $$
 declare _g uuid; _goal uuid;
 begin
-  insert into public.groups (name) values ('test') returning id into _g;
-  insert into public.group_members (group_id, user_id) values (_g, p_user);
+  -- One group per person: a second habit goes in the group the first made.
+  select group_id into _g from public.group_members where user_id = p_user;
+  if _g is null then
+    insert into public.groups (name) values ('test') returning id into _g;
+    insert into public.group_members (group_id, user_id) values (_g, p_user);
+  end if;
   insert into public.goals (user_id, group_id, title, icon, repeat_days, reminder_time)
   values (p_user, _g, p_title, p_icon, p_days, p_time) returning id into _goal;
   return _goal;

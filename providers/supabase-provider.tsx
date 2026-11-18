@@ -1,14 +1,25 @@
-import { ReactNode, useCallback, useMemo, useEffect, useState } from "react";
+import {
+  ReactNode,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { AppState } from "react-native";
 
 import { createClient, processLock, Session } from "@supabase/supabase-js";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { SupabaseContext } from "@/context/supabase-context";
 import { registerGoalMutationDefaults } from "@/lib/goalMutationDefaults";
-import { forgetRegisteredPushToken, getRegisteredPushToken } from "@/lib/push";
+import {
+  forgetRegisteredPushToken,
+  getRegisteredPushToken,
+  stopPushDelivery,
+} from "@/lib/push";
 import { asyncStoragePersister } from "@/lib/queryPersister";
+import { secureSessionStorage } from "@/lib/sessionStorage";
 
 interface SupabaseProviderProps {
   children: ReactNode;
@@ -22,7 +33,9 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
     () =>
       createClient(supabaseUrl, supabaseKey, {
         auth: {
-          storage: AsyncStorage,
+          // Encrypted, with the key in the keychain: the refresh token is the
+          // account, and AsyncStorage is a plain file that is in backups.
+          storage: secureSessionStorage,
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,
@@ -54,6 +67,32 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   // mutationFn found".
   useState(() => registerGoalMutationDefaults(queryClient, () => supabase));
 
+  // What this phone still holds once a session has ended, however it ended.
+  //
+  // The cache is a copy of somebody's group: every member's name, their
+  // habits, a week of check-ins, held in memory and mirrored into AsyncStorage
+  // for 24h, with any changes still waiting to sync. Both copies go.
+  //
+  // Push delivery is switched off on the phone itself, not awaited: deleting
+  // this device's `device_push_tokens` row needs a network and a valid
+  // session, which a revoked session and an offline Log out don't have, and
+  // the phone otherwise goes on showing the last account's nudges.
+  const cleanUpAfterSession = useCallback(async () => {
+    void stopPushDelivery();
+    queryClient.clear();
+    try {
+      await asyncStoragePersister.removeClient();
+    } catch {
+      // Swallowed on purpose: a storage failure must not turn a completed
+      // sign-out — or a completed account deletion — into an error the caller
+      // reports to the user.
+    }
+  }, [queryClient]);
+
+  // True while `signOut` below is running. supabase-js reports that sign-out
+  // as `SIGNED_OUT` too, and one Log out is one clean-up.
+  const signingOut = useRef(false);
+
   useEffect(() => {
     let active = true;
 
@@ -71,8 +110,14 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
       });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (event, newSession) => {
         setSession(newSession);
+        // A session supabase-js gave up on by itself: revoked from somewhere
+        // else, or a refresh token the server no longer accepts. Nobody
+        // pressed Log out, so nothing else is going to clean up.
+        if (event === "SIGNED_OUT" && !signingOut.current) {
+          void cleanUpAfterSession();
+        }
       },
     );
 
@@ -80,7 +125,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, cleanUpAfterSession]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
@@ -99,47 +144,43 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   // only cleared the caller's own copy and the rest of the tree caught up via
   // `onAuthStateChange`.
   const signOut = useCallback(async () => {
-    // Before `auth.signOut()`, while the JWT that authorises the delete is
-    // still valid. A signed-out phone that keeps its `device_push_tokens` row
-    // keeps receiving the previous account's nudges — on the lock screen of
-    // whoever is holding it. By token and not by user, so the person's other
-    // phones stay registered.
-    const pushToken = getRegisteredPushToken();
-    if (pushToken) {
-      try {
-        await supabase
-          .from("device_push_tokens")
-          .delete()
-          .eq("expo_push_token", pushToken);
-      } catch {
-        // Offline, or an expired JWT. Nobody gets held in a session they have
-        // asked to leave over this: `register_push_token` reassigns the
-        // orphaned row the next time anyone signs in on this device.
-      }
-      forgetRegisteredPushToken();
-    }
-
-    // Local, not supabase-js's default `global`: a global sign-out revokes the
-    // account's other phones too, and they drop out on their next refresh
-    // without passing through here — so their token rows survive and keep
-    // receiving this account's pushes while signed out.
-    await supabase.auth.signOut({ scope: "local" });
-    setSession(null);
-    // The session goes, its cache does not — and that cache is a copy of
-    // somebody's group: every member's name, their habits, a week of
-    // check-ins, held in memory and mirrored into AsyncStorage for 24h. Both
-    // copies go here. `useDeleteAccount` signs out through this same function,
-    // where keeping a local copy of data the server has just deleted is the
-    // worse half of the problem.
-    queryClient.clear();
+    signingOut.current = true;
     try {
-      await asyncStoragePersister.removeClient();
-    } catch {
-      // Swallowed on purpose: a storage failure must not turn a completed
-      // sign-out — or a completed account deletion — into an error the caller
-      // reports to the user.
+      // Before `auth.signOut()`, while the JWT that authorises the delete is
+      // still valid. A signed-out phone that keeps its `device_push_tokens`
+      // row keeps being sent the previous account's nudges. By token and not
+      // by user, so the person's other phones stay registered.
+      const pushToken = getRegisteredPushToken();
+      if (pushToken) {
+        try {
+          await supabase
+            .from("device_push_tokens")
+            .delete()
+            .eq("expo_push_token", pushToken);
+        } catch {
+          // Offline, or an expired JWT. Nobody gets held in a session they
+          // have asked to leave over this: delivery is switched off on the
+          // phone below, and `register_push_token` reassigns the orphaned row
+          // the next time anyone signs in on this device.
+        }
+        forgetRegisteredPushToken();
+      }
+
+      // Local, not supabase-js's default `global`: a global sign-out revokes
+      // the account's other phones too, and they drop out on their next
+      // refresh without passing through here. Offline this answers with an
+      // error and still drops the session on the phone, which is all that is
+      // asked of it.
+      await supabase.auth.signOut({ scope: "local" });
+      setSession(null);
+      // `useDeleteAccount` signs out through this same function, where
+      // keeping a local copy of data the server has just deleted is the worse
+      // half of the problem.
+      await cleanUpAfterSession();
+    } finally {
+      signingOut.current = false;
     }
-  }, [supabase, queryClient]);
+  }, [supabase, cleanUpAfterSession]);
 
   const value = useMemo(
     () => ({ supabase, session, isLoaded, signOut }),

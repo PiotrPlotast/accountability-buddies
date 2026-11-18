@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { SupabaseContextValue } from "@/context/supabase-context";
 import { useSupabase } from "@/hooks/useSupabase";
 import { SupabaseProvider } from "@/providers/supabase-provider";
+import { secureSessionStorage } from "@/lib/sessionStorage";
 import { getTodayLocalDate } from "@/lib/date";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -40,6 +41,7 @@ jest.mock("@/lib/queryPersister", () => ({
 jest.mock("@/lib/push", () => ({
   getRegisteredPushToken: jest.fn(() => null),
   forgetRegisteredPushToken: jest.fn(),
+  stopPushDelivery: jest.fn(() => Promise.resolve()),
 }));
 
 const { createClient } = require("@supabase/supabase-js") as {
@@ -50,10 +52,11 @@ const { asyncStoragePersister } = require("@/lib/queryPersister") as {
   asyncStoragePersister: { removeClient: jest.Mock };
 };
 
-const { getRegisteredPushToken, forgetRegisteredPushToken } =
+const { getRegisteredPushToken, forgetRegisteredPushToken, stopPushDelivery } =
   require("@/lib/push") as {
     getRegisteredPushToken: jest.Mock;
     forgetRegisteredPushToken: jest.Mock;
+    stopPushDelivery: jest.Mock;
   };
 
 type FakeClient = ReturnType<typeof buildFakeSupabase> & {
@@ -110,6 +113,7 @@ beforeEach(() => {
   createClient.mockReturnValue(client);
   queryClient = makeQueryClient();
   asyncStoragePersister.removeClient.mockClear();
+  stopPushDelivery.mockClear();
 });
 
 describe("SupabaseProvider", () => {
@@ -126,6 +130,18 @@ describe("SupabaseProvider", () => {
       expect.anything(),
       expect.objectContaining({ db: { retry: false } }),
     );
+  });
+
+  // The refresh token is the account. AsyncStorage is a plain file that is in
+  // the phone's backups, so the client is given `lib/sessionStorage.ts`.
+  it("keeps the session in encrypted storage", async () => {
+    await renderWithConsumers(["a"]);
+
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    const options = createClient.mock.calls[0][2];
+    expect(options.auth.storage).toBe(secureSessionStorage);
+    expect(options.auth.persistSession).toBe(true);
   });
 
   // The whole point of moving session state out of `useSupabase`: it used to
@@ -375,5 +391,165 @@ describe("SupabaseProvider — push token cleanup on sign-out", () => {
     // And the cache still goes: the reason sign-out clears it has nothing to do
     // with push.
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+  });
+});
+
+// Log out used to be the only thing that cleaned up, and only when it was
+// online. A session that supabase-js gives up on (revoked from elsewhere, or a
+// refresh token the server no longer accepts) arrives as a `SIGNED_OUT` event
+// with nobody having pressed anything, and left the last account's group in
+// the cache and its nudges arriving on the lock screen.
+describe("SupabaseProvider — a session that ends without Log out", () => {
+  const seedCache = () => {
+    queryClient.setQueryData(queryKeys.profile("user-1"), {
+      full_name: "Alice",
+      avatar_url: null,
+    });
+    queryClient.setQueryData(
+      queryKeys.groupMembers("group-1", getTodayLocalDate()),
+      [{ user_id: "user-2", full_name: "Bob", goals: [] }],
+    );
+  };
+
+  it("empties the cache and its persisted copy", async () => {
+    await renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+    seedCache();
+
+    await act(async () => {
+      authCallback()("SIGNED_OUT", null);
+    });
+
+    expect(seen.a.session).toBeNull();
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+    await waitFor(() =>
+      expect(asyncStoragePersister.removeClient).toHaveBeenCalledTimes(1),
+    );
+  });
+
+  it("switches push delivery off on this phone", async () => {
+    await renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      authCallback()("SIGNED_OUT", null);
+    });
+
+    expect(stopPushDelivery).toHaveBeenCalledTimes(1);
+  });
+
+  // A refreshed token and a signed-out launch are not a session ending.
+  it.each([
+    ["TOKEN_REFRESHED", { user: { id: "user-1" } }],
+    ["USER_UPDATED", { user: { id: "user-1" } }],
+    ["INITIAL_SESSION", null],
+  ])("leaves everything alone on %s", async (event, next) => {
+    await renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+    seedCache();
+
+    await act(async () => {
+      authCallback()(event, next as unknown as Session | null);
+    });
+
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(2);
+    expect(asyncStoragePersister.removeClient).not.toHaveBeenCalled();
+    expect(stopPushDelivery).not.toHaveBeenCalled();
+  });
+
+  it("survives the persisted copy failing to go", async () => {
+    asyncStoragePersister.removeClient.mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    );
+    await renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+    seedCache();
+
+    await act(async () => {
+      authCallback()("SIGNED_OUT", null);
+    });
+
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+    expect(seen.a.session).toBeNull();
+  });
+});
+
+describe("SupabaseProvider — Log out and push delivery", () => {
+  it("switches push delivery off on this phone", async () => {
+    await renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    expect(stopPushDelivery).toHaveBeenCalledTimes(1);
+  });
+
+  // Offline, the row on the server cannot be deleted and supabase-js answers
+  // with an error (it still drops the session on the phone). This is the case
+  // the switch on the phone is for.
+  it("does so offline too, and still ends signed out with an empty cache", async () => {
+    getRegisteredPushToken.mockReturnValue("ExponentPushToken[device]");
+    client.from = jest.fn(() => {
+      throw new Error("Network request failed");
+    }) as unknown as typeof client.from;
+    client.auth.signOut.mockResolvedValue({
+      error: { message: "Network request failed" },
+    });
+    await renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+    queryClient.setQueryData(queryKeys.profile("user-1"), { full_name: "A" });
+
+    await act(async () => {
+      await expect(seen.a.signOut()).resolves.toBeUndefined();
+    });
+
+    expect(stopPushDelivery).toHaveBeenCalledTimes(1);
+    expect(seen.a.session).toBeNull();
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+    expect(asyncStoragePersister.removeClient).toHaveBeenCalledTimes(1);
+    getRegisteredPushToken.mockReturnValue(null);
+  });
+
+  // supabase-js reports its own sign-out as `SIGNED_OUT` as well. One Log out
+  // is one clean-up.
+  it("cleans up once when supabase-js echoes the sign-out", async () => {
+    await renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+    client.auth.signOut.mockImplementation(async () => {
+      authCallback()("SIGNED_OUT", null);
+      return { error: null };
+    });
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+
+    expect(asyncStoragePersister.removeClient).toHaveBeenCalledTimes(1);
+    expect(stopPushDelivery).toHaveBeenCalledTimes(1);
+  });
+
+  // The flag that makes that so must not outlive the Log out it belongs to.
+  it("still cleans up for a session that ends later by itself", async () => {
+    await renderWithConsumers(["a"]);
+    await waitFor(() => expect(seen.a.isLoaded).toBe(true));
+
+    await act(async () => {
+      await seen.a.signOut();
+    });
+    await act(async () => {
+      authCallback()("SIGNED_IN", {
+        user: { id: "user-2" },
+      } as unknown as Session);
+    });
+    await act(async () => {
+      authCallback()("SIGNED_OUT", null);
+    });
+
+    expect(stopPushDelivery).toHaveBeenCalledTimes(2);
+    await waitFor(() =>
+      expect(asyncStoragePersister.removeClient).toHaveBeenCalledTimes(2),
+    );
   });
 });
